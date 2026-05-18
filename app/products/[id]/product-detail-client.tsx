@@ -72,6 +72,10 @@ export default function ProductDetailClient({
   // Track ViewContent event when product page loads
   useEffect(() => {
     if (hasTrackedViewRef.current) return;
+    if (isAgent) {
+      hasTrackedViewRef.current = true;
+      return;
+    }
 
     // Don't send user data if it's an agent
     const userData =
@@ -113,6 +117,11 @@ export default function ProductDetailClient({
 
   // Wrapper for handleAddBag with AddToCart tracking
   const onAddBag = (weight: 3 | 5 | 10 | 25) => {
+    if (isAgent) {
+      handleAddBag(weight);
+      return;
+    }
+
     const newTotalKg = totalKg + weight;
     const newTotalPrice = calculatePrice(product, newTotalKg);
 
@@ -150,32 +159,34 @@ export default function ProductDetailClient({
       return; // Hook already shows error toast
     }
 
-    // Don't send user data if it's an agent
-    const userData =
-      user && !isAgent
-        ? {
-            email: user.email,
-            phone: user.phone,
-            externalId: user.$id,
-            firstName: user.name?.split(" ")[0],
-            lastName: user.name?.split(" ").slice(1).join(" "),
-          }
-        : undefined;
+    // Track InitiateCheckout event (skip for agents)
+    if (!isAgent) {
+      // Don't send user data if it's an agent
+      const userData =
+        user && !isAgent
+          ? {
+              email: user.email,
+              phone: user.phone,
+              externalId: user.$id,
+              firstName: user.name?.split(" ")[0],
+              lastName: user.name?.split(" ").slice(1).join(" "),
+            }
+          : undefined;
 
-    // Track InitiateCheckout event
-    trackInitiateCheckout({
-      value: totalPrice,
-      currency: "PKR",
-      numItems: totalKg,
-      contentIds: [product.$id],
-      userData,
-      trackingContext: {
-        orderChannel,
-        agentLabel,
-        placedByUserId: user?.$id,
-      },
-      stableKey: `${product.$id}:${totalKg}`,
-    });
+      trackInitiateCheckout({
+        value: totalPrice,
+        currency: "PKR",
+        numItems: totalKg,
+        contentIds: [product.$id],
+        userData,
+        trackingContext: {
+          orderChannel,
+          agentLabel,
+          placedByUserId: user?.$id,
+        },
+        stableKey: `${product.$id}:${totalKg}`,
+      });
+    }
 
     // Call the hook's buyNow function
     buyNow();

@@ -666,42 +666,44 @@ function CheckoutContent() {
         throw creationError; // Re-throw to be caught by main try-catch
       }
 
-      // Track Purchase event
-      // Clean customer name by removing agent symbols before sending to Meta
-      const cleanedName =
-        sanitizeCustomerNameForMeta(formData.fullName) || formData.fullName;
+      // Track Purchase event (skip for agents)
+      if (!isAgent) {
+        // Clean customer name by removing agent symbols before sending to Meta
+        const cleanedName =
+          sanitizeCustomerNameForMeta(formData.fullName) || formData.fullName;
 
-      trackPurchase({
-        value: getTotalPrice(),
-        currency: "PKR",
-        orderId,
-        numItems: items.reduce((sum, item) => sum + item.quantity, 0),
-        contentIds: items.map((item) => item.product.$id),
-        contents: items.map((item) => ({
-          id: item.product.$id,
-          quantity: item.quantity,
-          item_price: item.product.base_price_per_kg,
-        })),
-        userData: {
-          email: formData.email || undefined,
-          phone: formattedPhone,
-          firstName: cleanedName.split(" ")[0],
-          lastName: cleanedName.split(" ").slice(1).join(" "),
-          city: finalCity || undefined,
-          externalId: !isAgent && user?.$id ? user.$id : customerId, // CRITICAL: Link to customer/user ID, but NEVER agent ID
-        },
-        trackingContext: {
-          orderChannel,
-          agentLabel,
-          placedByUserId: user?.$id,
-          customerUserId: customerId,
-        },
-      }).catch((trackingError) => {
-        console.error("[Meta Purchase] non-blocking send failed:", {
+        trackPurchase({
+          value: getTotalPrice(),
+          currency: "PKR",
           orderId,
-          trackingError,
+          numItems: items.reduce((sum, item) => sum + item.quantity, 0),
+          contentIds: items.map((item) => item.product.$id),
+          contents: items.map((item) => ({
+            id: item.product.$id,
+            quantity: item.quantity,
+            item_price: item.product.base_price_per_kg,
+          })),
+          userData: {
+            email: formData.email || undefined,
+            phone: formattedPhone,
+            firstName: cleanedName.split(" ")[0],
+            lastName: cleanedName.split(" ").slice(1).join(" "),
+            city: finalCity || undefined,
+            externalId: !isAgent && user?.$id ? user.$id : customerId, // CRITICAL: Link to customer/user ID, but NEVER agent ID
+          },
+          trackingContext: {
+            orderChannel,
+            agentLabel,
+            placedByUserId: user?.$id,
+            customerUserId: customerId,
+          },
+        }).catch((trackingError) => {
+          console.error("[Meta Purchase] non-blocking send failed:", {
+            orderId,
+            trackingError,
+          });
         });
-      });
+      }
 
       // Mark discount code as used if applied
       if (appliedDiscount) {

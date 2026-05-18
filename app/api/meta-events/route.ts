@@ -43,6 +43,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Server-side guard: drop events from call center agent sessions
+    // Agents (Kiran/Saima) calling past customers should never trigger Meta events.
+    // This is a safety net — the client already suppresses these calls.
+    if (custom_data?.order_channel === "call_center_agent") {
+      console.log(
+        `[Meta API] Suppressing ${event_name} event from call center agent (event_id: ${event_id})`,
+      );
+      return NextResponse.json({
+        success: true,
+        suppressed: true,
+        event_id,
+        message: "Event suppressed (call center agent)",
+      });
+    }
+
     // Get client IP and user agent from request headers
     const clientIp = getClientIp(request);
     const userAgent = request.headers.get("user-agent") || undefined;

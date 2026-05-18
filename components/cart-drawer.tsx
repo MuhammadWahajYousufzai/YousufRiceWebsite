@@ -73,22 +73,24 @@ export function CartDrawer() {
           }
         : undefined;
 
-    // Track InitiateCheckout event
-    trackInitiateCheckout({
-      value: totalPrice,
-      currency: "PKR",
-      numItems: itemsForTracking.reduce((sum, item) => sum + item.quantity, 0),
-      contentIds: uniqueContentIds,
-      userData,
-      trackingContext: {
-        orderChannel,
-        agentLabel,
-        placedByUserId: user?.$id,
-      },
-      stableKey: itemsForTracking
-        .map((item) => `${item.product.$id}:${item.quantity}`)
-        .join("|"),
-    });
+    // Track InitiateCheckout event (skip for agents)
+    if (!isAgent) {
+      trackInitiateCheckout({
+        value: totalPrice,
+        currency: "PKR",
+        numItems: itemsForTracking.reduce((sum, item) => sum + item.quantity, 0),
+        contentIds: uniqueContentIds,
+        userData,
+        trackingContext: {
+          orderChannel,
+          agentLabel,
+          placedByUserId: user?.$id,
+        },
+        stableKey: itemsForTracking
+          .map((item) => `${item.product.$id}:${item.quantity}`)
+          .join("|"),
+      });
+    }
 
     setIsOpen(false);
     router.push("/checkout");
