@@ -30,12 +30,8 @@ function MetaPixelContent() {
 
   return (
     <>
-      <Script
-        id="meta-pixel"
-        strategy="afterInteractive"
-        dangerouslySetInnerHTML={{
-          __html: `
-            !function(f,b,e,v,n,t,s)
+      <Script id="meta-pixel" strategy="afterInteractive">
+        {`!function(f,b,e,v,n,t,s)
             {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
             n.callMethod.apply(n,arguments):n.queue.push(arguments)};
             if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
@@ -46,10 +42,8 @@ function MetaPixelContent() {
             var _mpvid = 'pv_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
             fbq('init', '${META_DATASET_ID}');
             fbq('track', 'PageView', {}, { eventID: _mpvid });
-            window.__metaPageViewEventId = _mpvid;
-          `,
-        }}
-      />
+            window.__metaPageViewEventId = _mpvid;`}
+      </Script>
       <noscript>
         <img
           height="1"

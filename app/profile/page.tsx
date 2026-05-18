@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth-store";
 import {
@@ -296,7 +296,7 @@ export default function ProfilePage() {
                   <Link
                     href="/auth/forgot-password"
                     className="text-xs text-[#27247b] hover:underline block text-right"
-                    onClick={(e) => {
+                    onClick={(e: MouseEvent<HTMLAnchorElement>) => {
                       e.stopPropagation(); // Prevent the form from submitting
                       setIsEditing(false); // Close the edit mode
                     }}
