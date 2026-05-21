@@ -1,31 +1,25 @@
 import crypto from 'crypto';
 import type { AgentLabel, OrderChannel } from "@/lib/tracking/order-channel";
 
-// Meta Configuration (2025 - Dataset Approach)
-// In 2025, every Pixel is part of a Dataset
-// Use Dataset ID for both browser (Pixel) and server (Conversions API) tracking
-
 export const META_DATASET_ID = process.env.NEXT_PUBLIC_META_DATASET_ID!;
 export const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN!;
 
-// Meta Conversions API URL
 export const META_API_URL = `https://graph.facebook.com/v20.0/${META_DATASET_ID}/events`;
 
-// Types for Meta Events
 export interface MetaUserData {
-  em?: string; // email (hashed)
-  ph?: string; // phone (hashed)
-  fn?: string; // first name (hashed)
-  ln?: string; // last name (hashed)
-  ct?: string; // city (hashed)
-  st?: string; // state (hashed)
-  zp?: string; // zip code (hashed)
-  country?: string; // country code (hashed)
+  em?: string;
+  ph?: string;
+  fn?: string;
+  ln?: string;
+  ct?: string;
+  st?: string;
+  zp?: string;
+  country?: string;
   client_ip_address?: string;
   client_user_agent?: string;
-  fbp?: string; // Facebook browser ID (_fbp cookie)
-  fbc?: string; // Facebook click ID (_fbc cookie)
-  external_id?: string; // Your customer ID
+  fbp?: string;
+  fbc?: string;
+  external_id?: string;
 }
 
 export interface MetaCustomData {
@@ -83,33 +77,38 @@ export function sanitizeCustomerNameForMeta(name: string | undefined | null): st
   return sanitized || undefined;
 }
 
-// Utility: Hash data with SHA256 (required by Meta)
+// Utility: Hash data with SHA256 (required by Meta) — server-only, uses Node.js crypto
 export function hashData(data: string | undefined | null): string | undefined {
   if (!data) return undefined;
-  
-  // Normalize: lowercase and trim
   const normalized = data.toLowerCase().trim();
-  
-  // Hash with SHA256
   return crypto.createHash('sha256').update(normalized).digest('hex');
 }
 
-// Utility: Generate unique event ID for deduplication
-export function generateEventId(options?: {
+// Cross-platform SHA256: uses Web Crypto API in browser, Node.js crypto on server
+async function hashString(str: string): Promise<string> {
+  const normalized = str.toLowerCase().trim();
+  if (typeof window !== 'undefined' && window.crypto?.subtle) {
+    const encoder = new TextEncoder();
+    const hashBuffer = await window.crypto.subtle.digest('SHA-256', encoder.encode(normalized));
+    return Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+  return crypto.createHash('sha256').update(normalized).digest('hex');
+}
+
+// Utility: Generate unique event ID for deduplication — works in browser and server
+export async function generateEventId(options?: {
   eventName?: string;
   stableKey?: string;
-}): string {
+}): Promise<string> {
   const eventPrefix = options?.eventName
     ? options.eventName.toLowerCase().replace(/[^a-z0-9]+/g, "_")
     : "event";
 
   if (options?.stableKey) {
-    const stableHash = crypto
-      .createHash("sha256")
-      .update(options.stableKey)
-      .digest("hex")
-      .slice(0, 16);
-    return `${eventPrefix}_${stableHash}`;
+    const stableHash = await hashString(options.stableKey);
+    return `${eventPrefix}_${stableHash.slice(0, 16)}`;
   }
 
   return `${eventPrefix}_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
@@ -219,7 +218,15 @@ export async function sendMetaEvent(
       let errorMessage = 'Unknown error';
       try {
         const result = await response.json();
-        errorMessage = result?.error?.message || errorMessage;
+        const error = result?.error;
+        errorMessage = [
+          error?.message,
+          error?.error_user_title,
+          error?.error_user_msg,
+          error?.error_subcode ? `subcode ${error.error_subcode}` : undefined,
+        ]
+          .filter(Boolean)
+          .join(" - ") || errorMessage;
       } catch {
         errorMessage = `Meta API HTTP ${response.status}`;
       }

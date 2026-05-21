@@ -9,6 +9,11 @@ import {
   type MetaCustomData,
 } from "@/lib/meta";
 
+const SERVER_META_TEST_EVENT_CODE =
+  process.env.META_TEST_EVENT_CODE ||
+  process.env.NEXT_PUBLIC_META_TEST_EVENT_CODE ||
+  "";
+
 export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get("content-type") || "";
@@ -92,7 +97,10 @@ export async function POST(request: NextRequest) {
     };
 
     // Send to Meta Conversions API
-    const result = await sendMetaEvent(metaEvent, test_event_code);
+    const result = await sendMetaEvent(
+      metaEvent,
+      test_event_code || SERVER_META_TEST_EVENT_CODE || undefined,
+    );
 
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 500 });

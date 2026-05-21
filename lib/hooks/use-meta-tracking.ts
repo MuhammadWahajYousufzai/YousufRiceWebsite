@@ -83,7 +83,7 @@ export function useMetaTracking() {
     }: TrackEventParams) => {
       try {
         // Generate unique event ID for deduplication
-        const eventId = providedEventId ?? generateEventId({ eventName });
+        const eventId = providedEventId ?? await generateEventId({ eventName });
 
         // Construct current URL using actual browser origin
         const origin =
@@ -155,13 +155,25 @@ export function useMetaTracking() {
         const responsePromise = fetch("/api/meta-events", requestInit);
 
         if (deliveryMode !== "await") {
-          responsePromise.catch((error) => {
-            console.error("[Meta Conversions API] Background send failed:", {
-              eventName,
-              eventId,
-              error,
+          responsePromise
+            .then(async (response) => {
+              if (!response.ok) {
+                const responseText = await response.text().catch(() => "");
+                console.warn("[Meta Conversions API] Background send returned error:", {
+                  eventName,
+                  eventId,
+                  status: response.status,
+                  responseText,
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("[Meta Conversions API] Background send failed:", {
+                eventName,
+                eventId,
+                error,
+              });
             });
-          });
           return { success: true, eventId };
         }
 
@@ -285,7 +297,7 @@ export function useMetaTracking() {
   );
 
   const trackInitiateCheckout = useCallback(
-    (checkoutData: {
+    async (checkoutData: {
       value: number;
       currency?: string;
       numItems: number;
@@ -304,12 +316,13 @@ export function useMetaTracking() {
       trackingContext?: TrackingContext;
       stableKey?: string;
     }) => {
+      const eventId = await generateEventId({
+        eventName: "InitiateCheckout",
+        stableKey: checkoutData.stableKey,
+      });
       return trackEvent({
         eventName: "InitiateCheckout",
-        eventId: generateEventId({
-          eventName: "InitiateCheckout",
-          stableKey: checkoutData.stableKey,
-        }),
+        eventId,
         userData: checkoutData.userData,
         customData: buildTrackingCustomData(
           {
@@ -329,7 +342,7 @@ export function useMetaTracking() {
   );
 
   const trackPurchase = useCallback(
-    (purchaseData: {
+    async (purchaseData: {
       value: number;
       currency?: string;
       orderId: string;
@@ -353,12 +366,13 @@ export function useMetaTracking() {
       };
       trackingContext?: TrackingContext;
     }) => {
+      const eventId = await generateEventId({
+        eventName: "Purchase",
+        stableKey: purchaseData.orderId,
+      });
       return trackEvent({
         eventName: "Purchase",
-        eventId: generateEventId({
-          eventName: "Purchase",
-          stableKey: purchaseData.orderId,
-        }),
+        eventId,
         userData: purchaseData.userData,
         customData: buildTrackingCustomData(
           {

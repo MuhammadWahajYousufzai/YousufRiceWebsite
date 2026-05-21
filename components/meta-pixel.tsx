@@ -53,6 +53,7 @@ function MetaPixelContent() {
             s.parentNode.insertBefore(t,s)}(window, document,'script',
             'https://connect.facebook.net/en_US/fbevents.js');
             var _mpvid = 'pv_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+            fbq('set', 'autoConfig', false, '${META_DATASET_ID}');
             fbq('init', '${META_DATASET_ID}');
             fbq('track', 'PageView', {}, { eventID: _mpvid });
             window.__metaPageViewEventId = _mpvid;`}

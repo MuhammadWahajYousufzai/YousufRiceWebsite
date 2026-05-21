@@ -668,7 +668,6 @@ function CheckoutContent() {
 
       // Track Purchase event (skip for agents)
       if (!isAgent) {
-        // Clean customer name by removing agent symbols before sending to Meta
         const cleanedName =
           sanitizeCustomerNameForMeta(formData.fullName) || formData.fullName;
 
@@ -689,7 +688,7 @@ function CheckoutContent() {
             firstName: cleanedName.split(" ")[0],
             lastName: cleanedName.split(" ").slice(1).join(" "),
             city: finalCity || undefined,
-            externalId: !isAgent && user?.$id ? user.$id : customerId, // CRITICAL: Link to customer/user ID, but NEVER agent ID
+            externalId: !isAgent && user?.$id ? user.$id : customerId,
           },
           trackingContext: {
             orderChannel,
