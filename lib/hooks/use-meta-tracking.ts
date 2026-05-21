@@ -84,6 +84,7 @@ export function useMetaTracking() {
       try {
         // Generate unique event ID for deduplication
         const eventId = providedEventId ?? await generateEventId({ eventName });
+        const eventTime = Math.floor(Date.now() / 1000);
 
         // Construct current URL using actual browser origin
         const origin =
@@ -112,6 +113,7 @@ export function useMetaTracking() {
         const payload = {
           event_name: eventName,
           event_id: eventId,
+          event_time: eventTime,
           event_source_url: eventSourceUrl,
           user_data: {
             ...userData,
@@ -289,7 +291,7 @@ export function useMetaTracking() {
           },
           cartData.trackingContext,
         ),
-        deliveryMode: "background",
+        deliveryMode: "await",
         testEventCode: TEST_EVENT_CODE || undefined,
       });
     },

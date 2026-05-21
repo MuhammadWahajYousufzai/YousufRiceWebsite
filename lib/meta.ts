@@ -119,20 +119,69 @@ export function getCurrentTimestamp(): number {
   return Math.floor(Date.now() / 1000);
 }
 
-// Utility: Extract Facebook cookies from browser
-export function getFacebookCookies(): { fbp?: string; fbc?: string } {
-  if (typeof window === 'undefined') return {};
-  
-  const cookies = document.cookie.split(';').reduce((acc, cookie) => {
-    const [key, value] = cookie.trim().split('=');
-    acc[key] = value;
+function readBrowserCookies(): Record<string, string> {
+  return document.cookie.split(';').reduce((acc, cookie) => {
+    const separatorIndex = cookie.indexOf('=');
+    if (separatorIndex === -1) return acc;
+
+    const key = cookie.slice(0, separatorIndex).trim();
+    const value = cookie.slice(separatorIndex + 1);
+    if (key) acc[key] = value;
     return acc;
   }, {} as Record<string, string>);
+}
+
+function writeMetaCookie(name: string, value: string) {
+  const maxAge = 60 * 60 * 24 * 90;
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = [
+    `${name}=${encodeURIComponent(value)}`,
+    `Max-Age=${maxAge}`,
+    'Path=/',
+    'SameSite=Lax',
+  ].join('; ') + secure;
+}
+
+function createMetaBrowserId(): string {
+  const timestamp = Date.now();
+  const browserCrypto = window.crypto;
+  const randomPart =
+    typeof browserCrypto !== 'undefined' && 'randomUUID' in browserCrypto
+      ? browserCrypto.randomUUID().replace(/-/g, '').slice(0, 16)
+      : Math.random().toString(36).slice(2, 12);
+
+  return `fb.1.${timestamp}.${randomPart}`;
+}
+
+function getOrCreateFacebookCookies(): { fbp?: string; fbc?: string } {
+  const cookies = readBrowserCookies();
+  let fbp = cookies._fbp;
+  let fbc = cookies._fbc;
+
+  if (!fbp) {
+    fbp = createMetaBrowserId();
+    writeMetaCookie('_fbp', fbp);
+  }
+
+  const fbclid = new URLSearchParams(window.location.search).get('fbclid');
+  if (!fbc && fbclid) {
+    fbc = `fb.1.${Date.now()}.${fbclid}`;
+    writeMetaCookie('_fbc', fbc);
+  }
 
   return {
-    fbp: cookies._fbp,
-    fbc: cookies._fbc,
+    fbp: fbp ? decodeURIComponent(fbp) : undefined,
+    fbc: fbc ? decodeURIComponent(fbc) : undefined,
   };
+}
+
+// Utility: Extract Facebook cookies from browser. If Meta has not created _fbp
+// yet, create the same first-party identifier format so guest CAPI events can
+// still be matched and deduplicated with browser Pixel events.
+export function getFacebookCookies(): { fbp?: string; fbc?: string } {
+  if (typeof window === 'undefined') return {};
+
+  return getOrCreateFacebookCookies();
 }
 
 // Utility: Get client IP (from headers in API route)

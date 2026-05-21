@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
     const {
       event_name,
       event_id,
+      event_time,
       event_source_url,
       user_data,
       custom_data,
@@ -87,7 +88,10 @@ export async function POST(request: NextRequest) {
     // Construct Meta event
     const metaEvent: MetaEvent = {
       event_name,
-      event_time: getCurrentTimestamp(),
+      event_time:
+        typeof event_time === "number" && event_time > 0
+          ? event_time
+          : getCurrentTimestamp(),
       event_id,
       event_source_url:
         event_source_url || request.headers.get("referer") || undefined,
