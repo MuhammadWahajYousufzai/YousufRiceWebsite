@@ -1,43 +1,68 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { tablesDB, DATABASE_ID, CUSTOMERS_TABLE_ID, ORDERS_TABLE_ID, ADDRESSES_TABLE_ID } from "@/lib/appwrite";
 import AdminAuthGuard from '@/components/admin/AdminAuthGuard';
-import { Customer, Order } from '@/lib/types';
+import { Customer } from '@/lib/types';
 import { Card, CardContent, } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatCurrency } from '@/lib/utils';
 import { User, Mail, Phone, ShoppingBag, Search, Users, TrendingUp, DollarSign, Award, Download } from 'lucide-react';
-import { Query } from 'appwrite';
 import toast from 'react-hot-toast';
 import { sanitizeCustomerNameForMeta } from '@/lib/meta';
+import { requestAdminGraphQL } from '@/lib/admin/graphql-client';
+import { useAuthStore } from '@/lib/store/auth-store';
 
 interface CustomerWithStats extends Customer {
   orderCount: number;
   totalSpent: number;
+  city?: string | null;
 }
 
+const ADMIN_CUSTOMERS_QUERY = `
+  query AdminCustomers {
+    adminCustomers {
+      customers {
+        id
+        createdAt
+        fullName
+        phone
+        email
+        orderCount
+        totalSpent
+        city
+      }
+    }
+  }
+`;
+
+type AdminCustomersResponse = {
+  adminCustomers: {
+    customers: Array<{
+      id: string;
+      createdAt: string;
+      fullName: string;
+      phone: string;
+      email: string | null;
+      orderCount: number;
+      totalSpent: number;
+      city: string | null;
+    }>;
+  };
+};
+
 export default function AdminCustomersPage() {
-  const router = useRouter();
+  const { hasReadPermission, loading: authLoading } = useAuthStore();
   const [customers, setCustomers] = useState<CustomerWithStats[]>([]);
-  const [filteredCustomers, setFilteredCustomers] = useState<CustomerWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'orders' | 'spent'>('name');
 
-
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
-  useEffect(() => {
+  const filteredCustomers = useMemo(() => {
     let filtered = [...customers];
 
-    // Apply search filter
     if (searchQuery) {
       const isPakistaniPhoneSearch = searchQuery.startsWith('0');
       const formattedPhoneSearch = isPakistaniPhoneSearch ? '+92' + searchQuery.slice(1) : searchQuery;
@@ -50,7 +75,6 @@ export default function AdminCustomersPage() {
       );
     }
 
-    // Apply sorting
     filtered.sort((a, b) => {
       if (sortBy === 'name') {
         return a.full_name.localeCompare(b.full_name);
@@ -61,51 +85,41 @@ export default function AdminCustomersPage() {
       }
     });
 
-    setFilteredCustomers(filtered);
+    return filtered;
   }, [customers, searchQuery, sortBy]);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
+    if (authLoading || !hasReadPermission()) return;
+
     try {
-      const customersResponse = await tablesDB.listRows({ databaseId: DATABASE_ID, tableId: CUSTOMERS_TABLE_ID, queries: [
-                    Query.orderDesc('$createdAt'),
-                    Query.limit(5000)
-                  ] });
-
-      const customersWithStats = await Promise.all(
-        customersResponse.rows.map(async (customer: any) => {
-          try {
-            const ordersResponse = await tablesDB.listRows({ databaseId: DATABASE_ID, tableId: ORDERS_TABLE_ID, queries: [Query.equal('customer_id', customer.$id)] });
-
-            const totalSpent = ordersResponse.rows.reduce((sum: number, order: any) => {
-              // Exclude returned orders from revenue calculation
-              if (order.status === 'returned') return sum;
-              return sum + (order.total_price || 0);
-            }, 0);
-
-            return {
-              ...customer,
-              orderCount: ordersResponse.total,
-              totalSpent
-            } as CustomerWithStats;
-          } catch {
-            return {
-              ...customer,
-              orderCount: 0,
-              totalSpent: 0
-            } as CustomerWithStats;
-          }
-        })
+      const data = await requestAdminGraphQL<AdminCustomersResponse>(
+        ADMIN_CUSTOMERS_QUERY
       );
+      const customersWithStats = data.adminCustomers.customers.map((customer) => ({
+        $id: customer.id,
+        $createdAt: customer.createdAt,
+        user_id: "",
+        full_name: customer.fullName,
+        phone: customer.phone,
+        email: customer.email || undefined,
+        orderCount: customer.orderCount,
+        totalSpent: customer.totalSpent,
+        city: customer.city,
+      }));
 
       setCustomers(customersWithStats);
-      setFilteredCustomers(customersWithStats);
     } catch (error) {
       console.error('Error fetching customers:', error);
       toast.error('Failed to load customers');
     } finally {
       setLoading(false);
     }
-  };
+  }, [authLoading, hasReadPermission]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchCustomers();
+  }, [fetchCustomers]);
 
   const exportToMetaCSV = async () => {
     try {
@@ -114,50 +128,10 @@ export default function AdminCustomersPage() {
         return;
       }
 
-      // Fetch orders and addresses for each customer to get city information
-      const customersWithCity = await Promise.all(
-        customers.map(async (customer) => {
-          try {
-            const ordersResponse = await tablesDB.listRows({ 
-              databaseId: DATABASE_ID, 
-              tableId: ORDERS_TABLE_ID, 
-              queries: [Query.equal('customer_id', customer.$id)] 
-            });
-
-            let city: string | null = null;
-            
-            // Check all orders for city information
-            for (const order of ordersResponse.rows) {
-              if (order.address_id) {
-                try {
-                  const address = await tablesDB.getRow({ 
-                    databaseId: DATABASE_ID, 
-                    tableId: ADDRESSES_TABLE_ID, 
-                    rowId: order.address_id 
-                  });
-                  if (address.city) {
-                    city = address.city;
-                    break; // Use the first city found
-                  }
-                } catch (e) {
-                  // Address not found, continue to next order
-                }
-              }
-            }
-
-            return {
-              ...customer,
-              city
-            };
-          } catch (error) {
-            console.error(`Error fetching city for customer ${customer.$id}:`, error);
-            return {
-              ...customer,
-              city: null
-            };
-          }
-        })
-      );
+      const customersWithCity = customers.map((customer) => ({
+        ...customer,
+        city: customer.city ?? null,
+      }));
 
       // Sort customers by city: Karachi first, null second, others last
       const sortedCustomers = customersWithCity.sort((a, b) => {
@@ -377,7 +351,12 @@ export default function AdminCustomersPage() {
                     className="pl-10"
                   />
                 </div>
-                <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                <Select
+                  value={sortBy}
+                  onValueChange={(value) =>
+                    setSortBy(value as 'name' | 'orders' | 'spent')
+                  }
+                >
                   <SelectTrigger className="w-full md:w-48">
                     <SelectValue />
                   </SelectTrigger>

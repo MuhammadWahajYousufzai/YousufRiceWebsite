@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Client, Account } from 'node-appwrite';
+import { Client, Account } from 'appwrite';
 
 // Detect if we're in a build environment
 const isBuildTime = () => {
@@ -15,13 +15,20 @@ function createServerClient(req: NextRequest) {
     .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
     .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!);
 
+  const authorization = req.headers.get('authorization');
+  const bearerToken = authorization?.startsWith('Bearer ')
+    ? authorization.slice('Bearer '.length).trim()
+    : undefined;
+
   // The Appwrite session cookie lives on the Appwrite domain (yousufricemill.com),
   // so the browser won't send it to our local API routes (localhost:3000).
   // Instead we sync the session secret into a 'yousuf_session' cookie on
   // the Next.js domain after login, so it is forwarded automatically.
   const session = req.cookies.get('yousuf_session')?.value;
 
-  if (session) {
+  if (bearerToken) {
+    client.setJWT(bearerToken);
+  } else if (session) {
     client.setSession(session);
   }
 
@@ -117,7 +124,9 @@ export function isMutationRequest(req: NextRequest): boolean {
  * @param handler - API route handler
  * @returns Handler function
  */
-export function withAdminAuth(handler: Function) {
+export function withAdminAuth(
+  handler: (req: NextRequest) => Promise<NextResponse> | NextResponse
+) {
   return async function(req: NextRequest) {
     // For mutation requests, require write access
     const requireWriteAccess = isMutationRequest(req);

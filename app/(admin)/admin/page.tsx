@@ -1,21 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuthStore } from "@/lib/store/auth-store";
-import {
-  tablesDB,
-  DATABASE_ID,
-  ORDERS_TABLE_ID,
-  ORDER_ITEMS_TABLE_ID,
-  PRODUCTS_TABLE_ID,
-  CUSTOMERS_TABLE_ID,
-} from "@/lib/appwrite";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Package,
   ShoppingBag,
@@ -35,16 +24,85 @@ import {
   Calendar,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { Query } from "appwrite";
 import toast from "react-hot-toast";
 import { clearImageCache } from "@/lib/actions/cache-actions";
-import { Order, Product, Customer } from "@/lib/types";
+import { Order } from "@/lib/types";
 import AdminAuthGuard from "@/components/admin/AdminAuthGuard";
 import ReadOnlyGuard from "@/components/admin/ReadOnlyGuard";
+import { requestAdminGraphQL } from "@/lib/admin/graphql-client";
+import { useAuthStore } from "@/lib/store/auth-store";
+
+const ADMIN_DASHBOARD_QUERY = `
+  query AdminDashboardOverview {
+    adminDashboardOverview {
+      stats {
+        totalOrders
+        monthlyRevenue
+        lifetimeRevenue
+        totalProducts
+        totalCustomers
+        pendingOrders
+        acceptedOrders
+        outForDeliveryOrders
+        deliveredOrders
+        availableProducts
+        lowStockProducts
+        revenueGrowth
+        ordersGrowth
+      }
+      recentOrders {
+        id
+        createdAt
+        status
+        totalPrice
+      }
+      topProducts {
+        id
+        name
+        count
+        revenue
+      }
+    }
+  }
+`;
+
+type AdminDashboardResponse = {
+  adminDashboardOverview: {
+    stats: {
+      totalOrders: number;
+      monthlyRevenue: number;
+      lifetimeRevenue: number;
+      totalProducts: number;
+      totalCustomers: number;
+      pendingOrders: number;
+      acceptedOrders: number;
+      outForDeliveryOrders: number;
+      deliveredOrders: number;
+      availableProducts: number;
+      lowStockProducts: number;
+      revenueGrowth: number;
+      ordersGrowth: number;
+    };
+    recentOrders: Array<{
+      id: string;
+      createdAt: string;
+      status: Order["status"];
+      totalPrice: number;
+    }>;
+    topProducts: Array<{
+      id: string;
+      name: string;
+      count: number;
+      revenue: number;
+    }>;
+  };
+};
+
+type DashboardTopProduct =
+  AdminDashboardResponse["adminDashboardOverview"]["topProducts"][number];
 
 export default function AdminDashboard() {
-  const router = useRouter();
-  const { hasReadPermission, hasWritePermission } = useAuthStore();
+  const { hasReadPermission, loading: authLoading } = useAuthStore();
   const [stats, setStats] = useState({
     totalOrders: 0,
     monthlyRevenue: 0,
@@ -61,189 +119,44 @@ export default function AdminDashboard() {
     ordersGrowth: 0,
   });
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
-  const [topProducts, setTopProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [topProducts, setTopProducts] = useState<DashboardTopProduct[]>([]);
   const [revalidating, setRevalidating] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
-      if (!hasReadPermission()) return;
+      if (authLoading || !hasReadPermission()) return;
 
       try {
-        const now = new Date();
-
-        const [
-          ordersRes,
-          productsRes,
-          customersRes,
-          pendingRes,
-          acceptedRes,
-          outForDeliveryRes,
-          deliveredRes,
-          recentOrdersRes,
-
-          orderItemsRes,
-        ] = await Promise.all([
-          tablesDB.listRows({ databaseId: DATABASE_ID, tableId: ORDERS_TABLE_ID, queries: [
-                            Query.limit(5000),
-                            Query.orderDesc("$createdAt"),
-                          ] }),
-          tablesDB.listRows({ databaseId: DATABASE_ID, tableId: PRODUCTS_TABLE_ID }),
-          tablesDB.listRows({ databaseId: DATABASE_ID, tableId: CUSTOMERS_TABLE_ID }),
-          tablesDB.listRows({ databaseId: DATABASE_ID, tableId: ORDERS_TABLE_ID, queries: [
-                          Query.equal("status", "pending"),
-                        ] }),
-          tablesDB.listRows({ databaseId: DATABASE_ID, tableId: ORDERS_TABLE_ID, queries: [
-                          Query.equal("status", "accepted"),
-                        ] }),
-          tablesDB.listRows({ databaseId: DATABASE_ID, tableId: ORDERS_TABLE_ID, queries: [
-                          Query.equal("status", "out_for_delivery"),
-                        ] }),
-          tablesDB.listRows({ databaseId: DATABASE_ID, tableId: ORDERS_TABLE_ID, queries: [
-                          Query.equal("status", "delivered"),
-                        ] }),
-          tablesDB.listRows({ databaseId: DATABASE_ID, tableId: ORDERS_TABLE_ID, queries: [
-                          Query.orderDesc("$createdAt"),
-                          Query.limit(5),
-                        ] }),
-          tablesDB.listRows({ databaseId: DATABASE_ID, tableId: ORDER_ITEMS_TABLE_ID, queries: [
-                          Query.limit(5000),
-                        ] }),
-        ]);
-
-
-        // Calculate Lifetime Revenue
-        const lifetimeRevenue = ordersRes.rows.reduce(
-          (sum: number, order: any) => {
-            if (order.status === "returned") return sum;
-            return sum + (order.total_price || 0);
-          },
-          0
+        const data = await requestAdminGraphQL<AdminDashboardResponse>(
+          ADMIN_DASHBOARD_QUERY
         );
-
-        // Calculate Monthly Revenue (MTD)
-        const currentYear = now.getFullYear();
-        const currentMonth = now.getMonth();
-        const currentDate = now.getDate(); // 1-31
-
-        const thisMonthStart = new Date(currentYear, currentMonth, 1);
-        const nextMonthStart = new Date(currentYear, currentMonth + 1, 1);
-
-        const lastMonthStart = new Date(currentYear, currentMonth - 1, 1);
-        // Correctly handle end of last month for comparison (e.g. if today is 19th, compare with 19th of last month)
-        // Also handle edge cases where last month has fewer days (e.g. Mar 31 -> Feb 28/29)
-        const daysInLastMonth = new Date(currentYear, currentMonth, 0).getDate();
-        const compareDate = Math.min(currentDate, daysInLastMonth);
-        const lastMonthEnd = new Date(currentYear, currentMonth - 1, compareDate, 23, 59, 59, 999);
-
-        // Filter for This Month (MTD)
-        const thisMonthOrders = ordersRes.rows.filter((order: any) => {
-          const orderDate = new Date(order.$createdAt);
-          return orderDate >= thisMonthStart && orderDate < nextMonthStart;
-        });
-
-        const thisMonthRevenue = thisMonthOrders.reduce((sum: number, order: any) => {
-          if (order.status === "returned") return sum;
-          return sum + (order.total_price || 0);
-        }, 0);
-
-        // Filter for Last Month (MTD equivalent)
-        const lastMonthOrdersMTD = ordersRes.rows.filter((order: any) => {
-          const orderDate = new Date(order.$createdAt);
-          return orderDate >= lastMonthStart && orderDate <= lastMonthEnd;
-        });
-
-        const lastMonthRevenueMTD = lastMonthOrdersMTD.reduce((sum: number, order: any) => {
-          if (order.status === "returned") return sum;
-          return sum + (order.total_price || 0);
-        }, 0);
-
-        const revenueGrowth =
-          lastMonthRevenueMTD > 0
-            ? ((thisMonthRevenue - lastMonthRevenueMTD) / lastMonthRevenueMTD) * 100
-            : 0;
-
-        // Last Month Orders count for Growth (using MTD logic broadly or just full month? 
-        // usually order growth is also interesting as MTD. Let's keep existing logic or align it.
-        // The existing logic used `lastMonthOrdersRes` which was simply > 30 days ago.
-        // Let's improve Order Growth to be MTD as well for consistency.
-        const lastMonthOrdersCountMTD = lastMonthOrdersMTD.length;
-        const thisMonthOrdersCount = thisMonthOrders.length;
-
-        const ordersGrowth =
-          lastMonthOrdersCountMTD > 0
-            ? ((thisMonthOrdersCount - lastMonthOrdersCountMTD) / lastMonthOrdersCountMTD) * 100
-            : 0;
-
-        const availableProducts = (productsRes.rows as any[]).filter(
-          (p: any) => p.available
-        ).length;
+        const overview = data.adminDashboardOverview;
 
         setStats({
-          totalOrders: ordersRes.total,
-          monthlyRevenue: thisMonthRevenue,
-          lifetimeRevenue: lifetimeRevenue,
-          totalProducts: productsRes.total,
-          totalCustomers: customersRes.total,
-          pendingOrders: pendingRes.total,
-          acceptedOrders: acceptedRes.total,
-          outForDeliveryOrders: outForDeliveryRes.total,
-          deliveredOrders: deliveredRes.total,
-          availableProducts,
-          lowStockProducts: 0,
-          revenueGrowth: Math.round(revenueGrowth * 10) / 10,
-          ordersGrowth: Math.round(ordersGrowth * 10) / 10,
+          ...overview.stats,
         });
 
-        setRecentOrders(recentOrdersRes.rows as unknown as Order[]);
-
-        // Create product lookup map for names
-        const productLookup: { [key: string]: string } = {};
-        productsRes.rows.forEach((product: any) => {
-          productLookup[product.$id] = product.name;
-        });
-
-        // Calculate top products from orders
-        // Calculate top products from ACTUAL order items table (Robust way)
-        const productCounts: {
-          [key: string]: { count: number; revenue: number; name: string };
-        } = {};
-
-        orderItemsRes.rows.forEach((item: any) => {
-          const productId = item.product_id;
-          const quantity = item.quantity_kg || 0;
-          const total = item.total_after_discount || 0;
-
-          if (!productCounts[productId]) {
-            productCounts[productId] = {
-              count: 0,
-              revenue: 0,
-              name:
-                productLookup[productId] ||
-                item.product_name ||
-                `Product ${productId.slice(0, 8)}`,
-            };
-          }
-
-          productCounts[productId].count += quantity;
-          productCounts[productId].revenue += total;
-        });
-
-        const topProductsArray = Object.entries(productCounts)
-          .map(([id, data]) => ({ id, ...data }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 5);
-
-        setTopProducts(topProductsArray);
+        setRecentOrders(
+          overview.recentOrders.map((order) => ({
+            $id: order.id,
+            $createdAt: order.createdAt,
+            status: order.status,
+            total_price: order.totalPrice,
+          })) as Order[]
+        );
+        setTopProducts(overview.topProducts);
       } catch (error) {
         console.error("Error fetching stats:", error);
-      } finally {
-        setLoading(false);
+        toast.error(
+          error instanceof Error
+            ? `Failed to load dashboard stats: ${error.message}`
+            : "Failed to load dashboard stats"
+        );
       }
     };
 
     fetchStats();
-  }, [hasReadPermission]);
+  }, [authLoading, hasReadPermission]);
 
   const handleRevalidateImages = async () => {
     setRevalidating(true);

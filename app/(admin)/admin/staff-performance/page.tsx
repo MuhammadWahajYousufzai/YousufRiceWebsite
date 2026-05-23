@@ -1,15 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAuthStore } from "@/lib/store/auth-store";
+import { useCallback, useEffect, useState } from "react";
 import AdminAuthGuard from "@/components/admin/AdminAuthGuard";
-import {
-    tablesDB,
-    DATABASE_ID,
-    ORDERS_TABLE_ID,
-    CUSTOMERS_TABLE_ID,
-} from "@/lib/appwrite";
-import { Order, Customer } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,24 +19,9 @@ import {
     DollarSign,
     Scale,
 } from "lucide-react";
-import { Query } from "appwrite";
 import toast from "react-hot-toast";
-
-// Helper to detect agent from name based on lib/meta.ts logic
-const getAgentType = (name: string = ""): "s_agent" | "k_agent" | "direct" => {
-        // Regex Logic:
-        // 1. Matches "- s", "- S" with optional spaces
-        // 2. Matches "(s)", "(S)" with optional spaces
-        // 3. Matches standalone "s", "S" (word boundaries)
-        const sPattern = /\s*-\s*[sS]\s*|\s*\(\s*[sS]\s*\)\s*|\b[sS]\b/;
-
-    // Same logic for K agent
-    const kPattern = /\s*-\s*[kK]\s*|\s*\(\s*[kK]\s*\)\s*|\b[kK]\b/;
-
-    if (sPattern.test(name)) return "s_agent";
-    if (kPattern.test(name)) return "k_agent";
-    return "direct";
-};
+import { requestAdminGraphQL } from "@/lib/admin/graphql-client";
+import { useAuthStore } from "@/lib/store/auth-store";
 
 interface AgentStats {
     totalOrders: number;
@@ -52,17 +29,62 @@ interface AgentStats {
     totalWeight: number;
 }
 
+type DateFilter = "today" | "week" | "month" | "custom";
+
 const initialStats: AgentStats = {
     totalOrders: 0,
     totalRevenue: 0,
     totalWeight: 0,
 };
 
+const STAFF_PERFORMANCE_QUERY = `
+    query StaffPerformance($dateFilter: StaffDateFilter!, $startDate: String, $endDate: String) {
+        staffPerformance(dateFilter: $dateFilter, startDate: $startDate, endDate: $endDate) {
+            stats {
+                sAgent {
+                    totalOrders
+                    totalRevenue
+                    totalWeight
+                }
+                kAgent {
+                    totalOrders
+                    totalRevenue
+                    totalWeight
+                }
+                direct {
+                    totalOrders
+                    totalRevenue
+                    totalWeight
+                }
+                total {
+                    totalOrders
+                    totalRevenue
+                    totalWeight
+                }
+            }
+        }
+    }
+`;
+
+type StaffDateFilterValue = "TODAY" | "WEEK" | "MONTH" | "CUSTOM";
+
+type StaffPerformanceResponse = {
+    staffPerformance: {
+        stats: {
+            sAgent: AgentStats;
+            kAgent: AgentStats;
+            direct: AgentStats;
+            total: AgentStats;
+        };
+    };
+};
+
 export default function StaffPerformancePage() {
+    const { hasReadPermission, loading: authLoading } = useAuthStore();
     const [loading, setLoading] = useState(true);
     const [progress, setProgress] = useState("");
     const [dateFilter, setDateFilter] = useState<
-        "today" | "week" | "month" | "custom"
+        DateFilter
     >("week");
     const [customStartDate, setCustomStartDate] = useState("");
     const [customEndDate, setCustomEndDate] = useState("");
@@ -74,141 +96,52 @@ export default function StaffPerformancePage() {
         total: { ...initialStats },
     });
 
-    useEffect(() => {
-        fetchStats();
-    }, [dateFilter, customStartDate, customEndDate]);
+    const fetchStats = useCallback(async () => {
+        if (authLoading || !hasReadPermission()) return;
 
-    const fetchStats = async () => {
         try {
             setLoading(true);
-            setProgress("Initializing...");
+            setProgress("Loading performance data...");
 
-            // Calculate Date Range
-            const now = new Date();
-            let start = new Date();
-            let end = new Date(); // End is always now unless custom
-
-            if (dateFilter === "today") {
-                start.setHours(0, 0, 0, 0);
-            } else if (dateFilter === "week") {
-                start.setDate(now.getDate() - 7);
-            } else if (dateFilter === "month") {
-                start.setMonth(now.getMonth() - 1);
-            } else if (dateFilter === "custom") {
-                if (!customStartDate || !customEndDate) {
-                    setLoading(false);
-                    setProgress("");
-                    return; // Wait for both dates
-                }
-                start = new Date(customStartDate);
-                // Set end date to end of the day if it's just a date string
-                end = new Date(customEndDate);
-                end.setHours(23, 59, 59, 999);
-            } else {
-                // Default to all time or some logical default? Let's assume week if undefined but type says otherwise
-                start.setDate(now.getDate() - 7);
+            if (dateFilter === "custom" && (!customStartDate || !customEndDate)) {
+                setLoading(false);
+                setProgress("");
+                return;
             }
 
-            // 1. Fetch ALL relevant orders
-            const allOrders: Order[] = [];
-            let lastId = null;
-            let hasMore = true;
-            const CHUNK_SIZE = 1000; // Larger chunk for orders is usually fine
-
-            while (hasMore) {
-                setProgress(`Fetching orders... (${allOrders.length})`);
-
-                const queries: string[] = [
-                    Query.greaterThanEqual("$createdAt", start.toISOString()),
-                    Query.lessThanEqual("$createdAt", end.toISOString()),
-                    Query.limit(CHUNK_SIZE),
-                ];
-
-                if (lastId) {
-                    queries.push(Query.cursorAfter(lastId));
+            const data = await requestAdminGraphQL<StaffPerformanceResponse>(
+                STAFF_PERFORMANCE_QUERY,
+                {
+                    dateFilter: dateFilter.toUpperCase() as StaffDateFilterValue,
+                    startDate: dateFilter === "custom" ? customStartDate : null,
+                    endDate: dateFilter === "custom" ? customEndDate : null,
                 }
+            );
 
-                const response = await tablesDB.listRows({ databaseId: DATABASE_ID, tableId: ORDERS_TABLE_ID, queries: queries });
-
-                const chunk = response.rows as unknown as Order[];
-                if (chunk.length > 0) {
-                    allOrders.push(...chunk);
-                    lastId = chunk[chunk.length - 1].$id;
-                }
-
-                if (chunk.length < CHUNK_SIZE) {
-                    hasMore = false;
-                }
-            }
-
-            // 2. Fetch Customers
-            setProgress(`Processing ${allOrders.length} orders...`);
-
-            const customerMap = new Map<string, string>(); // Map ID -> Name
-            const uniqueCustomerIds = Array.from(new Set(allOrders.map(o => o.customer_id)));
-
-            // IMPROVED: Batch fetching with delay to handle rate limits
-            const CUSTOMER_BATCH_SIZE = 20;
-            let processedCustomers = 0;
-
-            for (let i = 0; i < uniqueCustomerIds.length; i += CUSTOMER_BATCH_SIZE) {
-                setProgress(`Fetching customer data... ${processedCustomers}/${uniqueCustomerIds.length}`);
-
-                const batchIds = uniqueCustomerIds.slice(i, i + CUSTOMER_BATCH_SIZE);
-
-                await Promise.all(batchIds.map(async (customerId) => {
-                    try {
-                        const customer = await tablesDB.getRow({ databaseId: DATABASE_ID, tableId: CUSTOMERS_TABLE_ID, rowId: customerId }) as unknown as Customer;
-                        customerMap.set(customerId, customer.full_name);
-                    } catch (error) {
-                        console.error(`Failed to fetch customer ${customerId}`, error);
-                        customerMap.set(customerId, ""); // Mark as empty but present
-                    }
-                }));
-
-                processedCustomers += batchIds.length;
-                // Add explicit delay to throttle requests
-                await new Promise(resolve => setTimeout(resolve, 50));
-            }
-
-            // 3. Calculate Stats
-            const newStats = {
-                s_agent: { ...initialStats },
-                k_agent: { ...initialStats },
-                direct: { ...initialStats },
-                total: { ...initialStats }
-            };
-
-            allOrders.forEach(order => {
-                if (order.status === 'returned') return;
-
-                const customerName = customerMap.get(order.customer_id) || "";
-                const type = getAgentType(customerName);
-
-                const weight = order.total_weight_kg || 0;
-                const price = order.total_price || 0;
-
-                // Add to specific agent
-                newStats[type].totalOrders += 1;
-                newStats[type].totalRevenue += price;
-                newStats[type].totalWeight += weight;
-
-                // Add to global total
-                newStats.total.totalOrders += 1;
-                newStats.total.totalRevenue += price;
-                newStats.total.totalWeight += weight;
+            setStats({
+                s_agent: data.staffPerformance.stats.sAgent,
+                k_agent: data.staffPerformance.stats.kAgent,
+                direct: data.staffPerformance.stats.direct,
+                total: data.staffPerformance.stats.total,
             });
-
-            setStats(newStats);
 
         } catch (error) {
             console.error("Error fetching stats:", error);
-            toast.error("Failed to load staff performance data");
+            toast.error(
+                error instanceof Error
+                    ? `Failed to load staff performance data: ${error.message}`
+                    : "Failed to load staff performance data"
+            );
         } finally {
             setLoading(false);
             setProgress("");
         }
-    };
+    }, [authLoading, customEndDate, customStartDate, dateFilter, hasReadPermission]);
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        fetchStats();
+    }, [fetchStats]);
 
     return (
         <AdminAuthGuard>
@@ -229,7 +162,7 @@ export default function StaffPerformancePage() {
                             <label className="text-sm font-medium text-gray-700 mb-1 block">Time Range</label>
                             <Select
                                 value={dateFilter}
-                                onValueChange={(val: any) => setDateFilter(val)}
+                                onValueChange={(val) => setDateFilter(val as DateFilter)}
                             >
                                 <SelectTrigger>
                                     <SelectValue />
