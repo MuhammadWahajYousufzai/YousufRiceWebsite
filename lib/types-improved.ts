@@ -104,6 +104,7 @@ export interface Address {
   customer_id: string;
   order_id: string;
   address_line: string;
+  city: string;
   latitude: number;
   longitude: number;
   maps_url: string;
@@ -158,6 +159,7 @@ export interface CreateOrderRequest {
   items: CreateOrderItemRequest[];
   address: {
     address_line: string;
+    city: string;
     latitude: number;
     longitude: number;
   };

@@ -1056,6 +1056,11 @@ export const createOrderTool = tool({
     customerName: z.string().describe("Customer full name"),
     phoneNumber: z.string().describe("Customer phone number with country code"),
     deliveryAddress: z.string().describe("Complete delivery address"),
+    city: z
+      .string()
+      .describe(
+        "Delivery city or town. Required for every order, e.g. Karachi, Lahore, Islamabad.",
+      ),
     items: z
       .array(
         z.object({
@@ -1099,6 +1104,7 @@ export const createOrderTool = tool({
     customerName,
     phoneNumber,
     deliveryAddress,
+    city,
     items,
     totalAmount,
     customerEmail,
@@ -1166,6 +1172,16 @@ export const createOrderTool = tool({
           order: null,
           message:
             "Please provide a complete delivery address with area and city.",
+        };
+      }
+
+      const normalizedCity = city.trim();
+      if (!normalizedCity) {
+        return {
+          success: false,
+          error: "City is required",
+          order: null,
+          message: "Please provide the delivery city before placing the order.",
         };
       }
 
@@ -1517,6 +1533,7 @@ export const createOrderTool = tool({
           customer_id: customerId,
           order_id: orderId,
           address_line: deliveryAddress.trim(),
+          city: normalizedCity,
           latitude: (hasCoordinates ? latitude : 0) || 0,
           longitude: (hasCoordinates ? longitude : 0) || 0,
           maps_url: mapsUrl,

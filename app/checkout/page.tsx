@@ -51,6 +51,8 @@ import {
 import { processLoyaltyReward } from "@/app/actions/loyalty-actions";
 import Image from "next/image";
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function CheckoutContent() {
   const router = useRouter();
   const { items, getTotalPrice, clearCart } = useCartStore();
@@ -81,6 +83,8 @@ function CheckoutContent() {
     useState<LoyaltyDiscount | null>(null);
   const [discountError, setDiscountError] = useState("");
   const [validatingDiscount, setValidatingDiscount] = useState(false);
+  const emailValue = formData.email.trim();
+  const isEmailInvalid = emailValue.length > 0 && !EMAIL_PATTERN.test(emailValue);
 
   // Ref to track if order has been placed to prevent redirect to cart
   const isOrderPlacedRef = useRef(false);
@@ -316,19 +320,47 @@ function CheckoutContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.fullName || !formData.phone || !formData.addressLine) {
+    const fullName = formData.fullName.trim();
+    const phone = formData.phone.trim();
+    const email = formData.email.trim().toLowerCase();
+    const addressLine = formData.addressLine.trim();
+    const notes = formData.notes.trim();
+    const selectedCity = formData.city.trim();
+    const otherCity = formData.otherCity.trim();
+    const isOtherCity = selectedCity === "Other City/Town";
+
+    if (!fullName || !phone || !addressLine) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    const phoneValidation = validatePakistaniPhoneNumber(formData.phone);
+    if (!selectedCity) {
+      toast.error("Please select your city");
+      return;
+    }
+
+    if (isOtherCity && !otherCity) {
+      toast.error("Please enter your city or town");
+      return;
+    }
+
+    const finalCity = isOtherCity ? otherCity : selectedCity;
+
+    if (!finalCity) {
+      toast.error("Please provide your city");
+      return;
+    }
+
+    const emailForOrder = email && EMAIL_PATTERN.test(email) ? email : "";
+
+    const phoneValidation = validatePakistaniPhoneNumber(phone);
     if (!phoneValidation.isValid) {
       toast.error(phoneValidation.error!);
       return;
     }
 
     // Use the cleaned phone number from validation
-    const cleanedPhone = phoneValidation.cleanedPhone || formData.phone;
+    const cleanedPhone = phoneValidation.cleanedPhone || phone;
 
     // Validate that no product has 0 price
     const zeroPriceProducts = items.filter(
@@ -366,7 +398,7 @@ function CheckoutContent() {
       // ---------------------------------------------------------
       // AGENT ID LOGIC: Append (S) or (K) for specific agents
       // ---------------------------------------------------------
-      let dbFullName = formData.fullName;
+      let dbFullName = fullName;
       if (user && user.labels) {
         // Case-insensitive check for agent labels
         const labels = user.labels.map((l) => l.toLowerCase());
@@ -429,7 +461,7 @@ function CheckoutContent() {
           data: {
             user_id: userIdToSave,
             full_name: dbFullName,
-            email: formData.email || null,
+            email: emailForOrder || existingCustomer.email || null,
             phone: formattedPhone, // Ensure phone is formatted
           },
         });
@@ -444,7 +476,7 @@ function CheckoutContent() {
             user_id: user?.$id || "guest",
             full_name: dbFullName,
             phone: formattedPhone,
-            email: formData.email || null,
+            email: emailForOrder || null,
           },
         });
       }
@@ -453,10 +485,6 @@ function CheckoutContent() {
       const orderId = ID.unique();
       const addressId = ID.unique();
       const mapsUrl = generateMapsUrl(formData.latitude, formData.longitude);
-      const finalCity =
-        formData.city === "Other City/Town"
-          ? formData.otherCity
-          : formData.city;
 
       const orderItems = formatOrderItems(
         items.map((item) => ({
@@ -584,7 +612,7 @@ function CheckoutContent() {
 
               // Metadata
               notes:
-                (formData.notes || "") +
+                notes +
                 (item.isColdDrinkBundle && item.quantity >= 10
                   ? `\n(Free Cold Drink Deal Qualified)`
                   : ""),
@@ -601,7 +629,7 @@ function CheckoutContent() {
           data: {
             customer_id: customerId,
             order_id: orderId,
-            address_line: formData.addressLine,
+            address_line: addressLine,
             city: finalCity,
             latitude: formData.latitude,
             longitude: formData.longitude,
@@ -669,7 +697,7 @@ function CheckoutContent() {
       // Track Purchase event (skip for agents)
       if (!isAgent) {
         const cleanedName =
-          sanitizeCustomerNameForMeta(formData.fullName) || formData.fullName;
+          sanitizeCustomerNameForMeta(fullName) || fullName;
 
         trackPurchase({
           value: getTotalPrice(),
@@ -683,7 +711,7 @@ function CheckoutContent() {
             item_price: item.product.base_price_per_kg,
           })),
           userData: {
-            email: formData.email || undefined,
+            email: emailForOrder || undefined,
             phone: formattedPhone,
             firstName: cleanedName.split(" ")[0],
             lastName: cleanedName.split(" ").slice(1).join(" "),
@@ -726,7 +754,7 @@ function CheckoutContent() {
         // Use Server Action to ensure secure execution with API key
         loyaltyData = await processLoyaltyReward(
           customerId,
-          formData.fullName,
+          fullName,
           getTotalPrice(),
           productNames,
           orderId,
@@ -737,7 +765,7 @@ function CheckoutContent() {
       }
 
       // Send order confirmation email if email is provided (AFTER loyalty check)
-      if (formData.email) {
+      if (emailForOrder) {
         try {
           await fetch("/api/send-order-confirmation", {
             method: "POST",
@@ -746,10 +774,10 @@ function CheckoutContent() {
             },
             body: JSON.stringify({
               orderId,
-              customerName: formData.fullName,
-              customerEmail: formData.email,
+              customerName: fullName,
+              customerEmail: emailForOrder,
               customerPhone: formattedPhone,
-              deliveryAddress: formData.addressLine,
+              deliveryAddress: addressLine,
               mapsUrl,
               items: items.map((item) => {
                 const savingsInfo = calculateSavings(
@@ -878,7 +906,9 @@ function CheckoutContent() {
                           Email (Optional)
                         </label>
                         <Input
-                          type="email"
+                          type="text"
+                          inputMode="email"
+                          autoComplete="email"
                           value={formData.email}
                           onChange={(e) =>
                             setFormData({ ...formData, email: e.target.value })
@@ -886,6 +916,12 @@ function CheckoutContent() {
                           className="border-2 border-gray-300 focus:border-[#ffff03] focus:ring-2 focus:ring-[#ffff03]/20 rounded-lg p-3 text-base"
                           placeholder="your@email.com"
                         />
+                        {isEmailInvalid && (
+                          <p className="mt-1 text-xs text-amber-700">
+                            Email looks incorrect, so we will skip confirmation
+                            email.
+                          </p>
+                        )}
                       </div>
                     </div>
 

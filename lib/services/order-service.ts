@@ -34,6 +34,16 @@ export class OrderService {
     try {
       // Create the main order first
       const orderId = ID.unique();
+      const addressLine = orderRequest.address.address_line.trim();
+      const city = orderRequest.address.city.trim();
+
+      if (!addressLine) {
+        throw new Error("Address line is required.");
+      }
+
+      if (!city) {
+        throw new Error("City is required.");
+      }
 
       // Calculate totals from items
       let totalItemsCount = 0;
@@ -183,7 +193,8 @@ export class OrderService {
         address = (await tablesDB.createRow({ databaseId: DATABASE_ID, tableId: ADDRESSES_TABLE_ID, rowId: addressId, data: {
                         customer_id: orderRequest.customer_id,
                         order_id: orderId,
-                        address_line: orderRequest.address.address_line,
+                        address_line: addressLine,
+                        city,
                         latitude: orderRequest.address.latitude,
                         longitude: orderRequest.address.longitude,
                         maps_url: mapsUrl,

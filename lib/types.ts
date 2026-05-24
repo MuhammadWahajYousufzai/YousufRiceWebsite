@@ -102,7 +102,7 @@ export interface Customer {
   $createdAt: string;
 }
 
-export interface Address extends Addresses { }
+export type Address = Addresses;
 
 export interface CartItem {
   product: Product;
@@ -140,6 +140,7 @@ export interface CreateOrderRequest {
   items: CreateOrderItemRequest[];
   address: {
     address_line: string;
+    city: string;
     latitude: number;
     longitude: number;
   };
