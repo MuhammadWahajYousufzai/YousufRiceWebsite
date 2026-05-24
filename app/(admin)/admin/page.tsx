@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,10 +16,7 @@ import {
   Image as ImageIcon,
   ArrowUpRight,
   ArrowDownRight,
-  Clock,
   CheckCircle2,
-  Truck,
-  AlertCircle,
   BarChart3,
   Activity,
   Calendar,
@@ -26,7 +24,6 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { clearImageCache } from "@/lib/actions/cache-actions";
-import { Order } from "@/lib/types";
 import AdminAuthGuard from "@/components/admin/AdminAuthGuard";
 import ReadOnlyGuard from "@/components/admin/ReadOnlyGuard";
 import { requestAdminGraphQL } from "@/lib/admin/graphql-client";
@@ -41,10 +38,6 @@ const ADMIN_DASHBOARD_QUERY = `
         lifetimeRevenue
         totalProducts
         totalCustomers
-        pendingOrders
-        acceptedOrders
-        outForDeliveryOrders
-        deliveredOrders
         availableProducts
         lowStockProducts
         revenueGrowth
@@ -53,7 +46,6 @@ const ADMIN_DASHBOARD_QUERY = `
       recentOrders {
         id
         createdAt
-        status
         totalPrice
       }
       topProducts {
@@ -74,10 +66,6 @@ type AdminDashboardResponse = {
       lifetimeRevenue: number;
       totalProducts: number;
       totalCustomers: number;
-      pendingOrders: number;
-      acceptedOrders: number;
-      outForDeliveryOrders: number;
-      deliveredOrders: number;
       availableProducts: number;
       lowStockProducts: number;
       revenueGrowth: number;
@@ -86,7 +74,6 @@ type AdminDashboardResponse = {
     recentOrders: Array<{
       id: string;
       createdAt: string;
-      status: Order["status"];
       totalPrice: number;
     }>;
     topProducts: Array<{
@@ -101,36 +88,81 @@ type AdminDashboardResponse = {
 type DashboardTopProduct =
   AdminDashboardResponse["adminDashboardOverview"]["topProducts"][number];
 
+type DashboardStats =
+  AdminDashboardResponse["adminDashboardOverview"]["stats"];
+
+type DashboardRecentOrder = {
+  $id: string;
+  $createdAt: string;
+  total_price: number;
+};
+
+const EMPTY_DASHBOARD_STATS: DashboardStats = {
+  totalOrders: 0,
+  monthlyRevenue: 0,
+  lifetimeRevenue: 0,
+  totalProducts: 0,
+  totalCustomers: 0,
+  availableProducts: 0,
+  lowStockProducts: 0,
+  revenueGrowth: 0,
+  ordersGrowth: 0,
+};
+
+function StatDisplay({
+  children,
+  className,
+  loading,
+  unavailable,
+}: {
+  children: ReactNode;
+  className: string;
+  loading: boolean;
+  unavailable: boolean;
+}) {
+  return (
+    <p className={className}>
+      {loading ? (
+        <span className="text-base font-semibold text-gray-500">Loading</span>
+      ) : unavailable ? (
+        <span className="text-base font-semibold text-red-600">Unavailable</span>
+      ) : (
+        children
+      )}
+    </p>
+  );
+}
+
 export default function AdminDashboard() {
   const { hasReadPermission, loading: authLoading } = useAuthStore();
-  const [stats, setStats] = useState({
-    totalOrders: 0,
-    monthlyRevenue: 0,
-    lifetimeRevenue: 0,
-    totalProducts: 0,
-    totalCustomers: 0,
-    pendingOrders: 0,
-    acceptedOrders: 0,
-    outForDeliveryOrders: 0,
-    deliveredOrders: 0,
-    availableProducts: 0,
-    lowStockProducts: 0,
-    revenueGrowth: 0,
-    ordersGrowth: 0,
-  });
-  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [recentOrders, setRecentOrders] = useState<DashboardRecentOrder[]>([]);
   const [topProducts, setTopProducts] = useState<DashboardTopProduct[]>([]);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [revalidating, setRevalidating] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchStats = async () => {
-      if (authLoading || !hasReadPermission()) return;
+      if (authLoading) return;
+
+      if (!hasReadPermission()) {
+        setDashboardLoading(false);
+        return;
+      }
+
+      setDashboardLoading(true);
+      setDashboardError(null);
 
       try {
         const data = await requestAdminGraphQL<AdminDashboardResponse>(
           ADMIN_DASHBOARD_QUERY
         );
         const overview = data.adminDashboardOverview;
+
+        if (cancelled) return;
 
         setStats({
           ...overview.stats,
@@ -140,23 +172,40 @@ export default function AdminDashboard() {
           overview.recentOrders.map((order) => ({
             $id: order.id,
             $createdAt: order.createdAt,
-            status: order.status,
             total_price: order.totalPrice,
-          })) as Order[]
+          }))
         );
         setTopProducts(overview.topProducts);
       } catch (error) {
+        if (cancelled) return;
+
         console.error("Error fetching stats:", error);
+        const message =
+          error instanceof Error ? error.message : "Failed to load dashboard stats";
+
+        setDashboardError(message);
         toast.error(
           error instanceof Error
             ? `Failed to load dashboard stats: ${error.message}`
             : "Failed to load dashboard stats"
         );
+      } finally {
+        if (!cancelled) {
+          setDashboardLoading(false);
+        }
       }
     };
 
     fetchStats();
+
+    return () => {
+      cancelled = true;
+    };
   }, [authLoading, hasReadPermission]);
+
+  const currentStats = stats ?? EMPTY_DASHBOARD_STATS;
+  const statsLoading = dashboardLoading && !stats;
+  const statsUnavailable = Boolean(dashboardError && !stats);
 
   const handleRevalidateImages = async () => {
     setRevalidating(true);
@@ -211,27 +260,35 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Monthly Revenue</p>
-                  <p className="text-3xl font-bold text-green-600">
-                    {formatCurrency(stats.monthlyRevenue)}
-                  </p>
+                  <StatDisplay
+                    className="text-3xl font-bold text-green-600"
+                    loading={statsLoading}
+                    unavailable={statsUnavailable}
+                  >
+                    {formatCurrency(currentStats.monthlyRevenue)}
+                  </StatDisplay>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                   <DollarSign className="w-6 h-6 text-green-600" />
                 </div>
               </div>
               <div className="flex items-center text-sm">
-                {stats.revenueGrowth >= 0 ? (
+                {statsLoading ? (
+                  <span className="text-gray-500">Loading trends</span>
+                ) : statsUnavailable ? (
+                  <span className="text-red-600">Stats unavailable</span>
+                ) : currentStats.revenueGrowth >= 0 ? (
                   <>
                     <ArrowUpRight className="w-4 h-4 text-green-600 mr-1" />
                     <span className="text-green-600 font-medium">
-                      +{Math.round(stats.revenueGrowth)}%
+                      +{Math.round(currentStats.revenueGrowth)}%
                     </span>
                   </>
                 ) : (
                   <>
                     <ArrowDownRight className="w-4 h-4 text-red-600 mr-1" />
                     <span className="text-red-600 font-medium">
-                      {Math.round(stats.revenueGrowth)}%
+                      {Math.round(currentStats.revenueGrowth)}%
                     </span>
                   </>
                 )}
@@ -245,9 +302,13 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Lifetime Revenue</p>
-                  <p className="text-3xl font-bold text-emerald-600">
-                    {formatCurrency(stats.lifetimeRevenue)}
-                  </p>
+                  <StatDisplay
+                    className="text-3xl font-bold text-emerald-600"
+                    loading={statsLoading}
+                    unavailable={statsUnavailable}
+                  >
+                    {formatCurrency(currentStats.lifetimeRevenue)}
+                  </StatDisplay>
                 </div>
                 <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
                   <DollarSign className="w-6 h-6 text-emerald-600" />
@@ -265,9 +326,13 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Total Orders</p>
-                  <p className="text-3xl font-bold text-blue-600">
-                    {stats.totalOrders}
-                  </p>
+                  <StatDisplay
+                    className="text-3xl font-bold text-blue-600"
+                    loading={statsLoading}
+                    unavailable={statsUnavailable}
+                  >
+                    {currentStats.totalOrders}
+                  </StatDisplay>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                   <ShoppingBag className="w-6 h-6 text-blue-600" />
@@ -276,7 +341,11 @@ export default function AdminDashboard() {
               <div className="flex items-center text-sm">
                 <BarChart3 className="w-4 h-4 text-blue-600 mr-1" />
                 <span className="text-gray-600">
-                  {stats.deliveredOrders} delivered
+                  {statsLoading
+                    ? "Loading"
+                    : statsUnavailable
+                      ? "Unavailable"
+                      : "All orders"}
                 </span>
               </div>
             </CardContent>
@@ -287,9 +356,13 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Products</p>
-                  <p className="text-3xl font-bold text-purple-600">
-                    {stats.totalProducts}
-                  </p>
+                  <StatDisplay
+                    className="text-3xl font-bold text-purple-600"
+                    loading={statsLoading}
+                    unavailable={statsUnavailable}
+                  >
+                    {currentStats.totalProducts}
+                  </StatDisplay>
                 </div>
                 <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
                   <Package className="w-6 h-6 text-purple-600" />
@@ -298,7 +371,11 @@ export default function AdminDashboard() {
               <div className="flex items-center text-sm">
                 <CheckCircle2 className="w-4 h-4 text-purple-600 mr-1" />
                 <span className="text-gray-600">
-                  {stats.availableProducts} available
+                  {statsLoading
+                    ? "Loading"
+                    : statsUnavailable
+                      ? "Unavailable"
+                      : `${currentStats.availableProducts} available`}
                 </span>
               </div>
             </CardContent>
@@ -309,9 +386,13 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Customers</p>
-                  <p className="text-3xl font-bold text-orange-600">
-                    {stats.totalCustomers}
-                  </p>
+                  <StatDisplay
+                    className="text-3xl font-bold text-orange-600"
+                    loading={statsLoading}
+                    unavailable={statsUnavailable}
+                  >
+                    {currentStats.totalCustomers}
+                  </StatDisplay>
                 </div>
                 <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
                   <Users className="w-6 h-6 text-orange-600" />
@@ -324,86 +405,6 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Order Status Pipeline */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Truck className="w-5 h-5" />
-              Order Pipeline
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="flex items-center gap-3 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-yellow-900">
-                    {stats.pendingOrders}
-                  </p>
-                  <p className="text-sm text-yellow-700">Pending</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Package className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-blue-900">
-                    {stats.acceptedOrders}
-                  </p>
-                  <p className="text-sm text-blue-700">Accepted</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                  <Truck className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-purple-900">
-                    {stats.outForDeliveryOrders}
-                  </p>
-                  <p className="text-sm text-purple-700">Out for Delivery</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-green-900">
-                    {stats.deliveredOrders}
-                  </p>
-                  <p className="text-sm text-green-700">Delivered</p>
-                </div>
-              </div>
-            </div>
-            {stats.pendingOrders > 0 && (
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-yellow-600" />
-                  <span className="text-sm font-medium text-yellow-900">
-                    {stats.pendingOrders} order
-                    {stats.pendingOrders !== 1 ? "s" : ""} need
-                    {stats.pendingOrders === 1 ? "s" : ""} your attention
-                  </span>
-                </div>
-                <ReadOnlyGuard>
-                  <Link href="/admin/orders">
-                    <Button
-                      size="sm"
-                      className="bg-yellow-600 hover:bg-yellow-700"
-                    >
-                      Review Orders
-                    </Button>
-                  </Link>
-                </ReadOnlyGuard>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         {/* Recent Activity & Quick Actions */}
         <div className="grid lg:grid-cols-2 gap-6 mb-8">
@@ -425,7 +426,15 @@ export default function AdminDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {recentOrders.length === 0 ? (
+              {statsLoading ? (
+                <p className="text-center text-gray-500 py-8">
+                  Loading recent orders
+                </p>
+              ) : statsUnavailable ? (
+                <p className="text-center text-red-600 py-8">
+                  Recent orders unavailable
+                </p>
+              ) : recentOrders.length === 0 ? (
                 <p className="text-center text-gray-500 py-8">
                   No recent orders
                 </p>
@@ -437,23 +446,13 @@ export default function AdminDashboard() {
                       className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div
-                          className={`w-2 h-2 rounded-full ${order.status === "pending"
-                            ? "bg-yellow-500"
-                            : order.status === "accepted"
-                              ? "bg-blue-500"
-                              : order.status === "out_for_delivery"
-                                ? "bg-purple-500"
-                                : "bg-green-500"
-                            }`}
-                        />
+                        <div className="w-2 h-2 rounded-full bg-blue-500" />
                         <div>
                           <p className="font-medium text-sm">
                             Order #{order.$id.slice(0, 8)}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {new Date(order.$createdAt).toLocaleDateString()} •{" "}
-                            {order.status.replace("_", " ")}
+                            {new Date(order.$createdAt).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
@@ -498,7 +497,15 @@ export default function AdminDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {topProducts.length === 0 ? (
+              {statsLoading ? (
+                <p className="text-center text-gray-500 py-8">
+                  Loading product data
+                </p>
+              ) : statsUnavailable ? (
+                <p className="text-center text-red-600 py-8">
+                  Product data unavailable
+                </p>
+              ) : topProducts.length === 0 ? (
                 <p className="text-center text-gray-500 py-8">
                   No product data available
                 </p>

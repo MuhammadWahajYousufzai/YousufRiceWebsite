@@ -88,15 +88,34 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const result = await execute({
-    schema: adminGraphQLSchema,
-    document,
-    operationName,
-    variableValues:
-      body.variables && typeof body.variables === "object"
-        ? (body.variables as Record<string, unknown>)
-        : undefined,
-  });
+  let result;
+  try {
+    result = await execute({
+      schema: adminGraphQLSchema,
+      document,
+      operationName,
+      variableValues:
+        body.variables && typeof body.variables === "object"
+          ? (body.variables as Record<string, unknown>)
+          : undefined,
+    });
+  } catch (error) {
+    console.error("Admin GraphQL execution failed:", error);
+
+    return NextResponse.json(
+      {
+        errors: [
+          {
+            message:
+              error instanceof Error
+                ? error.message
+                : "Admin GraphQL execution failed",
+          },
+        ],
+      },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json(result, {
     headers: {

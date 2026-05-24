@@ -97,6 +97,7 @@ export type StaffPerformancePayload = {
 type OrderSummaryRow = AppwriteRow & {
   customer_id?: string;
   address_id?: string;
+  order_items?: string;
   status?: string;
   total_price?: number;
   total_weight_kg?: number;
@@ -385,6 +386,22 @@ async function fetchOrderSummaries(maxRows = MAX_ANALYTICS_ROWS) {
   });
 }
 
+async function fetchDashboardOrderSummaries(maxRows = MAX_ANALYTICS_ROWS) {
+  return fetchAllRows<OrderSummaryRow>({
+    tableIdValue: ordersTableId(),
+    queries: [Query.orderDesc("$createdAt")],
+    select: [
+      "$id",
+      "$createdAt",
+      "customer_id",
+      "address_id",
+      "order_items",
+      "total_price",
+    ],
+    maxRows,
+  });
+}
+
 async function fetchProductSummaries() {
   return fetchAllRows<ProductSummaryRow>({
     tableIdValue: productsTableId(),
@@ -410,6 +427,19 @@ async function fetchOrderItemSummaries() {
   });
 }
 
+async function fetchOptionalOrderItemSummaries() {
+  try {
+    return await fetchOrderItemSummaries();
+  } catch (error) {
+    console.warn("Dashboard top products unavailable:", error);
+    return {
+      rows: [] as OrderItemSummaryRow[],
+      total: 0,
+      truncated: false,
+    };
+  }
+}
+
 async function fetchCustomerSummaries() {
   return fetchAllRows<CustomerSummaryRow>({
     tableIdValue: customersTableId(),
@@ -428,6 +458,47 @@ async function fetchAddressSummaries() {
   });
 }
 
+function addTopProductCount(
+  productCounts: Map<string, { count: number; revenue: number; name: string }>,
+  productId: string,
+  count: number,
+  revenue: number,
+  name: string
+) {
+  const current =
+    productCounts.get(productId) ??
+    {
+      count: 0,
+      revenue: 0,
+      name,
+    };
+
+  current.count += count;
+  current.revenue += revenue;
+  productCounts.set(productId, current);
+}
+
+function parseOrderItemsSnapshot(orderItems: string | undefined) {
+  if (!orderItems) return [];
+
+  return orderItems
+    .split(",")
+    .map((item) => {
+      const [productId, quantityText] = item.split(":");
+      const quantity = Number.parseFloat((quantityText || "").replace("kg", ""));
+
+      if (!productId || !Number.isFinite(quantity)) {
+        return null;
+      }
+
+      return {
+        productId,
+        quantity,
+      };
+    })
+    .filter((item): item is { productId: string; quantity: number } => Boolean(item));
+}
+
 export async function getDashboardOverview() {
   return cached<DashboardOverview>("dashboard-overview", DASHBOARD_TTL_MS, async () => {
     const ordersTable = ordersTableId();
@@ -437,26 +508,18 @@ export async function getDashboardOverview() {
       ordersResult,
       productsResult,
       customersCount,
-      pendingOrders,
-      acceptedOrders,
-      outForDeliveryOrders,
-      deliveredOrders,
       recentOrdersPage,
       orderItemsResult,
     ] = await Promise.all([
-      fetchOrderSummaries(),
+      fetchDashboardOrderSummaries(),
       fetchProductSummaries(),
       countRows(customersTableId()),
-      countRows(ordersTable, [Query.equal("status", "pending")]),
-      countRows(ordersTable, [Query.equal("status", "accepted")]),
-      countRows(ordersTable, [Query.equal("status", "out_for_delivery")]),
-      countRows(ordersTable, [Query.equal("status", "delivered")]),
       listRowsPage<OrderSummaryRow>(ordersTable, [
         Query.orderDesc("$createdAt"),
         Query.limit(5),
-        Query.select(["$id", "$createdAt", "status", "total_price"]),
+        Query.select(["$id", "$createdAt", "total_price"]),
       ]),
-      fetchOrderItemSummaries(),
+      fetchOptionalOrderItemSummaries(),
     ]);
 
     const orders = ordersResult.rows;
@@ -498,20 +561,30 @@ export async function getDashboardOverview() {
       const productId = item.product_id;
       if (!productId) continue;
 
-      const current =
-        productCounts.get(productId) ??
-        {
-          count: 0,
-          revenue: 0,
-          name:
-            productLookup.get(productId) ||
-            item.product_name ||
-            `Product ${productId.slice(0, 8)}`,
-        };
+      addTopProductCount(
+        productCounts,
+        productId,
+        toNumber(item.quantity_kg),
+        toNumber(item.total_after_discount),
+        productLookup.get(productId) ||
+          item.product_name ||
+          `Product ${productId.slice(0, 8)}`
+      );
+    }
 
-      current.count += toNumber(item.quantity_kg);
-      current.revenue += toNumber(item.total_after_discount);
-      productCounts.set(productId, current);
+    if (productCounts.size === 0) {
+      for (const order of orders) {
+        for (const item of parseOrderItemsSnapshot(order.order_items)) {
+          addTopProductCount(
+            productCounts,
+            item.productId,
+            item.quantity,
+            0,
+            productLookup.get(item.productId) ||
+              `Product ${item.productId.slice(0, 8)}`
+          );
+        }
+      }
     }
 
     const topProducts = Array.from(productCounts.entries())
@@ -526,10 +599,10 @@ export async function getDashboardOverview() {
         lifetimeRevenue: activeRevenue(orders),
         totalProducts: productsResult.total,
         totalCustomers: customersCount,
-        pendingOrders,
-        acceptedOrders,
-        outForDeliveryOrders,
-        deliveredOrders,
+        pendingOrders: 0,
+        acceptedOrders: 0,
+        outForDeliveryOrders: 0,
+        deliveredOrders: 0,
         availableProducts: products.filter((product) => Boolean(product.available)).length,
         lowStockProducts: 0,
         revenueGrowth: roundOne(revenueGrowth),
