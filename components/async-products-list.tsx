@@ -17,6 +17,12 @@ export async function AsyncProductsList() {
   const allProducts = await getCachedRegularProducts();
   const products = allProducts.filter((p) => p.available);
 
+  const EXCLUDED_COLD_DRINK_IDS = new Set([
+    "6916cb0a0021c185b7e9",
+    "6916cbbe0016c5a0e97a",
+    "6916cbef001ae8761e0c",
+  ]);
+
   // Custom sort order: Every Grain -> All Steam -> All Sella -> Bachat Basmati -> Bachat Regular
   const sortedProducts = products.sort((a, b) => {
     const aName = a.name.toLowerCase();
@@ -217,6 +223,11 @@ export async function AsyncProductsList() {
                         <ProductCard
                           product={product}
                           imageFileId={imageMap.get(product.$id)}
+                          badgeLabel={
+                            EXCLUDED_COLD_DRINK_IDS.has(product.$id)
+                              ? undefined
+                              : "Free Cold Drink"
+                          }
                         />
                       </div>
                     </div>
