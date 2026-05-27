@@ -5,11 +5,12 @@ import { loadCatalogSnapshot } from "@/lib/catalog";
 import {
   BANNER_STORAGE_BUCKET_ID,
   Channel,
+  APPWRITE_REALTIME_ENABLED,
   DATABASE_ID,
   PRODUCT_IMAGES_TABLE_ID,
   PRODUCTS_TABLE_ID,
   STORAGE_BUCKET_ID,
-  realtime,
+  client,
 } from "@/lib/appwrite";
 
 interface CatalogState {
@@ -44,7 +45,7 @@ function catalogChannels() {
 
   return channels.filter(
     (channel): channel is NonNullable<(typeof channels)[number]> => Boolean(channel),
-  );
+  ).map((channel) => channel.toString());
 }
 
 export function useLiveCatalog() {
@@ -95,32 +96,20 @@ export function useLiveCatalog() {
   useEffect(() => {
     const channels = catalogChannels();
 
-    if (channels.length === 0) {
+    if (!APPWRITE_REALTIME_ENABLED || channels.length === 0) {
       return;
     }
 
-    let mounted = true;
-    let subscription: { unsubscribe: () => Promise<void> } | null = null;
+    let unsubscribe: (() => void) | null = null;
 
-    realtime
-      .subscribe(channels, scheduleRealtimeRefresh)
-      .then((nextSubscription) => {
-        if (!mounted) {
-          void nextSubscription.unsubscribe();
-          return;
-        }
-
-        subscription = nextSubscription;
-      })
-      .catch((error) => {
-        console.warn("Realtime catalog refresh unavailable:", error);
-      });
+    try {
+      unsubscribe = client.subscribe(channels, scheduleRealtimeRefresh);
+    } catch (error) {
+      console.warn("Realtime catalog refresh unavailable:", error);
+    }
 
     return () => {
-      mounted = false;
-      if (subscription) {
-        void subscription.unsubscribe();
-      }
+      unsubscribe?.();
     };
   }, [scheduleRealtimeRefresh]);
 

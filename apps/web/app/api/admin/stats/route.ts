@@ -14,6 +14,8 @@ const isBuildTime = () => {
 const dummyStats = {
   totalOrders: 0,
   totalRevenue: 0,
+  monthlyRevenue: 0,
+  lifetimeRevenue: 0,
   totalProducts: 0,
   totalCustomers: 0,
   pendingOrders: 0,
@@ -38,6 +40,8 @@ export async function GET(req: NextRequest) {
       stats: {
         totalOrders: 0,
         totalRevenue: 0,
+        monthlyRevenue: 0,
+        lifetimeRevenue: 0,
         totalProducts: 0,
         totalCustomers: 0,
         pendingOrders: 0,
@@ -99,6 +103,8 @@ export async function GET(req: NextRequest) {
       stats: {
         totalOrders: ordersRes.total,
         totalRevenue,
+        monthlyRevenue: lastMonthRevenue,
+        lifetimeRevenue: totalRevenue,
         totalProducts: productsRes.total,
         totalCustomers: customersRes.total,
         pendingOrders: pendingRes.total,

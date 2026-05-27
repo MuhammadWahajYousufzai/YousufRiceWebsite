@@ -6,7 +6,6 @@ import {
   Client,
   ID,
   Query,
-  Realtime,
   Storage,
   TablesDB,
 } from "react-native-appwrite";
@@ -27,6 +26,8 @@ export const ADDRESSES_TABLE_ID = process.env.EXPO_PUBLIC_APPWRITE_ADDRESSES_TAB
 export const STORAGE_BUCKET_ID = process.env.EXPO_PUBLIC_APPWRITE_STORAGE_BUCKET_ID ?? "";
 export const BANNER_STORAGE_BUCKET_ID =
   process.env.EXPO_PUBLIC_BANNER_STORAGE_BUCKET_ID ?? "";
+export const APPWRITE_REALTIME_ENABLED =
+  process.env.EXPO_PUBLIC_ENABLE_APPWRITE_REALTIME === "true";
 
 export const client = new Client()
   .setEndpoint(APPWRITE_ENDPOINT)
@@ -37,7 +38,6 @@ if (APPWRITE_PLATFORM) {
 }
 
 export const account = new Account(client);
-export const realtime = new Realtime(client);
 export const tablesDB = new TablesDB(client);
 export const storage = new Storage(client);
 

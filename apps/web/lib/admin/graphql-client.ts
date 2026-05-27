@@ -13,7 +13,7 @@ export async function requestAdminGraphQL<TData>(
   query: string,
   variables?: Record<string, unknown>
 ) {
-  const authHeaders = await createAuthHeaders();
+  const authHeaders = await createAdminAuthHeaders();
   const response = await fetch("/api/admin/graphql", {
     method: "POST",
     credentials: "include",
@@ -43,7 +43,7 @@ export async function requestAdminGraphQL<TData>(
   return payload.data;
 }
 
-async function createAuthHeaders(): Promise<Record<string, string>> {
+export async function createAdminAuthHeaders(): Promise<Record<string, string>> {
   try {
     const token = await account.createJWT();
     if (token.jwt) {

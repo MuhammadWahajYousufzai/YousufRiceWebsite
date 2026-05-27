@@ -16,7 +16,7 @@ interface ServerSession {
 
 class ServerSessionManager {
   private sessions = new Map<string, ServerSession>();
-  private cleanupInterval: NodeJS.Timeout | null = null;
+  private cleanupInterval: ReturnType<typeof setInterval> | null = null;
   private readonly SESSION_TIMEOUT_HOURS = 2; // Sessions expire after 2 hours of inactivity
   private readonly CLEANUP_INTERVAL_MINUTES = 15; // Clean up expired sessions every 15 minutes
 

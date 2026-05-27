@@ -26,7 +26,10 @@ import toast from "react-hot-toast";
 import { clearImageCache } from "@/lib/actions/cache-actions";
 import AdminAuthGuard from "@/components/admin/AdminAuthGuard";
 import ReadOnlyGuard from "@/components/admin/ReadOnlyGuard";
-import { requestAdminGraphQL } from "@/lib/admin/graphql-client";
+import {
+  createAdminAuthHeaders,
+  requestAdminGraphQL,
+} from "@/lib/admin/graphql-client";
 import { useAuthStore } from "@/lib/store/auth-store";
 
 const ADMIN_DASHBOARD_QUERY = `
@@ -97,6 +100,21 @@ type DashboardRecentOrder = {
   total_price: number;
 };
 
+type LegacyDashboardStatsResponse = {
+  stats?: {
+    totalOrders?: number;
+    totalRevenue?: number;
+    monthlyRevenue?: number;
+    lifetimeRevenue?: number;
+    totalProducts?: number;
+    totalCustomers?: number;
+    availableProducts?: number;
+    lowStockProducts?: number;
+    revenueGrowth?: number;
+    ordersGrowth?: number;
+  };
+};
+
 const EMPTY_DASHBOARD_STATS: DashboardStats = {
   totalOrders: 0,
   monthlyRevenue: 0,
@@ -108,6 +126,63 @@ const EMPTY_DASHBOARD_STATS: DashboardStats = {
   revenueGrowth: 0,
   ordersGrowth: 0,
 };
+
+const DASHBOARD_RETRY_DELAY_MS = 900;
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchDashboardOverviewWithRetry() {
+  try {
+    return await requestAdminGraphQL<AdminDashboardResponse>(
+      ADMIN_DASHBOARD_QUERY
+    );
+  } catch (error) {
+    await wait(DASHBOARD_RETRY_DELAY_MS);
+
+    try {
+      return await requestAdminGraphQL<AdminDashboardResponse>(
+        ADMIN_DASHBOARD_QUERY
+      );
+    } catch {
+      throw error;
+    }
+  }
+}
+
+async function fetchLegacyDashboardStats(): Promise<DashboardStats | null> {
+  const authHeaders = await createAdminAuthHeaders();
+  const response = await fetch("/api/admin/stats", {
+    credentials: "include",
+    headers: authHeaders,
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const payload =
+    (await response.json().catch(() => ({}))) as LegacyDashboardStatsResponse;
+
+  if (!payload.stats) {
+    return null;
+  }
+
+  return {
+    totalOrders: payload.stats.totalOrders ?? 0,
+    monthlyRevenue:
+      payload.stats.monthlyRevenue ?? payload.stats.totalRevenue ?? 0,
+    lifetimeRevenue:
+      payload.stats.lifetimeRevenue ?? payload.stats.totalRevenue ?? 0,
+    totalProducts: payload.stats.totalProducts ?? 0,
+    totalCustomers: payload.stats.totalCustomers ?? 0,
+    availableProducts: payload.stats.availableProducts ?? 0,
+    lowStockProducts: payload.stats.lowStockProducts ?? 0,
+    revenueGrowth: payload.stats.revenueGrowth ?? 0,
+    ordersGrowth: payload.stats.ordersGrowth ?? 0,
+  };
+}
 
 function StatDisplay({
   children,
@@ -157,9 +232,7 @@ export default function AdminDashboard() {
       setDashboardError(null);
 
       try {
-        const data = await requestAdminGraphQL<AdminDashboardResponse>(
-          ADMIN_DASHBOARD_QUERY
-        );
+        const data = await fetchDashboardOverviewWithRetry();
         const overview = data.adminDashboardOverview;
 
         if (cancelled) return;
@@ -182,6 +255,17 @@ export default function AdminDashboard() {
         console.error("Error fetching stats:", error);
         const message =
           error instanceof Error ? error.message : "Failed to load dashboard stats";
+        const fallbackStats = await fetchLegacyDashboardStats().catch(() => null);
+
+        if (cancelled) return;
+
+        if (fallbackStats) {
+          setStats(fallbackStats);
+          setRecentOrders([]);
+          setTopProducts([]);
+          setDashboardError(null);
+          return;
+        }
 
         setDashboardError(message);
         toast.error(

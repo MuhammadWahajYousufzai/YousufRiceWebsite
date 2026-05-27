@@ -13,7 +13,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Product } from "@repo/types";
 import {
   calculatePrice,
@@ -46,6 +46,7 @@ const emptyBags = {
 export default function HomeScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const bannerWidth = Math.max(320, width - 32);
   const scrollRef = useRef<ScrollView>(null);
   const { addBag, getItem, getTotalItems, removeBag } = useCart();
@@ -113,7 +114,10 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[
+          styles.container,
+          { paddingBottom: 120 + insets.bottom + 24 },
+        ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => refresh("manual")} />}
       >
         <View style={styles.announcementBar}>

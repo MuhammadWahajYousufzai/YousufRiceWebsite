@@ -18,6 +18,8 @@
 # next.js
 /.next/
 **/.next/
+/.turbo/
+**/.turbo/
 /out/
 **/out/
 
