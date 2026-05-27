@@ -6,6 +6,12 @@ import {
   getCachedRegularProducts,
   getCachedProductImages,
 } from "@/lib/cached-data";
+import {
+  groupProductsByCatalogCategory,
+  isColdDrinkBundleProduct,
+  shouldShowColdDrinkBadge,
+  sortProductsForCatalog,
+} from "@repo/utils";
 import { Package } from "lucide-react";
 
 /**
@@ -17,58 +23,7 @@ export async function AsyncProductsList() {
   const allProducts = await getCachedRegularProducts();
   const products = allProducts.filter((p) => p.available);
 
-  const EXCLUDED_COLD_DRINK_IDS = new Set([
-    "6916cb0a0021c185b7e9",
-    "6916cbbe0016c5a0e97a",
-    "6916cbef001ae8761e0c",
-  ]);
-
-  // Custom sort order: Every Grain -> All Steam -> All Sella -> Bachat Basmati -> Bachat Regular
-  const sortedProducts = products.sort((a, b) => {
-    const aName = a.name.toLowerCase();
-    const bName = b.name.toLowerCase();
-
-    // Define priority groups
-    const getPriority = (name: string) => {
-      if (name.includes("every grain")) return 1;
-      if (name.includes("steam")) return 2;
-      if (name.includes("sella")) return 3;
-      if (name.includes("bachat") && name.includes("basmati")) return 4;
-      if (name.includes("bachat")) return 5;
-      return 6;
-    };
-
-    const aPriority = getPriority(aName);
-    const bPriority = getPriority(bName);
-
-    if (aPriority !== bPriority) {
-      return aPriority - bPriority;
-    }
-
-    // Sub-sort for Steam products
-    if (aPriority === 2 && bPriority === 2) {
-      const getSteamPriority = (name: string) => {
-        if (name.includes("x-steam") || name.includes("x steam")) return 1;
-        if (name.includes("platinum")) return 2;
-        if (name.includes("premium")) return 3;
-        return 4;
-      };
-      return getSteamPriority(aName) - getSteamPriority(bName);
-    }
-
-    // Sub-sort for Sella products
-    if (aPriority === 3 && bPriority === 3) {
-      const getSellaPriority = (name: string) => {
-        if (name.includes("ultimate")) return 1;
-        if (name.includes("platinum")) return 2;
-        if (name.includes("gold")) return 3;
-        return 4;
-      };
-      return getSellaPriority(aName) - getSellaPriority(bName);
-    }
-
-    return 0;
-  });
+  const sortedProducts = sortProductsForCatalog(products);
 
   const productIds = sortedProducts.map((p) => p.$id);
   const images = await getCachedProductImages(productIds);
@@ -133,12 +88,7 @@ export async function AsyncProductsList() {
           <div className="flex justify-center w-full">
             <div className="grid gap-6 justify-center grid-cols-[repeat(auto-fit,minmax(250px,1fr))] max-w-5xl w-full">
               {sortedProducts
-                .filter(
-                  (p) =>
-                    p.name.toLowerCase().includes("ultimate sella") ||
-                    p.name.toLowerCase().includes("x-steam") ||
-                    p.name.toLowerCase().includes("x steam"),
-                )
+                .filter(isColdDrinkBundleProduct)
                 .map((product) => (
                   <div
                     key={`bundle-${product.$id}`}
@@ -164,35 +114,7 @@ export async function AsyncProductsList() {
       <div className="mb-16 w-full">
         {/* Group products by category */}
         {(() => {
-          const categories: { [key: string]: typeof sortedProducts } = {};
-          const categoryOrder: string[] = [];
-
-          sortedProducts.forEach((product) => {
-            const productName = product.name.toLowerCase();
-            let category = "Other";
-
-            if (productName.includes("every grain")) {
-              category = "Every Grain Rice XXXL";
-            } else if (productName.includes("steam")) {
-              category = "Basmati Steam Rice";
-            } else if (productName.includes("sella")) {
-              category = "Sella Rice";
-            }
-            if (
-              productName.includes("bachat") ||
-              productName.includes("regular")
-            ) {
-              category = "Bachat Rice";
-            }
-
-            if (!categories[category]) {
-              categories[category] = [];
-              categoryOrder.push(category);
-            }
-            categories[category].push(product);
-          });
-
-          return categoryOrder.map((category) => (
+          return groupProductsByCatalogCategory(sortedProducts).map(({ category, products: categoryProducts }) => (
             <div key={category} className="mb-16">
               {/* Category Heading */}
               <div className="mb-8 mt-8">
@@ -217,16 +139,16 @@ export async function AsyncProductsList() {
       w-full
     "
                 >
-                  {categories[category].map((product) => (
+                  {categoryProducts.map((product) => (
                     <div key={product.$id} className="flex justify-center">
                       <div className="w-full max-w-sm">
                         <ProductCard
                           product={product}
                           imageFileId={imageMap.get(product.$id)}
                           badgeLabel={
-                            EXCLUDED_COLD_DRINK_IDS.has(product.$id)
-                              ? undefined
-                              : "Free Cold Drink"
+                            shouldShowColdDrinkBadge(product)
+                              ? "Free Cold Drink"
+                              : undefined
                           }
                         />
                       </div>

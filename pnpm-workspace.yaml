@@ -1,0 +1,12 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+onlyBuiltDependencies:
+  - msgpackr-extract
+  - sharp
+  - unrs-resolver
+allowBuilds:
+  esbuild: true
+  msgpackr-extract: true
+  sharp: true
+  unrs-resolver: true

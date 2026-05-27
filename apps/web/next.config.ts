@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["@repo/appwrite", "@repo/types", "@repo/ui", "@repo/utils"],
+
   // ============================================
   // Next.js 16 Advanced Features
   // ============================================
@@ -73,6 +75,30 @@ const nextConfig: NextConfig = {
   // ============================================
   // Turbopack is now the default bundler - no config needed!
   // It provides 5-10x faster builds and hot module replacement
+  turbopack: {
+    resolveExtensions: [
+      ".web.tsx",
+      ".web.ts",
+      ".web.js",
+      ".tsx",
+      ".ts",
+      ".jsx",
+      ".js",
+      ".mjs",
+      ".json",
+    ],
+  },
+
+  webpack(config) {
+    config.resolve.extensions = [
+      ".web.tsx",
+      ".web.ts",
+      ".web.js",
+      ...config.resolve.extensions,
+    ];
+
+    return config;
+  },
 
   // ============================================
   // Headers for SEO and Security

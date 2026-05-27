@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "paths": {
+      "@repo/ui": ["./packages/ui/src/index.ts"],
+      "@repo/types": ["./packages/types/src/index.ts"],
+      "@repo/utils": ["./packages/utils/src/index.ts"],
+      "@repo/appwrite": ["./packages/appwrite/src/index.ts"]
+    }
+  }
+}

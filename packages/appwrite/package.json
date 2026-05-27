@@ -1,0 +1,31 @@
+{
+  "name": "@repo/appwrite",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.41",
+    "appwrite": "^22.4.1",
+    "react-native-appwrite": "^0.31.0",
+    "react-native-url-polyfill": "^3.0.0"
+  },
+  "peerDependencies": {
+    "appwrite": ">=22.0.0",
+    "react-native-appwrite": ">=0.31.0"
+  },
+  "peerDependenciesMeta": {
+    "appwrite": {
+      "optional": true
+    },
+    "react-native-appwrite": {
+      "optional": true
+    }
+  }
+}

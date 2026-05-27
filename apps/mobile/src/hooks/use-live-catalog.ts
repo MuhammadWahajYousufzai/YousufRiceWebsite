@@ -1,0 +1,158 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AppState, type AppStateStatus } from "react-native";
+import type { BannerImage, ProductWithImage } from "@/lib/catalog";
+import { loadCatalogSnapshot } from "@/lib/catalog";
+import {
+  BANNER_STORAGE_BUCKET_ID,
+  Channel,
+  DATABASE_ID,
+  PRODUCT_IMAGES_TABLE_ID,
+  PRODUCTS_TABLE_ID,
+  STORAGE_BUCKET_ID,
+  realtime,
+} from "@/lib/appwrite";
+
+interface CatalogState {
+  banners: BannerImage[];
+  error: string | null;
+  loading: boolean;
+  products: ProductWithImage[];
+  refreshing: boolean;
+  updatedAt: string | null;
+}
+
+const initialState: CatalogState = {
+  banners: [],
+  error: null,
+  loading: true,
+  products: [],
+  refreshing: false,
+  updatedAt: null,
+};
+
+function catalogChannels() {
+  const channels = [
+    DATABASE_ID && PRODUCTS_TABLE_ID
+      ? Channel.tablesdb(DATABASE_ID).table(PRODUCTS_TABLE_ID).row()
+      : null,
+    DATABASE_ID && PRODUCT_IMAGES_TABLE_ID
+      ? Channel.tablesdb(DATABASE_ID).table(PRODUCT_IMAGES_TABLE_ID).row()
+      : null,
+    STORAGE_BUCKET_ID ? Channel.bucket(STORAGE_BUCKET_ID).file() : null,
+    BANNER_STORAGE_BUCKET_ID ? Channel.bucket(BANNER_STORAGE_BUCKET_ID).file() : null,
+  ];
+
+  return channels.filter(
+    (channel): channel is NonNullable<(typeof channels)[number]> => Boolean(channel),
+  );
+}
+
+export function useLiveCatalog() {
+  const [state, setState] = useState<CatalogState>(initialState);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const refresh = useCallback(async (mode: "initial" | "manual" | "realtime" = "manual") => {
+    setState((current) => ({
+      ...current,
+      error: null,
+      loading: mode === "initial" ? true : current.loading,
+      refreshing: mode !== "initial",
+    }));
+
+    try {
+      const snapshot = await loadCatalogSnapshot();
+      setState({
+        ...snapshot,
+        error: null,
+        loading: false,
+        refreshing: false,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        error: error instanceof Error ? error.message : "Could not load catalog.",
+        loading: false,
+        refreshing: false,
+      }));
+    }
+  }, []);
+
+  const scheduleRealtimeRefresh = useCallback(() => {
+    if (refreshTimer.current) {
+      clearTimeout(refreshTimer.current);
+    }
+
+    refreshTimer.current = setTimeout(() => {
+      refresh("realtime");
+    }, 250);
+  }, [refresh]);
+
+  useEffect(() => {
+    refresh("initial");
+  }, [refresh]);
+
+  useEffect(() => {
+    const channels = catalogChannels();
+
+    if (channels.length === 0) {
+      return;
+    }
+
+    let mounted = true;
+    let subscription: { unsubscribe: () => Promise<void> } | null = null;
+
+    realtime
+      .subscribe(channels, scheduleRealtimeRefresh)
+      .then((nextSubscription) => {
+        if (!mounted) {
+          void nextSubscription.unsubscribe();
+          return;
+        }
+
+        subscription = nextSubscription;
+      })
+      .catch((error) => {
+        console.warn("Realtime catalog refresh unavailable:", error);
+      });
+
+    return () => {
+      mounted = false;
+      if (subscription) {
+        void subscription.unsubscribe();
+      }
+    };
+  }, [scheduleRealtimeRefresh]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refresh("realtime");
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [refresh]);
+
+  useEffect(() => {
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === "active") {
+        refresh("manual");
+      }
+    };
+
+    const subscription = AppState.addEventListener("change", handleAppStateChange);
+    return () => subscription.remove();
+  }, [refresh]);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimer.current) {
+        clearTimeout(refreshTimer.current);
+      }
+    };
+  }, []);
+
+  return {
+    ...state,
+    refresh,
+  };
+}
