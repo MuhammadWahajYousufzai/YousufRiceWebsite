@@ -1,4 +1,12 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 const nextConfig = {
+  output: "standalone",
+  outputFileTracingRoot: path.join(__dirname, "../.."),
+
   transpilePackages: ["@repo/appwrite", "@repo/types", "@repo/ui", "@repo/utils"],
 
   cacheComponents: true,

@@ -8,8 +8,10 @@ echo "=== Preparing output for Appwrite SSR bundler ==="
 # Remove old root-level .next if it exists
 rm -rf .next
 
-# Copy .next from apps/web to root so SSR bundler finds it
-cp -r apps/web/.next ./.next
+# Copy .next from apps/web to root so SSR bundler finds it.
+# tar preserves pnpm's symlinks more reliably than cp -r across build hosts.
+mkdir -p .next
+tar -C apps/web/.next -cf - . | tar -C .next -xf -
 
 # Create symlinks for packages the SSR bundler expects at root
 ln -sf apps/web/node_modules/next node_modules/next

@@ -49,7 +49,7 @@
             "timeout": 30,
             "buildRuntime": "node-22",
             "adapter": "ssr",
-            "installCommand": "npm install -g pnpm@11.4.0 && pnpm i --filter=@yousuf-rice/web...",
+            "installCommand": "npm install -g pnpm@11.4.0 && pnpm install --frozen-lockfile",
             "buildCommand": "bash apps/web/scripts/appwrite-build.sh",
             "outputDirectory": "./.next",
             "fallbackFile": "",
