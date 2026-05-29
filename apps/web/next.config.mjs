@@ -1,45 +1,29 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+const nextConfig = {
   transpilePackages: ["@repo/appwrite", "@repo/types", "@repo/ui", "@repo/utils"],
 
-  // ============================================
-  // Next.js 16 Advanced Features
-  // ============================================
-  // reactCompiler: true,
-  // Enable Cache Components with PPR (Partial Prerendering)
-  // This enables the new caching model with 'use cache' directive
-  // But disable it for API routes to avoid build-time authentication issues
   cacheComponents: true,
 
-  // Configure cache profiles for optimal performance
   cacheLife: {
-    // Default profile for most content
     default: {
-      stale: 3600, // 1 hour stale time
-      revalidate: 86400, // 24 hours revalidation
-      expire: 604800, // 7 days expiration
+      stale: 3600,
+      revalidate: 86400,
+      expire: 604800,
     },
-    // For frequently changing content
     frequent: {
-      stale: 300, // 5 minutes
-      revalidate: 900, // 15 minutes
-      expire: 3600, // 1 hour
+      stale: 300,
+      revalidate: 900,
+      expire: 3600,
     },
-    // For static content that rarely changes
     max: {
-      stale: 86400, // 24 hours
-      revalidate: 604800, // 7 days
-      expire: 2592000, // 30 days
+      stale: 86400,
+      revalidate: 604800,
+      expire: 2592000,
     },
   },
 
-  // ============================================
-  // Image Optimization
-  // ============================================
   images: {
-    unoptimized: false, // Enable image optimization for caching
-    minimumCacheTTL: 2592000, // Cache optimized images for 30 days (in seconds)
+    unoptimized: false,
+    minimumCacheTTL: 2592000,
     qualities: [20, 75, 85, 90],
     remotePatterns: [
       {
@@ -49,7 +33,7 @@ const nextConfig: NextConfig = {
         pathname: "/v1/storage/buckets/**",
       },
     ],
-    formats: ["image/avif", "image/webp"], // AVIF first: ~50% smaller than WebP, WebP as fallback
+    formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     dangerouslyAllowSVG: true,
@@ -57,24 +41,10 @@ const nextConfig: NextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 
-  // ============================================
-  // Performance & SEO Optimizations
-  // ============================================
-
-  // Compress responses for better performance (helps SEO)
   compress: true,
-
-  // Generate ETags for caching
   generateEtags: true,
-
-  // Remove X-Powered-By header for security
   poweredByHeader: false,
 
-  // ============================================
-  // Turbopack Configuration (Default in Next.js 16)
-  // ============================================
-  // Turbopack is now the default bundler - no config needed!
-  // It provides 5-10x faster builds and hot module replacement
   turbopack: {
     resolveExtensions: [
       ".web.tsx",
@@ -100,9 +70,6 @@ const nextConfig: NextConfig = {
     return config;
   },
 
-  // ============================================
-  // Headers for SEO and Security
-  // ============================================
   async headers() {
     return [
       {
@@ -139,7 +106,6 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // Cache static assets aggressively
         source: "/static/:path*",
         headers: [
           {
@@ -149,7 +115,6 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // Service Worker specific headers for PWA
         source: "/sw.js",
         headers: [
           {
