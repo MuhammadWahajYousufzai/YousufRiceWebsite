@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
@@ -14,30 +13,6 @@ import { Suspense } from "react";
 import { ImageProtection } from "@/components/image-protection";
 import { Popup } from "@/components/popup";
 import { CartDrawer } from "@/components/cart-drawer";
-import { Playfair_Display, Poppins } from "next/font/google";
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["700", "900"],
-  variable: "--font-playfair",
-});
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  variable: "--font-poppins",
-});
-
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 // Support multiple domains - uses primary domain for metadata
 const primaryDomain =
@@ -161,13 +136,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`scroll-smooth ${playfair.variable} ${poppins.variable}`}>
+    <html lang="en" className="scroll-smooth">
       <head>
         <MetaPixel />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className="antialiased">
         {/* Transitions removed */}
 
         {/* Wrap dynamic components in Suspense for PPR */}
@@ -211,4 +184,3 @@ export default function RootLayout({
     </html>
   );
 }
-

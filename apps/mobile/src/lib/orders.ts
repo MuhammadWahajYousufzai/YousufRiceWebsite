@@ -27,6 +27,7 @@ export interface CheckoutFormData {
   longitude: number;
   notes?: string;
   phone: string;
+  userId?: string;
 }
 
 export interface PlaceOrderResult {
@@ -80,6 +81,7 @@ export async function placeCodOrder(
   const city = formData.city.trim();
   const email = formData.email?.trim().toLowerCase() || "";
   const notes = formData.notes?.trim() || "";
+  const userId = formData.userId?.trim() || "guest";
 
   if (!fullName || !phone || !addressLine || !city) {
     throw new Error("Please fill in name, phone, city, and address.");
@@ -120,7 +122,7 @@ export async function placeCodOrder(
         user_id:
           existingCustomer.user_id && existingCustomer.user_id !== "guest"
             ? existingCustomer.user_id
-            : "guest",
+            : userId,
       },
     });
   } else {
@@ -133,7 +135,7 @@ export async function placeCodOrder(
         email: email || null,
         full_name: fullName,
         phone: formattedPhone,
-        user_id: "guest",
+        user_id: userId,
       },
     });
   }

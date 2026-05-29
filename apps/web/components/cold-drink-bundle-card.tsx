@@ -84,7 +84,7 @@ export function ColdDrinkBundleCard({
             {/* Tagline */}
             <div className="mb-2 inline-flex">
               <span className="bg-linear-to-r from-orange-50 to-amber-50 text-orange-700 text-[10px] font-black px-2.5 py-1 rounded shadow-sm uppercase tracking-widest border border-orange-200/60">
-                10kg Exclusive
+                10kg Bundle
               </span>
             </div>
 

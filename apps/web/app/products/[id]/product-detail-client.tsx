@@ -415,7 +415,7 @@ export default function ProductDetailClient({
                     </span>
                     <div>
                       <h3 className="font-black text-cyan-300 mb-1 text-base sm:text-lg tracking-widest uppercase drop-shadow">
-                        Exclusive Bundle Deal
+                        Cold Drink Bundle
                       </h3>
                       <p className="text-xs sm:text-sm text-blue-50 font-medium leading-relaxed">
                         You get{" "}

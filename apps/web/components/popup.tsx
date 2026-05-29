@@ -54,7 +54,7 @@ export function Popup() {
                             <h2 className="title-text text-4xl font-black leading-tight mb-1">
                                 Post-Eid<br />Special Offer!
                             </h2>
-                            <p className="text-yellow-300/80 text-sm font-medium tracking-widest uppercase mt-1">Exclusive Offer Inside</p>
+                            <p className="text-yellow-300/80 text-sm font-medium tracking-widest uppercase mt-1">Karachi home delivery offer</p>
                         </div>
 
                         {/* Big FREE badge */}

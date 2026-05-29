@@ -1,7 +1,7 @@
 "use cache";
 
 import Link from "next/link";
-import { MapPin, Phone, Mail, Instagram, Facebook } from "lucide-react";
+import { Phone, Mail } from "lucide-react";
 
 export async function Footer() {
   return (
@@ -28,7 +28,7 @@ export async function Footer() {
                 className="bg-white/10 hover:bg-[#ffff03] hover:text-[#27247b] p-2.5 rounded-full transition-all duration-300 hover:scale-110"
                 aria-label="Instagram"
               >
-                <Instagram className="w-5 h-5" />
+                <span className="text-sm font-black leading-none">IG</span>
               </a>
               <a
                 href="https://www.facebook.com/yousufricee"
@@ -37,7 +37,7 @@ export async function Footer() {
                 className="bg-white/10 hover:bg-[#ffff03] hover:text-[#27247b] p-2.5 rounded-full transition-all duration-300 hover:scale-110"
                 aria-label="Facebook"
               >
-                <Facebook className="w-5 h-5" />
+                <span className="text-sm font-black leading-none">FB</span>
               </a>
             </div>
           </div>

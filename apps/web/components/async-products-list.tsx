@@ -75,11 +75,10 @@ export async function AsyncProductsList() {
       {process.env.NEXT_PUBLIC_ENABLE_COLD_DRINK_BUNDLE === "true" && (
         <div className="mb-16 w-full">
           <div className="mb-8 mt-8">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
               <div className="flex-1 h-0.5 bg-linear-to-r from-transparent via-blue-500 to-blue-500"></div>
-              <h3 className="text-2xl md:text-3xl font-black text-blue-600 whitespace-nowrap flex items-center gap-2">
-                <span className="text-3xl">🥤</span> Exclusive Free Cold Drink
-                Deals
+              <h3 className="min-w-0 max-w-[min(100%,42rem)] text-center text-xl sm:text-2xl md:text-3xl font-black text-blue-600 leading-tight flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+                <span className="text-2xl sm:text-3xl">🥤</span> Cold Drink Bundles
               </h3>
               <div className="flex-1 h-0.5 bg-linear-to-l from-transparent via-blue-500 to-blue-500"></div>
             </div>
@@ -118,9 +117,9 @@ export async function AsyncProductsList() {
             <div key={category} className="mb-16">
               {/* Category Heading */}
               <div className="mb-8 mt-8">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                   <div className="flex-1 h-0.5 bg-linear-to-r from-transparent via-[#ffff03] to-[#ffff03]"></div>
-                  <h3 className="text-2xl md:text-3xl font-bold text-[#27247b] whitespace-nowrap">
+                  <h3 className="min-w-0 max-w-full text-center text-2xl md:text-3xl font-bold text-[#27247b] leading-tight">
                     {category}
                   </h3>
                   <div className="flex-1 h-0.5 bg-linear-to-l from-transparent via-[#ffff03] to-[#ffff03]"></div>

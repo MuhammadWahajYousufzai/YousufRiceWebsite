@@ -1,1827 +1,2345 @@
 {
-  "projectId": "69b54919003a3b212c96",
-  "projectName": "YousufRiceWebsite",
-  "endpoint": "https://yousufricemill.com/v1",
-  "settings": {
-    "services": {
-      "account": true,
-      "avatars": true,
-      "databases": true,
-      "locale": true,
-      "health": true,
-      "storage": true,
-      "teams": true,
-      "users": true,
-      "sites": true,
-      "functions": true,
-      "graphql": true,
-      "messaging": true
+    "projectId": "69b54919003a3b212c96",
+    "projectName": "YousufRice",
+    "settings": {
+        "services": {
+            "account": true,
+            "avatars": true,
+            "databases": true,
+            "locale": true,
+            "health": true,
+            "storage": true,
+            "teams": true,
+            "users": true,
+            "sites": true,
+            "functions": true,
+            "graphql": true,
+            "messaging": true
+        },
+        "protocols": {},
+        "auth": {
+            "methods": {
+                "jwt": true,
+                "phone": true,
+                "invites": true,
+                "anonymous": true,
+                "email-otp": true,
+                "magic-url": true,
+                "email-password": true
+            },
+            "security": {
+                "duration": 31536000,
+                "limit": 0,
+                "sessionsLimit": 10,
+                "passwordHistory": 0,
+                "passwordDictionary": false,
+                "personalDataCheck": false,
+                "sessionAlerts": false,
+                "mockNumbers": []
+            }
+        }
     },
-    "auth": {
-      "methods": {
-        "jwt": true,
-        "phone": true,
-        "invites": true,
-        "anonymous": true,
-        "email-otp": true,
-        "magic-url": true,
-        "email-password": true
-      },
-      "security": {
-        "duration": 31536000,
-        "limit": 0,
-        "sessionsLimit": 10,
-        "passwordHistory": 0,
-        "passwordDictionary": false,
-        "personalDataCheck": false,
-        "sessionAlerts": false,
-        "mockNumbers": []
-      }
-    }
-  },
-  "sites": [
-    {
-      "$id": "6998449900073b9988fc",
-      "name": "yousuf_rice_website",
-      "path": "sites/yousuf_rice_website",
-      "framework": "nextjs",
-      "enabled": true,
-      "logging": true,
-      "timeout": 30,
-      "buildRuntime": "node-22",
-      "adapter": "ssr",
-      "installCommand": "pnpm i",
-      "buildCommand": "pnpm build",
-      "outputDirectory": "./.next",
-      "fallbackFile": "",
-      "specification": "s-1vcpu-1gb"
-    }
-  ],
-  "tablesDB": [
-    {
-      "$id": "6915ff74001aa13f6189",
-      "name": "YousufRiceWebsite",
-      "enabled": true
-    }
-  ],
-  "tables": [
-    {
-      "$id": "6916ac06002cba46aaa9",
-      "$permissions": [
-        "read(\"any\")",
-        "create(\"label:admin\")",
-        "read(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")"
-      ],
-      "databaseId": "6915ff74001aa13f6189",
-      "name": "Products",
-      "enabled": true,
-      "rowSecurity": false,
-      "columns": [
+    "sites": [
         {
-          "key": "name",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
+            "$id": "69b551f10036f43dd741",
+            "name": "YousufRiceWebsite",
+            "path": "sites/yousufricewebsite",
+            "framework": "nextjs",
+            "logging": true,
+            "timeout": 30,
+            "buildRuntime": "node-22",
+            "adapter": "ssr",
+            "installCommand": "pnpm i",
+            "buildCommand": "pnpm build",
+            "outputDirectory": "./.next",
+            "fallbackFile": "",
+            "startCommand": "",
+            "buildSpecification": "s-1vcpu-512mb",
+            "runtimeSpecification": "s-1vcpu-512mb",
+            "deploymentRetention": 0
         },
         {
-          "key": "has_tier_pricing",
-          "type": "boolean",
-          "required": true,
-          "array": false,
-          "default": null
-        },
-        {
-          "key": "description",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 1000,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "available",
-          "type": "boolean",
-          "required": true,
-          "array": false,
-          "default": null
-        },
-        {
-          "key": "primary_image_id",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "tier_2_4kg_price",
-          "type": "double",
-          "required": false,
-          "array": false,
-          "min": -1.7976931348623157e308,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "tier_5_9kg_price",
-          "type": "double",
-          "required": false,
-          "array": false,
-          "min": -1.7976931348623157e308,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "tier_10kg_up_price",
-          "type": "double",
-          "required": false,
-          "array": false,
-          "min": -1.7976931348623157e308,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "base_price_per_kg",
-          "type": "double",
-          "required": false,
-          "array": false,
-          "min": -1.7976931348623157e308,
-          "max": 1.7976931348623157e308,
-          "default": null
+            "$id": "6a01b1dd000ae0766e13",
+            "name": "customer-retargeting",
+            "path": "sites/customer-retargeting",
+            "framework": "nextjs",
+            "logging": true,
+            "timeout": 30,
+            "buildRuntime": "node-22",
+            "adapter": "ssr",
+            "installCommand": "npm install",
+            "buildCommand": "npm run build",
+            "outputDirectory": "./.next",
+            "fallbackFile": "",
+            "startCommand": "",
+            "buildSpecification": "s-1vcpu-512mb",
+            "runtimeSpecification": "s-1vcpu-512mb",
+            "deploymentRetention": 0
         }
-      ],
-      "indexes": []
-    },
-    {
-      "$id": "6916ac06002cd4ccd508",
-      "$permissions": [
-        "read(\"any\")",
-        "create(\"label:admin\")",
-        "read(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")"
-      ],
-      "databaseId": "6915ff74001aa13f6189",
-      "name": "Product Images",
-      "enabled": true,
-      "rowSecurity": false,
-      "columns": [
+    ],
+    "tablesDB": [
         {
-          "key": "file_id",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "product_id",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "is_primary",
-          "type": "boolean",
-          "required": false,
-          "array": false,
-          "default": null
-        },
-        {
-          "key": "is_cold_drink_bundle",
-          "type": "boolean",
-          "required": false,
-          "array": false,
-          "default": null
+            "$id": "6915ff74001aa13f6189",
+            "name": "YousufRiceWebsite",
+            "enabled": true
         }
-      ],
-      "indexes": []
-    },
-    {
-      "$id": "6916ac06002cd811b613",
-      "$permissions": [
-        "create(\"any\")",
-        "read(\"any\")",
-        "update(\"any\")",
-        "create(\"users\")",
-        "read(\"users\")",
-        "update(\"users\")"
-      ],
-      "databaseId": "6915ff74001aa13f6189",
-      "name": "Customers",
-      "enabled": true,
-      "rowSecurity": false,
-      "columns": [
+    ],
+    "tables": [
         {
-          "key": "email",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
+            "$id": "6916ac06002cba46aaa9",
+            "$permissions": [
+                "read(\"any\")",
+                "create(\"label:admin\")",
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Products",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "name",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "has_tier_pricing",
+                    "type": "boolean",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "description",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "available",
+                    "type": "boolean",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "primary_image_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "tier_2_4kg_price",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "tier_5_9kg_price",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "tier_10kg_up_price",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "base_price_per_kg",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                }
+            ],
+            "indexes": []
         },
         {
-          "key": "user_id",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
+            "$id": "6916ac06002cd4ccd508",
+            "$permissions": [
+                "read(\"any\")",
+                "create(\"label:admin\")",
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Product Images",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "file_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "product_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "is_primary",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "is_cold_drink_bundle",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                }
+            ],
+            "indexes": []
         },
         {
-          "key": "full_name",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
+            "$id": "6916ac06002cd811b613",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")"
+            ],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Customers",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "email",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "user_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "full_name",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "phone",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 20,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": []
         },
         {
-          "key": "phone",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 20,
-          "default": null,
-          "encrypt": false
+            "$id": "6916ac06002cd3573362",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "create(\"label:admin\")",
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")",
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Orders",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "address_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "customer_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "total_price",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "pending",
+                        "accepted",
+                        "out_for_delivery",
+                        "delivered",
+                        "returned"
+                    ]
+                },
+                {
+                    "key": "order_items",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 5000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "total_items_count",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "total_weight_kg",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "subtotal_before_discount",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "total_discount_amount",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "payment_method",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "transaction_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "6916ac06002cdc8982bf",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Addresses",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "address_line",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "longitude",
+                    "type": "double",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "customer_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "latitude",
+                    "type": "double",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "order_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "maps_url",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "city",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "order_items_table",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "create(\"label:admin\")",
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")",
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Order Items",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "order_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "product_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "product_name",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "product_description",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "quantity_kg",
+                    "type": "double",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "bags_3kg",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "bags_5kg",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "bags_10kg",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "bags_25kg",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "price_per_kg_at_order",
+                    "type": "double",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "base_price_per_kg",
+                    "type": "double",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "tier_applied",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "discount_percentage",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "discount_amount",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "subtotal_before_discount",
+                    "type": "double",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "total_after_discount",
+                    "type": "double",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "notes",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "discount_management",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Discount Management",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "type",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "customer_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "customer_name",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "card_status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "total_purchases",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "total_purchase_amount",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "eligible_for_extra_discount",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                },
+                {
+                    "key": "extra_discount_percentage",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "rule_name",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "discount_percentage",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "rule_active",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                },
+                {
+                    "key": "discount_code",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "code_status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "used_in_order_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "code_generated_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "code_used_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "is_enabled",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                },
+                {
+                    "key": "order_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "push_subscriptions",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")",
+                "create(\"label:admin\")",
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Push Subscriptions",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "endpoint",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "p256dh",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "auth",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "user_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "active",
+                    "format": "enum",
+                    "elements": [
+                        "active",
+                        "inactive",
+                        "pending"
+                    ]
+                },
+                {
+                    "key": "fail_count",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "user_agent",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "ip_address",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "last_used_at",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "created_at",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "tags",
+                    "type": "string",
+                    "required": false,
+                    "array": true,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_user_id",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "user_id"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_status",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "status"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_endpoint",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "endpoint"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_created_at",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "created_at"
+                    ],
+                    "orders": []
+                }
+            ]
+        },
+        {
+            "$id": "push_notification_log",
+            "$permissions": [
+                "create(\"label:admin\")",
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Push Notification Log",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "subscription_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "body",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "url",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "tag",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "image",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "sent",
+                    "format": "enum",
+                    "elements": [
+                        "sent",
+                        "clicked",
+                        "dismissed",
+                        "failed",
+                        "delivered"
+                    ]
+                },
+                {
+                    "key": "sent_at",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "clicked_at",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "dismissed_at",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "created_at",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "error_message",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "error_code",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_subscription_status",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "subscription_id",
+                        "status"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_status_sent",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "status",
+                        "sent_at"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_tag",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "tag"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_created_at",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "created_at"
+                    ],
+                    "orders": []
+                }
+            ]
+        },
+        {
+            "$id": "push_templates",
+            "$permissions": [
+                "create(\"label:admin\")",
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Push Templates",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "name",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "body",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 300,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "icon",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "badge",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "tag",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "url",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "actions",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "require_interaction",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "ttl",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 86400,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "is_active",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                },
+                {
+                    "key": "created_at",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_name",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "name"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_is_active",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "is_active"
+                    ],
+                    "orders": []
+                }
+            ]
+        },
+        {
+            "$id": "push_user_preferences",
+            "$permissions": [
+                "create(\"label:admin\")",
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Push User Preferences",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "user_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "enabled",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                },
+                {
+                    "key": "quiet_hours_start",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 10,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "quiet_hours_end",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 10,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "timezone",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": "UTC",
+                    "encrypt": false
+                },
+                {
+                    "key": "excluded_tags",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "max_per_day",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 10,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "updated_at",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_user_id",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "user_id"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_enabled",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "enabled"
+                    ],
+                    "orders": []
+                }
+            ]
+        },
+        {
+            "$id": "notification_campaigns",
+            "$permissions": [
+                "create(\"label:admin\")",
+                "read(\"any\")",
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Notification Campaigns",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "title",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 200,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "body",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "image_url",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "target_url",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "icon_url",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "badge_url",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "tag",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "campaign_type",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": "push",
+                    "encrypt": false
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "draft",
+                    "format": "enum",
+                    "elements": [
+                        "draft",
+                        "scheduled",
+                        "sending",
+                        "sent",
+                        "failed",
+                        "cancelled"
+                    ]
+                },
+                {
+                    "key": "is_active",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                },
+                {
+                    "key": "sent_count",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "clicked_count",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "failed_count",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "delivered_count",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "dismissed_count",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "scheduled_at",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "sent_at",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "created_by",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "target_segment",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": "all",
+                    "encrypt": false
+                },
+                {
+                    "key": "target_tags",
+                    "type": "string",
+                    "required": false,
+                    "array": true,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "actions",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "require_interaction",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_status",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "status"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_is_active",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "is_active"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_campaign_type",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "campaign_type"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_created_at",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "$createdAt"
+                    ],
+                    "orders": []
+                }
+            ]
+        },
+        {
+            "$id": "notification_campaign_analytics",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"users\")"
+            ],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Notification Campaign Analytics",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "campaign_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "subscription_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "event_type",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "sent",
+                    "format": "enum",
+                    "elements": [
+                        "sent",
+                        "delivered",
+                        "clicked",
+                        "dismissed",
+                        "failed"
+                    ]
+                },
+                {
+                    "key": "user_agent",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "ip_address",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "clicked_url",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "error_code",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "error_message",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "event_at",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_campaign_id",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "campaign_id"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_event_type",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "event_type"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_campaign_event",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "campaign_id",
+                        "event_type"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_event_at",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "event_at"
+                    ],
+                    "orders": []
+                }
+            ]
+        },
+        {
+            "$id": "announcements",
+            "$permissions": [],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Announcements",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "text",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "is_active",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                },
+                {
+                    "key": "bg_color",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "text_color",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "popups",
+            "$permissions": [],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Popups",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "image_url",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "link_url",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "is_active",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                },
+                {
+                    "key": "delay_ms",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 3000,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "6a015036003bf28a22c3",
+            "$permissions": [],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "previous website WordPress Customers",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "email",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "phone",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 20,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "first_name",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "last_name",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "city",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "value",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_wp_phone",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "phone"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "6a0150390003c09e45c7",
+            "$permissions": [],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Call Logs",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "customer_phone",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 20,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "customer_name",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 200,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "agent_name",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "response_type",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "notes",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 2000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "follow_up_date",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "order_placed",
+                    "type": "boolean",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "order_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_calls_phone",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "customer_phone"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "6a01503b002bec544f9b",
+            "$permissions": [],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Agent Orders",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "customer_phone",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 20,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "customer_name",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 200,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "address",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "city",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "items",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 5000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "total_price",
+                    "type": "double",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 30,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "agent_name",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "notes",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 2000,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_orders_phone",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "customer_phone"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "6a01503e0028b4106c78",
+            "$permissions": [],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Campaigns",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "name",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 200,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "description",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 2000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "target_city",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "min_value",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "max_value",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 20,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "created_by",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": []
         }
-      ],
-      "indexes": []
-    },
-    {
-      "$id": "6916ac06002cd3573362",
-      "$permissions": [
-        "create(\"any\")",
-        "read(\"any\")",
-        "create(\"label:admin\")",
-        "read(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")",
-        "create(\"users\")",
-        "read(\"users\")",
-        "update(\"users\")",
-        "delete(\"users\")"
-      ],
-      "databaseId": "6915ff74001aa13f6189",
-      "name": "Orders",
-      "enabled": true,
-      "rowSecurity": false,
-      "columns": [
+    ],
+    "buckets": [
         {
-          "key": "address_id",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
+            "$id": "product-images",
+            "$permissions": [
+                "create(\"label:admin\")",
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")",
+                "read(\"any\")"
+            ],
+            "fileSecurity": false,
+            "name": "product-images",
+            "enabled": true,
+            "maximumFileSize": 5242880,
+            "allowedFileExtensions": [
+                "jpg",
+                "jpeg",
+                "png",
+                "webp"
+            ],
+            "compression": "none",
+            "encryption": true,
+            "antivirus": false
         },
         {
-          "key": "customer_id",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
+            "$id": "banner-images",
+            "$permissions": [
+                "create(\"label:admin\")",
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")",
+                "read(\"any\")"
+            ],
+            "fileSecurity": false,
+            "name": "banner-images",
+            "enabled": true,
+            "maximumFileSize": 10242880,
+            "allowedFileExtensions": [
+                "jpg",
+                "jpeg",
+                "png",
+                "webp"
+            ],
+            "compression": "none",
+            "encryption": true,
+            "antivirus": false
         },
         {
-          "key": "total_price",
-          "type": "integer",
-          "required": true,
-          "array": false,
-          "min": -9223372036854775808,
-          "max": 9223372036854775807,
-          "default": null
+            "$id": "69b54a6f001d2c036ee4",
+            "$permissions": [
+                "read(\"any\")"
+            ],
+            "fileSecurity": false,
+            "name": "MillImageId",
+            "enabled": true,
+            "maximumFileSize": 30000000,
+            "allowedFileExtensions": [],
+            "compression": "none",
+            "encryption": true,
+            "antivirus": true
         },
         {
-          "key": "status",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "elements": [
-            "pending",
-            "accepted",
-            "out_for_delivery",
-            "delivered",
-            "returned"
-          ],
-          "format": "enum",
-          "default": null
-        },
-        {
-          "key": "order_items",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 5000,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "total_items_count",
-          "type": "integer",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 9223372036854775807,
-          "default": null
-        },
-        {
-          "key": "total_weight_kg",
-          "type": "double",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "subtotal_before_discount",
-          "type": "double",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "total_discount_amount",
-          "type": "double",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "payment_method",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 100,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "transaction_id",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
+            "$id": "notification-images",
+            "$permissions": [
+                "create(\"label:admin\")",
+                "read(\"any\")",
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "fileSecurity": false,
+            "name": "Notification Images",
+            "enabled": true,
+            "maximumFileSize": 30000000,
+            "allowedFileExtensions": [
+                "image/jpeg",
+                "image/png",
+                "image/gif",
+                "image/webp",
+                "image/svg+xml",
+                "jpg",
+                "png",
+                "svg",
+                "gif"
+            ],
+            "compression": "none",
+            "encryption": true,
+            "antivirus": true
         }
-      ],
-      "indexes": []
-    },
-    {
-      "$id": "6916ac06002cdc8982bf",
-      "$permissions": [
-        "create(\"any\")",
-        "read(\"any\")",
-        "update(\"any\")",
-        "delete(\"any\")"
-      ],
-      "databaseId": "6915ff74001aa13f6189",
-      "name": "Addresses",
-      "enabled": true,
-      "rowSecurity": false,
-      "columns": [
-        {
-          "key": "address_line",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 1000,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "longitude",
-          "type": "double",
-          "required": true,
-          "array": false,
-          "min": -1.7976931348623157e308,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "customer_id",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "latitude",
-          "type": "double",
-          "required": true,
-          "array": false,
-          "min": -1.7976931348623157e308,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "order_id",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "maps_url",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "city",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        }
-      ],
-      "indexes": []
-    },
-    {
-      "$id": "order_items_table",
-      "$permissions": [
-        "create(\"any\")",
-        "read(\"any\")",
-        "create(\"label:admin\")",
-        "read(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")",
-        "create(\"users\")",
-        "read(\"users\")",
-        "update(\"users\")",
-        "delete(\"users\")"
-      ],
-      "databaseId": "6915ff74001aa13f6189",
-      "name": "Order Items",
-      "enabled": true,
-      "rowSecurity": false,
-      "columns": [
-        {
-          "key": "order_id",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "product_id",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "product_name",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "product_description",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 1000,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "quantity_kg",
-          "type": "double",
-          "required": true,
-          "array": false,
-          "min": -1.7976931348623157e308,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "bags_3kg",
-          "type": "integer",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 9223372036854775807,
-          "default": null
-        },
-        {
-          "key": "bags_5kg",
-          "type": "integer",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 9223372036854775807,
-          "default": null
-        },
-        {
-          "key": "bags_10kg",
-          "type": "integer",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 9223372036854775807,
-          "default": null
-        },
-        {
-          "key": "bags_25kg",
-          "type": "integer",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 9223372036854775807,
-          "default": null
-        },
-        {
-          "key": "price_per_kg_at_order",
-          "type": "double",
-          "required": true,
-          "array": false,
-          "min": -1.7976931348623157e308,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "base_price_per_kg",
-          "type": "double",
-          "required": true,
-          "array": false,
-          "min": -1.7976931348623157e308,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "tier_applied",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "discount_percentage",
-          "type": "double",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "discount_amount",
-          "type": "double",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "subtotal_before_discount",
-          "type": "double",
-          "required": true,
-          "array": false,
-          "min": -1.7976931348623157e308,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "total_after_discount",
-          "type": "double",
-          "required": true,
-          "array": false,
-          "min": -1.7976931348623157e308,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "notes",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 500,
-          "default": null,
-          "encrypt": false
-        }
-      ],
-      "indexes": []
-    },
-    {
-      "$id": "discount_management",
-      "$permissions": [
-        "create(\"any\")",
-        "read(\"any\")",
-        "update(\"any\")",
-        "create(\"users\")",
-        "read(\"users\")",
-        "update(\"users\")",
-        "delete(\"users\")"
-      ],
-      "databaseId": "6915ff74001aa13f6189",
-      "name": "Discount Management",
-      "enabled": true,
-      "rowSecurity": false,
-      "columns": [
-        {
-          "key": "type",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "customer_id",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "customer_name",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "card_status",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "total_purchases",
-          "type": "integer",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 9223372036854775807,
-          "default": null
-        },
-        {
-          "key": "total_purchase_amount",
-          "type": "double",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "eligible_for_extra_discount",
-          "type": "boolean",
-          "required": false,
-          "array": false,
-          "default": true
-        },
-        {
-          "key": "extra_discount_percentage",
-          "type": "double",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "rule_name",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "discount_percentage",
-          "type": "double",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 1.7976931348623157e308,
-          "default": null
-        },
-        {
-          "key": "rule_active",
-          "type": "boolean",
-          "required": false,
-          "array": false,
-          "default": true
-        },
-        {
-          "key": "discount_code",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "code_status",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "used_in_order_id",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "code_generated_at",
-          "type": "datetime",
-          "required": false,
-          "array": false,
-          "format": "",
-          "default": null
-        },
-        {
-          "key": "code_used_at",
-          "type": "datetime",
-          "required": false,
-          "array": false,
-          "format": "",
-          "default": null
-        },
-        {
-          "key": "is_enabled",
-          "type": "boolean",
-          "required": false,
-          "array": false,
-          "default": true
-        },
-        {
-          "key": "order_id",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        }
-      ],
-      "indexes": []
-    },
-    {
-      "$id": "push_subscriptions",
-      "$permissions": [
-        "create(\"any\")",
-        "read(\"any\")",
-        "update(\"any\")",
-        "delete(\"any\")",
-        "create(\"label:admin\")",
-        "read(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")"
-      ],
-      "databaseId": "6915ff74001aa13f6189",
-      "name": "Push Subscriptions",
-      "enabled": true,
-      "rowSecurity": false,
-      "columns": [
-        {
-          "key": "endpoint",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 500,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "p256dh",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "auth",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "user_id",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "status",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "elements": ["active", "inactive", "pending"],
-          "format": "enum",
-          "default": "active"
-        },
-        {
-          "key": "fail_count",
-          "type": "integer",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 9223372036854775807,
-          "default": null
-        },
-        {
-          "key": "user_agent",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 500,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "ip_address",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "last_used_at",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "created_at",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "tags",
-          "type": "string",
-          "required": false,
-          "array": true,
-          "size": 100,
-          "default": null,
-          "encrypt": false
-        }
-      ],
-      "indexes": [
-        {
-          "key": "idx_user_id",
-          "type": "key",
-          "status": "available",
-          "columns": ["user_id"],
-          "orders": []
-        },
-        {
-          "key": "idx_status",
-          "type": "key",
-          "status": "available",
-          "columns": ["status"],
-          "orders": []
-        },
-        {
-          "key": "idx_endpoint",
-          "type": "unique",
-          "status": "available",
-          "columns": ["endpoint"],
-          "orders": []
-        },
-        {
-          "key": "idx_created_at",
-          "type": "key",
-          "status": "available",
-          "columns": ["created_at"],
-          "orders": []
-        }
-      ]
-    },
-    {
-      "$id": "push_notification_log",
-      "$permissions": [
-        "create(\"label:admin\")",
-        "read(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")"
-      ],
-      "databaseId": "6915ff74001aa13f6189",
-      "name": "Push Notification Log",
-      "enabled": true,
-      "rowSecurity": false,
-      "columns": [
-        {
-          "key": "subscription_id",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "title",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "body",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 1000,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "url",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 500,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "tag",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 100,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "image",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 500,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "status",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "elements": ["sent", "clicked", "dismissed", "failed", "delivered"],
-          "format": "enum",
-          "default": "sent"
-        },
-        {
-          "key": "sent_at",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "clicked_at",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "dismissed_at",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "created_at",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "error_message",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 500,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "error_code",
-          "type": "integer",
-          "required": false,
-          "array": false,
-          "min": -9223372036854775808,
-          "max": 9223372036854775807,
-          "default": null
-        }
-      ],
-      "indexes": [
-        {
-          "key": "idx_subscription_status",
-          "type": "key",
-          "status": "available",
-          "columns": ["subscription_id", "status"],
-          "orders": []
-        },
-        {
-          "key": "idx_status_sent",
-          "type": "key",
-          "status": "available",
-          "columns": ["status", "sent_at"],
-          "orders": []
-        },
-        {
-          "key": "idx_tag",
-          "type": "key",
-          "status": "available",
-          "columns": ["tag"],
-          "orders": []
-        },
-        {
-          "key": "idx_created_at",
-          "type": "key",
-          "status": "available",
-          "columns": ["created_at"],
-          "orders": []
-        }
-      ]
-    },
-    {
-      "$id": "push_templates",
-      "$permissions": [
-        "create(\"label:admin\")",
-        "read(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")"
-      ],
-      "databaseId": "6915ff74001aa13f6189",
-      "name": "Push Templates",
-      "enabled": true,
-      "rowSecurity": false,
-      "columns": [
-        {
-          "key": "name",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 100,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "title",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 100,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "body",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 300,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "icon",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 500,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "badge",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 500,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "tag",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 100,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "url",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 500,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "actions",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 1000,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "require_interaction",
-          "type": "boolean",
-          "required": false,
-          "array": false,
-          "default": false
-        },
-        {
-          "key": "ttl",
-          "type": "integer",
-          "required": false,
-          "array": false,
-          "min": 86400,
-          "max": 9223372036854775807,
-          "default": null
-        },
-        {
-          "key": "is_active",
-          "type": "boolean",
-          "required": false,
-          "array": false,
-          "default": true
-        },
-        {
-          "key": "created_at",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        }
-      ],
-      "indexes": [
-        {
-          "key": "idx_name",
-          "type": "unique",
-          "status": "available",
-          "columns": ["name"],
-          "orders": []
-        },
-        {
-          "key": "idx_is_active",
-          "type": "key",
-          "status": "available",
-          "columns": ["is_active"],
-          "orders": []
-        }
-      ]
-    },
-    {
-      "$id": "push_user_preferences",
-      "$permissions": [
-        "create(\"label:admin\")",
-        "read(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")"
-      ],
-      "databaseId": "6915ff74001aa13f6189",
-      "name": "Push User Preferences",
-      "enabled": true,
-      "rowSecurity": false,
-      "columns": [
-        {
-          "key": "user_id",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "enabled",
-          "type": "boolean",
-          "required": false,
-          "array": false,
-          "default": true
-        },
-        {
-          "key": "quiet_hours_start",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 10,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "quiet_hours_end",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 10,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "timezone",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": "UTC",
-          "encrypt": false
-        },
-        {
-          "key": "excluded_tags",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 500,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "max_per_day",
-          "type": "integer",
-          "required": false,
-          "array": false,
-          "min": 10,
-          "max": 9223372036854775807,
-          "default": null
-        },
-        {
-          "key": "updated_at",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        }
-      ],
-      "indexes": [
-        {
-          "key": "idx_user_id",
-          "type": "unique",
-          "status": "available",
-          "columns": ["user_id"],
-          "orders": []
-        },
-        {
-          "key": "idx_enabled",
-          "type": "key",
-          "status": "available",
-          "columns": ["enabled"],
-          "orders": []
-        }
-      ]
-    },
-    {
-      "$id": "notification_campaigns",
-      "$permissions": [
-        "create(\"label:admin\")",
-        "read(\"any\")",
-        "read(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")"
-      ],
-      "databaseId": "6915ff74001aa13f6189",
-      "name": "Notification Campaigns",
-      "enabled": true,
-      "rowSecurity": false,
-      "columns": [
-        {
-          "key": "title",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 200,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "body",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 1000,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "image_url",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 500,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "target_url",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 500,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "icon_url",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 500,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "badge_url",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 500,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "tag",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 100,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "campaign_type",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": "push",
-          "encrypt": false
-        },
-        {
-          "key": "status",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "elements": [
-            "draft",
-            "scheduled",
-            "sending",
-            "sent",
-            "failed",
-            "cancelled"
-          ],
-          "format": "enum",
-          "default": "draft"
-        },
-        {
-          "key": "is_active",
-          "type": "boolean",
-          "required": false,
-          "array": false,
-          "default": true
-        },
-        {
-          "key": "sent_count",
-          "type": "integer",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 9223372036854775807,
-          "default": null
-        },
-        {
-          "key": "clicked_count",
-          "type": "integer",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 9223372036854775807,
-          "default": null
-        },
-        {
-          "key": "failed_count",
-          "type": "integer",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 9223372036854775807,
-          "default": null
-        },
-        {
-          "key": "delivered_count",
-          "type": "integer",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 9223372036854775807,
-          "default": null
-        },
-        {
-          "key": "dismissed_count",
-          "type": "integer",
-          "required": false,
-          "array": false,
-          "min": 0,
-          "max": 9223372036854775807,
-          "default": null
-        },
-        {
-          "key": "scheduled_at",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "sent_at",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "created_by",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "target_segment",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 100,
-          "default": "all",
-          "encrypt": false
-        },
-        {
-          "key": "target_tags",
-          "type": "string",
-          "required": false,
-          "array": true,
-          "size": 100,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "actions",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 1000,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "require_interaction",
-          "type": "boolean",
-          "required": false,
-          "array": false,
-          "default": false
-        }
-      ],
-      "indexes": [
-        {
-          "key": "idx_status",
-          "type": "key",
-          "status": "available",
-          "columns": ["status"],
-          "orders": []
-        },
-        {
-          "key": "idx_is_active",
-          "type": "key",
-          "status": "available",
-          "columns": ["is_active"],
-          "orders": []
-        },
-        {
-          "key": "idx_campaign_type",
-          "type": "key",
-          "status": "available",
-          "columns": ["campaign_type"],
-          "orders": []
-        },
-        {
-          "key": "idx_created_at",
-          "type": "key",
-          "status": "available",
-          "columns": ["$createdAt"],
-          "orders": []
-        }
-      ]
-    },
-    {
-      "$id": "notification_campaign_analytics",
-      "$permissions": [
-        "create(\"any\")",
-        "read(\"any\")",
-        "update(\"any\")",
-        "delete(\"users\")"
-      ],
-      "databaseId": "6915ff74001aa13f6189",
-      "name": "Notification Campaign Analytics",
-      "enabled": true,
-      "rowSecurity": false,
-      "columns": [
-        {
-          "key": "campaign_id",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "subscription_id",
-          "type": "string",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "event_type",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "elements": ["sent", "delivered", "clicked", "dismissed", "failed"],
-          "format": "enum",
-          "default": "sent"
-        },
-        {
-          "key": "user_agent",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 500,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "ip_address",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "clicked_url",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 500,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "error_code",
-          "type": "integer",
-          "required": false,
-          "array": false,
-          "min": -9223372036854775808,
-          "max": 9223372036854775807,
-          "default": null
-        },
-        {
-          "key": "error_message",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 500,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "event_at",
-          "type": "string",
-          "required": false,
-          "array": false,
-          "size": 50,
-          "default": null,
-          "encrypt": false
-        }
-      ],
-      "indexes": [
-        {
-          "key": "idx_campaign_id",
-          "type": "key",
-          "status": "available",
-          "columns": ["campaign_id"],
-          "orders": []
-        },
-        {
-          "key": "idx_event_type",
-          "type": "key",
-          "status": "available",
-          "columns": ["event_type"],
-          "orders": []
-        },
-        {
-          "key": "idx_campaign_event",
-          "type": "key",
-          "status": "available",
-          "columns": ["campaign_id", "event_type"],
-          "orders": []
-        },
-        {
-          "key": "idx_event_at",
-          "type": "key",
-          "status": "available",
-          "columns": ["event_at"],
-          "orders": []
-        }
-      ]
-    }
-  ],
-  "buckets": [
-    {
-      "$id": "product-images",
-      "$permissions": [
-        "create(\"label:admin\")",
-        "read(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")",
-        "read(\"any\")"
-      ],
-      "fileSecurity": false,
-      "name": "product-images",
-      "enabled": true,
-      "maximumFileSize": 5242880,
-      "allowedFileExtensions": ["jpg", "jpeg", "png", "webp"],
-      "compression": "none",
-      "encryption": true,
-      "antivirus": false
-    },
-    {
-      "$id": "banner-images",
-      "$permissions": [
-        "create(\"label:admin\")",
-        "read(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")",
-        "read(\"any\")"
-      ],
-      "fileSecurity": false,
-      "name": "banner-images",
-      "enabled": true,
-      "maximumFileSize": 10242880,
-      "allowedFileExtensions": ["jpg", "jpeg", "png", "webp"],
-      "compression": "none",
-      "encryption": true,
-      "antivirus": false
-    },
-    {
-      "$id": "notification-images",
-      "$permissions": [
-        "create(\"label:admin\")",
-        "read(\"any\")",
-        "read(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")"
-      ],
-      "fileSecurity": false,
-      "name": "Notification Images",
-      "enabled": true,
-      "maximumFileSize": 30000000,
-      "allowedFileExtensions": [
-        "image/jpeg",
-        "image/png",
-        "image/gif",
-        "image/webp",
-        "image/svg+xml",
-        "jpg",
-        "png",
-        "svg",
-        "gif"
-      ],
-      "compression": "none",
-      "encryption": true,
-      "antivirus": true
-    },
-    {
-      "$id": "69b54a6f001d2c036ee4",
-      "$permissions": ["read(\"any\")"],
-      "fileSecurity": false,
-      "name": "MillImageId",
-      "enabled": true,
-      "maximumFileSize": 30000000,
-      "allowedFileExtensions": [
-        "image/jpeg",
-        "image/png",
-        "image/gif",
-        "image/webp",
-        "image/svg+xml",
-        "jpg",
-        "png",
-        "svg",
-        "gif"
-      ],
-      "compression": "none",
-      "encryption": true,
-      "antivirus": true
-    }
-  ]
+    ]
 }

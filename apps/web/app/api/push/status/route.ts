@@ -1,11 +1,23 @@
 import { NextResponse } from "next/server";
 import { getSubscriptionByEndpoint, checkRateLimit } from "@/lib/push-production";
 
+const isBuildTime = () => {
+  return process.env.NODE_ENV === "production" && typeof window === "undefined" && process.env.NEXT_PHASE === "phase-production-build";
+};
+
 /**
  * Check subscription status
  * Rate limited: 60 requests per minute per IP
  */
 export async function GET(req: Request) {
+  if (isBuildTime()) {
+    return NextResponse.json({
+      exists: false,
+      active: false,
+      status: "unknown",
+    });
+  }
+
   try {
     // Get client IP for rate limiting
     const forwarded = req.headers.get("x-forwarded-for");

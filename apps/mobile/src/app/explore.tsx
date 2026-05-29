@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import * as Location from "expo-location";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -16,10 +16,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   calculatePrice,
   formatCurrency,
+  formatPhoneNumberForDisplay,
   getPricePerKg,
   validatePakistaniPhoneNumber,
 } from "@repo/utils";
 import { Button } from "@repo/ui";
+import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { placeCodOrder } from "@/lib/orders";
 
@@ -29,6 +31,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function CartScreen() {
   const { clearCart, getTotalItems, getTotalPrice, items, removeBag, addBag, removeItem } = useCart();
+  const { user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [formData, setFormData] = useState({
@@ -41,6 +44,17 @@ export default function CartScreen() {
     notes: "",
     phone: "",
   });
+
+  useEffect(() => {
+    if (!user) return;
+
+    setFormData((current) => ({
+      ...current,
+      email: current.email || user.email || "",
+      fullName: current.fullName || user.name || "",
+      phone: current.phone || formatPhoneNumberForDisplay(user.phone || ""),
+    }));
+  }, [user]);
 
   const setField = (field: keyof typeof formData, value: string | number) => {
     setFormData((current) => ({ ...current, [field]: value }));
@@ -117,6 +131,7 @@ export default function CartScreen() {
         {
           ...formData,
           phone: phoneValidation.cleanedPhone ?? phone,
+          userId: user?.$id,
         },
         items,
       );

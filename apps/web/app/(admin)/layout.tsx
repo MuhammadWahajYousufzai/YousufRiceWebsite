@@ -16,13 +16,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   
   return (
     <AdminAuthGuard requiredPermission={AdminPermission.READ_ONLY}>
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen flex-col overflow-x-hidden md:flex-row">
         <Sidebar />
-        <div className="flex-1 bg-gray-50 relative">
+        <div className="relative min-w-0 flex-1 bg-gray-50">
           {isReadOnly && (
             <div className="sticky top-0 w-full bg-amber-50 border-b border-amber-200 p-2 z-50">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-amber-600" />
+              <div className="mx-auto flex max-w-7xl items-start gap-2 px-3 sm:px-6 lg:px-8">
+                <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
                 <p className="text-sm font-medium text-amber-800">
                   Read-Only Mode: You can view all data but cannot make any changes
                 </p>

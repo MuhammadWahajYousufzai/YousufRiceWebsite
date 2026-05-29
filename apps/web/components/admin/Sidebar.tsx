@@ -21,7 +21,7 @@ export function Sidebar() {
   const { adminPermission, logout } = useAuthStore();
   
   const isActive = (path: string) => {
-    return pathname === path || pathname.startsWith(`${path}/`);
+    return path === '/admin' ? pathname === path : pathname === path || pathname.startsWith(`${path}/`);
   };
   
   const allNavItems = [
@@ -76,15 +76,15 @@ export function Sidebar() {
   });
 
   return (
-    <div className="flex flex-col w-64 bg-white border-r border-gray-200 min-h-screen">
-      <div className="p-4 border-b border-gray-200">
+    <aside className="flex w-full shrink-0 flex-col border-b border-gray-200 bg-white md:min-h-screen md:w-64 md:border-b-0 md:border-r">
+      <div className="flex items-center justify-between gap-3 border-b border-gray-200 p-3 md:block md:p-4">
         <Link href="/admin" className="flex items-center gap-2">
-          <ShieldCheck className="w-6 h-6 text-blue-600" />
-          <span className="font-bold text-xl">Admin Panel</span>
+          <ShieldCheck className="h-6 w-6 shrink-0 text-blue-600" />
+          <span className="text-lg font-bold md:text-xl">Control Panel</span>
         </Link>
-        <div className="mt-2">
+        <div className="md:mt-2">
           <span className={cn(
-            "text-xs font-medium px-2 py-1 rounded-full",
+            "whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium",
             adminPermission === 'admin' ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"
           )}>
             {adminPermission === 'admin' ? 'Full Access' : 'Read Only'}
@@ -92,40 +92,40 @@ export function Sidebar() {
         </div>
       </div>
       
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex gap-2 overflow-x-auto p-3 md:flex-1 md:flex-col md:gap-0 md:space-y-1 md:overflow-visible md:p-4">
         {navItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
             className={cn(
-              "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
+              "flex shrink-0 items-center rounded-md px-3 py-2 text-sm font-medium transition-colors md:shrink",
               isActive(item.href)
                 ? "bg-blue-50 text-blue-700"
                 : "text-gray-700 hover:bg-gray-100"
             )}
           >
-            <item.icon className="w-5 h-5 mr-3" />
-            {item.name}
+            <item.icon className="mr-2 h-5 w-5 shrink-0 md:mr-3" />
+            <span className="whitespace-nowrap">{item.name}</span>
           </Link>
         ))}
       </nav>
       
-      <div className="p-4 border-t border-gray-200 space-y-2">
+      <div className="flex gap-2 border-t border-gray-200 p-3 md:block md:space-y-2 md:p-4">
         <Link
           href="/"
-          className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+          className="flex shrink-0 items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 md:w-full"
         >
-          <Home className="w-5 h-5 mr-3" />
+          <Home className="mr-2 h-5 w-5 shrink-0 md:mr-3" />
           Back to Site
         </Link>
         <button
           onClick={() => logout()}
-          className="flex items-center w-full px-3 py-2 rounded-md text-sm font-medium text-red-600 hover:bg-red-50"
+          className="flex shrink-0 items-center rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 md:w-full"
         >
-          <LogOut className="w-5 h-5 mr-3" />
+          <LogOut className="mr-2 h-5 w-5 shrink-0 md:mr-3" />
           Logout
         </button>
       </div>
-    </div>
+    </aside>
   );
 }

@@ -207,7 +207,7 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionRule} />
-              <Text style={styles.bundleTitle}>Exclusive Free Cold Drink Deals</Text>
+              <Text style={styles.bundleTitle}>Cold Drink Bundles</Text>
               <View style={styles.sectionRule} />
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalCards}>
@@ -641,6 +641,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontSize: 18,
     fontWeight: "900",
+    lineHeight: 23,
     textAlign: "center",
   },
   cardFooter: {
