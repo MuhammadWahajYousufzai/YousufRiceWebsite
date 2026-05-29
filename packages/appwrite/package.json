@@ -12,12 +12,12 @@
   },
   "devDependencies": {
     "@types/node": "^20.19.41",
-    "appwrite": "^25.2.0",
+    "appwrite": "^24.2.0",
     "react-native-appwrite": "^0.31.0",
     "react-native-url-polyfill": "^3.0.0"
   },
   "peerDependencies": {
-    "appwrite": ">=25.0.0",
+    "appwrite": ">=24.0.0",
     "react-native-appwrite": "^0.31.0"
   },
   "peerDependenciesMeta": {

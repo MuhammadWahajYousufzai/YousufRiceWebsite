@@ -49,7 +49,7 @@
             "timeout": 30,
             "buildRuntime": "node-22",
             "adapter": "ssr",
-            "installCommand": "pnpm i",
+            "installCommand": "pnpm i --filter=@yousuf-rice/web...",
             "buildCommand": "pnpm build",
             "outputDirectory": "./.next",
             "fallbackFile": "",
