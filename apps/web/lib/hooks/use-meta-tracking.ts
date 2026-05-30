@@ -66,6 +66,16 @@ function buildTrackingCustomData(
   };
 }
 
+function createSynchronousEventId(eventName: string, stableKey: string): string {
+  const eventPrefix = eventName.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  const stablePart = stableKey
+    .trim()
+    .replace(/[^a-zA-Z0-9_.:-]+/g, "_")
+    .slice(0, 80);
+
+  return `${eventPrefix}_${stablePart || Date.now()}`;
+}
+
 export function useMetaTracking() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -344,7 +354,7 @@ export function useMetaTracking() {
   );
 
   const trackPurchase = useCallback(
-    async (purchaseData: {
+    (purchaseData: {
       value: number;
       currency?: string;
       orderId: string;
@@ -368,10 +378,8 @@ export function useMetaTracking() {
       };
       trackingContext?: TrackingContext;
     }) => {
-      const eventId = await generateEventId({
-        eventName: "Purchase",
-        stableKey: purchaseData.orderId,
-      });
+      const eventId = createSynchronousEventId("Purchase", purchaseData.orderId);
+
       return trackEvent({
         eventName: "Purchase",
         eventId,
@@ -388,7 +396,7 @@ export function useMetaTracking() {
           },
           purchaseData.trackingContext,
         ),
-        deliveryMode: "background",
+        deliveryMode: "navigation",
         testEventCode: TEST_EVENT_CODE || undefined,
       });
     },

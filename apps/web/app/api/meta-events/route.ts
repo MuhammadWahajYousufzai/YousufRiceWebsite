@@ -14,6 +14,23 @@ const SERVER_META_TEST_EVENT_CODE =
   process.env.NEXT_PUBLIC_META_TEST_EVENT_CODE ||
   "";
 
+function getRequestSourceUrl(request: NextRequest): string | undefined {
+  const referer = request.headers.get("referer");
+  if (referer) return referer;
+
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host");
+  if (!host) return undefined;
+
+  const protocol =
+    request.headers.get("x-forwarded-proto") ||
+    request.headers.get("cf-visitor")?.match(/"scheme":"([^"]+)"/)?.[1] ||
+    "https";
+
+  return `${protocol}://${host}${request.nextUrl.pathname}`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get("content-type") || "";
@@ -94,7 +111,7 @@ export async function POST(request: NextRequest) {
           : getCurrentTimestamp(),
       event_id,
       event_source_url:
-        event_source_url || request.headers.get("referer") || undefined,
+        event_source_url || getRequestSourceUrl(request),
       action_source: "website",
       user_data: preparedUserData,
       custom_data: custom_data as MetaCustomData,

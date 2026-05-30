@@ -5,6 +5,7 @@ export const META_DATASET_ID = process.env.NEXT_PUBLIC_META_DATASET_ID!;
 export const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN!;
 
 export const META_API_URL = `https://graph.facebook.com/v20.0/${META_DATASET_ID}/events`;
+const META_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 90;
 
 export interface MetaUserData {
   em?: string;
@@ -77,10 +78,39 @@ export function sanitizeCustomerNameForMeta(name: string | undefined | null): st
   return sanitized || undefined;
 }
 
-// Utility: Hash data with SHA256 (required by Meta) — server-only, uses Node.js crypto
-export function hashData(data: string | undefined | null): string | undefined {
+function normalizeTextForMeta(data: string | undefined | null): string | undefined {
   if (!data) return undefined;
-  const normalized = data.toLowerCase().trim();
+  const normalized = data.toLowerCase().trim().replace(/\s+/g, ' ');
+  return normalized || undefined;
+}
+
+function normalizePhoneForMeta(phone: string | undefined | null): string | undefined {
+  if (!phone) return undefined;
+
+  let digits = phone.replace(/\D/g, '');
+  if (!digits) return undefined;
+
+  if (digits.startsWith('00')) {
+    digits = digits.slice(2);
+  }
+
+  if (digits.startsWith('0') && digits.length === 11) {
+    digits = `92${digits.slice(1)}`;
+  }
+
+  return digits;
+}
+
+// Utility: Hash data with SHA256 (required by Meta) - server-only, uses Node.js crypto
+export function hashData(data: string | undefined | null): string | undefined {
+  const normalized = normalizeTextForMeta(data);
+  if (!normalized) return undefined;
+  return crypto.createHash('sha256').update(normalized).digest('hex');
+}
+
+function hashPhoneData(phone: string | undefined | null): string | undefined {
+  const normalized = normalizePhoneForMeta(phone);
+  if (!normalized) return undefined;
   return crypto.createHash('sha256').update(normalized).digest('hex');
 }
 
@@ -131,15 +161,42 @@ function readBrowserCookies(): Record<string, string> {
   }, {} as Record<string, string>);
 }
 
+function getMetaCookieDomainAttribute(): string {
+  const hostname = window.location.hostname.toLowerCase();
+  if (hostname === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+    return '';
+  }
+
+  try {
+    const primaryHostname = new URL(
+      process.env.NEXT_PUBLIC_PRIMARY_DOMAIN || window.location.origin,
+    ).hostname
+      .toLowerCase()
+      .replace(/^www\./, '');
+
+    if (
+      primaryHostname &&
+      (hostname === primaryHostname ||
+        hostname === `www.${primaryHostname}` ||
+        hostname.endsWith(`.${primaryHostname}`))
+    ) {
+      return `; Domain=.${primaryHostname}`;
+    }
+  } catch {
+    // Ignore invalid environment URLs and fall back to a host-only cookie.
+  }
+
+  return '';
+}
+
 function writeMetaCookie(name: string, value: string) {
-  const maxAge = 60 * 60 * 24 * 90;
   const secure = window.location.protocol === 'https:' ? '; Secure' : '';
   document.cookie = [
     `${name}=${encodeURIComponent(value)}`,
-    `Max-Age=${maxAge}`,
+    `Max-Age=${META_COOKIE_MAX_AGE_SECONDS}`,
     'Path=/',
     'SameSite=Lax',
-  ].join('; ') + secure;
+  ].join('; ') + getMetaCookieDomainAttribute() + secure;
 }
 
 function createMetaBrowserId(): string {
@@ -155,8 +212,8 @@ function createMetaBrowserId(): string {
 
 function getOrCreateFacebookCookies(): { fbp?: string; fbc?: string } {
   const cookies = readBrowserCookies();
-  let fbp = cookies._fbp;
-  let fbc = cookies._fbc;
+  let fbp: string | undefined = cookies._fbp;
+  let fbc: string | undefined = cookies._fbc;
 
   if (!fbp) {
     fbp = createMetaBrowserId();
@@ -164,8 +221,18 @@ function getOrCreateFacebookCookies(): { fbp?: string; fbc?: string } {
   }
 
   const fbclid = new URLSearchParams(window.location.search).get('fbclid');
-  if (!fbc && fbclid) {
-    fbc = `fb.1.${Date.now()}.${fbclid}`;
+  if (fbclid) {
+    const nextFbc = `fb.1.${Date.now()}.${fbclid}`;
+    const currentFbclid = fbc?.split('.').slice(3).join('.');
+    if (currentFbclid !== fbclid) {
+      fbc = nextFbc;
+      writeMetaCookie('_fbc', fbc);
+    }
+  } else if (!fbc) {
+    fbc = undefined;
+  }
+
+  if (fbc && !cookies._fbc) {
     writeMetaCookie('_fbc', fbc);
   }
 
@@ -186,14 +253,18 @@ export function getFacebookCookies(): { fbp?: string; fbc?: string } {
 
 // Utility: Get client IP (from headers in API route)
 export function getClientIp(request: Request): string | undefined {
-  const forwarded = request.headers.get('x-forwarded-for');
-  const realIp = request.headers.get('x-real-ip');
-  
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
-  }
-  
-  return realIp || undefined;
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  const candidates = [
+    request.headers.get('cf-connecting-ip'),
+    request.headers.get('true-client-ip'),
+    request.headers.get('x-real-ip'),
+    request.headers.get('x-client-ip'),
+    forwardedFor?.split(',')[0],
+  ];
+
+  return candidates
+    .map((value) => value?.trim())
+    .find((value): value is string => Boolean(value && value !== 'unknown'));
 }
 
 // Utility: Prepare user data with hashing
@@ -214,7 +285,7 @@ export function prepareUserData(rawUserData: {
 }): MetaUserData {
   return {
     em: hashData(rawUserData.email),
-    ph: hashData(rawUserData.phone),
+    ph: hashPhoneData(rawUserData.phone),
     fn: hashData(rawUserData.firstName),
     ln: hashData(rawUserData.lastName),
     ct: hashData(rawUserData.city),
