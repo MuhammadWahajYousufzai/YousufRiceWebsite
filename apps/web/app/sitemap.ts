@@ -5,6 +5,11 @@ import { Query } from 'appwrite';
 
 export const revalidate = 3600; // Revalidate every hour
 
+const isProductionBuild = () =>
+  process.env.NODE_ENV === 'production' &&
+  typeof window === 'undefined' &&
+  process.env.NEXT_PHASE === 'phase-production-build';
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Use primary domain for sitemap
   const baseUrl = process.env.NEXT_PUBLIC_PRIMARY_DOMAIN || 'https://yourdomain.com';
@@ -14,7 +19,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   
   // Only fetch products if we have valid database configuration
   // This prevents build errors when database isn't accessible during build time
-  if (DATABASE_ID && PRODUCTS_TABLE_ID && DATABASE_ID !== 'undefined' && PRODUCTS_TABLE_ID !== 'undefined') {
+  if (isProductionBuild()) {
+    console.log('Sitemap: Build-time detected, skipping product page fetch');
+  } else if (DATABASE_ID && PRODUCTS_TABLE_ID && DATABASE_ID !== 'undefined' && PRODUCTS_TABLE_ID !== 'undefined') {
     try {
       const response = await tablesDB.listRows({ databaseId: DATABASE_ID, tableId: PRODUCTS_TABLE_ID, queries: [Query.equal('available', true)] });
       products = response.rows as unknown as Product[];
