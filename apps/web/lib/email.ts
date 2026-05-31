@@ -1,13 +1,18 @@
 import nodemailer from 'nodemailer';
 
-// Create reusable transporter using Hostinger SMTP
+const smtpUsername = 'foodsyousuf@gmail.com';
+const smtpPassword = process.env.SMTP_PASSWORD || process.env._APP_SMTP_PASSWORD || '';
+const smtpFrom = `"Yousuf Rice" <${smtpUsername}>`;
+
+// Create reusable transporter using Gmail SMTP.
 const transporter = nodemailer.createTransport({
-  host: 'smtp.hostinger.com',
-  port: 465,
-  secure: true, // SSL
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
+  requireTLS: true,
   auth: {
-    user: 'support@yousufrice.com',
-    pass: process.env.SMTP_PASSWORD || '',
+    user: smtpUsername,
+    pass: smtpPassword,
   },
 });
 
@@ -18,7 +23,7 @@ transporter.verify()
   })
   .catch((error) => {
     console.error('❌ SMTP connection error: ', error);
-    console.error('Email functionality may not work. Please check SMTP_PASSWORD in .env.local');
+    console.error('Email functionality may not work. Please check SMTP settings in .env.local');
   });
 
 interface OrderItem {
@@ -340,7 +345,7 @@ export async function sendOrderConfirmation(data: OrderConfirmationData) {
   `;
 
   const mailOptions = {
-    from: '"Yousuf Rice" <support@yousufrice.com>',
+    from: smtpFrom,
     to: customerEmail,
     subject: `Order Confirmation #${orderId.slice(0, 8).toUpperCase()} - Yousuf Rice`,
     html: emailHtml,
@@ -449,7 +454,7 @@ export async function sendVerificationOTP(email: string, otp: string, name?: str
   `;
 
   const mailOptions = {
-    from: '"Yousuf Rice" <support@yousufrice.com>',
+    from: smtpFrom,
     to: email,
     subject: 'Verify Your Email - Yousuf Rice',
     html: emailHtml,
@@ -551,7 +556,7 @@ export async function sendPasswordResetOTP(email: string, otp: string, name?: st
   `;
 
   const mailOptions = {
-    from: '"Yousuf Rice" <support@yousufrice.com>',
+    from: smtpFrom,
     to: email,
     subject: 'Reset Your Password - Yousuf Rice',
     html: emailHtml,
@@ -677,8 +682,8 @@ export async function sendContactFormEmail(data: ContactFormData) {
   `;
 
   const mailOptions = {
-    from: '"Yousuf Rice Website" <support@yousufrice.com>',
-    to: 'support@yousufrice.com',
+    from: smtpFrom,
+    to: smtpUsername,
     replyTo: email,
     subject: `New Contact Form Submission: ${subject}`,
     html: emailHtml,

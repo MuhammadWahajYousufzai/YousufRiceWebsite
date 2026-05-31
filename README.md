@@ -442,7 +442,7 @@ cp apps/web/env.example apps/web/.env.local
 | `APPWRITE_API_KEY` | ✅ | Appwrite server API key |
 | `NEXT_PUBLIC_PRIMARY_DOMAIN` | ✅ | Main domain (e.g. `https://yousufrice.com`) |
 | `NEXT_PUBLIC_DOMAIN_3` | ✅ | Secondary domain (e.g. `https://ssricemills.com`) |
-| `SMTP_PASSWORD` | ❌ | SMTP password for order confirmation emails |
+| `SMTP_PASSWORD` | ❌ | Gmail SMTP app password for transactional emails |
 | `NEXT_PUBLIC_ENABLE_LOYALTY_DISCOUNT` | ❌ | Toggle loyalty system (`true`/`false`) |
 | `NEXT_PUBLIC_ENABLE_RAMADAN_OFFER` | ❌ | Toggle Ramadan offer |
 | `NEXT_PUBLIC_ENABLE_COLD_DRINK_BUNDLE` | ❌ | Toggle cold drink bundle |
