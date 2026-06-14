@@ -299,7 +299,7 @@ export function useMetaTracking() {
   );
 
   const trackInitiateCheckout = useCallback(
-    async (checkoutData: {
+    (checkoutData: {
       value: number;
       currency?: string;
       numItems: number;
@@ -318,10 +318,12 @@ export function useMetaTracking() {
       trackingContext?: TrackingContext;
       stableKey?: string;
     }) => {
-      const eventId = await generateEventId({
-        eventName: "InitiateCheckout",
-        stableKey: checkoutData.stableKey,
-      });
+      const eventId = createSynchronousEventId(
+        "InitiateCheckout",
+        checkoutData.stableKey ||
+          `${checkoutData.contentIds.join(":")}:${checkoutData.numItems}:${checkoutData.value}`,
+      );
+
       return trackEvent({
         eventName: "InitiateCheckout",
         eventId,
