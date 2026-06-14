@@ -3,6 +3,7 @@ import { Toaster } from "react-hot-toast";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { MetaPixel } from "@/components/meta-pixel";
+import { MetaPixelDebug } from "@/components/meta-pixel-debug";
 import FloatingChatbox from "@/components/floating-chatbox";
 import { PWAInstall } from "@/components/PWAInstall";
 import PushNotificationButton from "@/components/PushNotificationButton";
@@ -141,6 +142,7 @@ export default function RootLayout({
         <MetaPixel />
       </head>
       <body className="antialiased">
+        <MetaPixelDebug />
         {/* Transitions removed */}
 
         {/* Wrap dynamic components in Suspense for PPR */}

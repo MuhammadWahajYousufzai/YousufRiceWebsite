@@ -10,8 +10,8 @@ import {
 } from "@/lib/meta";
 import type { AgentLabel, OrderChannel } from "@/lib/tracking/order-channel";
 
-const NAVIGATION_PIXEL_FLUSH_MS = 450;
-const NAVIGATION_PIXEL_READY_TIMEOUT_MS = 300;
+const NAVIGATION_PIXEL_FLUSH_MS = 800;
+const NAVIGATION_PIXEL_READY_TIMEOUT_MS = 1000;
 const PIXEL_READY_POLL_MS = 50;
 
 // Extend Window interface for Meta Pixel
@@ -24,6 +24,8 @@ declare global {
       options?: { eventID: string },
     ) => void;
     __metaPageViewEventId?: string;
+    __metaPixelInitialized?: boolean;
+    __metaDebugMode?: boolean;
   }
 }
 
@@ -81,16 +83,51 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isInstagramBrowser(): boolean {
+  if (typeof window === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return ua.includes("Instagram") || ua.includes("FBAN") || ua.includes("FBAV");
+}
+
+function isDebugMode(): boolean {
+  if (typeof window === "undefined") return false;
+  const url = new URL(window.location.href);
+  return url.searchParams.has("debug_pixel");
+}
+
+function debugLog(...args: unknown[]) {
+  if (typeof window !== "undefined" && (window.__metaDebugMode || isDebugMode())) {
+    console.log("[Meta Pixel Debug]", ...args);
+  }
+}
+
 async function waitForFbq(timeoutMs: number) {
   if (typeof window === "undefined") return undefined;
   if (window.fbq || timeoutMs <= 0) return window.fbq;
 
   const deadline = Date.now() + timeoutMs;
+  let attempts = 0;
   while (!window.fbq && Date.now() < deadline) {
+    attempts++;
     await sleep(PIXEL_READY_POLL_MS);
   }
 
+  debugLog(`waitForFbq: fbq ${window.fbq ? "found" : "not found"} after ${attempts * PIXEL_READY_POLL_MS}ms`);
   return window.fbq;
+}
+
+async function waitForPixelInit(timeoutMs: number): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  if (window.__metaPixelInitialized) return true;
+  if (timeoutMs <= 0) return false;
+
+  const deadline = Date.now() + timeoutMs;
+  while (!window.__metaPixelInitialized && Date.now() < deadline) {
+    await sleep(PIXEL_READY_POLL_MS);
+  }
+
+  debugLog(`waitForPixelInit: ${window.__metaPixelInitialized ? "initialized" : "not initialized"}`);
+  return window.__metaPixelInitialized || false;
 }
 
 async function trackBrowserPixel({
@@ -106,6 +143,18 @@ async function trackBrowserPixel({
 }) {
   if (typeof window === "undefined") return false;
 
+  const isInsta = isInstagramBrowser();
+  const debug = isDebugMode();
+  
+  debugLog(`trackBrowserPixel: ${eventName}`, {
+    eventId,
+    isInstagram: isInsta,
+    waitForPixel,
+    fbqExists: !!window.fbq,
+    pixelInitialized: window.__metaPixelInitialized,
+  });
+
+  // Wait for fbq to be available
   const fbq = await waitForFbq(
     waitForPixel ? NAVIGATION_PIXEL_READY_TIMEOUT_MS : 0,
   );
@@ -114,13 +163,42 @@ async function trackBrowserPixel({
       console.warn(
         `[Meta Pixel] ${eventName} browser event skipped because fbq was not ready before navigation.`,
       );
+      debugLog(`trackBrowserPixel: fbq not ready after ${NAVIGATION_PIXEL_READY_TIMEOUT_MS}ms`);
     }
     return false;
   }
 
-  fbq("track", eventName, customData, { eventID: eventId });
-  console.log(`[Meta Pixel] ${eventName} tracked with ID: ${eventId}`);
-  return true;
+  // For navigation events, also wait for Pixel initialization
+  if (waitForPixel) {
+    const isInitialized = await waitForPixelInit(NAVIGATION_PIXEL_READY_TIMEOUT_MS);
+    if (!isInitialized) {
+      console.warn(
+        `[Meta Pixel] ${eventName} browser event skipped because Pixel was not initialized.`,
+      );
+      debugLog(`trackBrowserPixel: Pixel not initialized after ${NAVIGATION_PIXEL_READY_TIMEOUT_MS}ms`);
+      // Still try to fire the event even if init flag is not set
+    }
+  }
+
+  // Fire the Pixel event
+  try {
+    fbq("track", eventName, customData, { eventID: eventId });
+    console.log(`[Meta Pixel] ${eventName} tracked with ID: ${eventId}`);
+    debugLog(`trackBrowserPixel: Event fired successfully`, { eventId, eventName });
+    
+    // Dispatch event for debug component
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("metaPixelEvent", {
+        detail: { eventName, eventId }
+      }));
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`[Meta Pixel] Error firing ${eventName}:`, error);
+    debugLog(`trackBrowserPixel: Error firing event`, { error });
+    return false;
+  }
 }
 
 export function useMetaTracking() {
@@ -154,8 +232,14 @@ export function useMetaTracking() {
           : `${origin}${pathname}`;
 
         console.log(
-          `[Meta Tracking] Event: ${eventName}, URL: ${eventSourceUrl}`,
+          `[Meta Tracking] Event: ${eventName}, URL: ${eventSourceUrl}, EventID: ${eventId}`,
         );
+        debugLog(`trackEvent: Starting`, {
+          eventName,
+          eventId,
+          eventSourceUrl,
+          deliveryMode,
+        });
 
         // Get Facebook cookies
         const { fbp, fbc } = getFacebookCookies();
@@ -171,9 +255,22 @@ export function useMetaTracking() {
               waitForPixel: deliveryMode === "navigation",
             });
 
+        debugLog(`trackEvent: Browser pixel result`, {
+          eventName,
+          eventId,
+          browserPixelTracked,
+          skipBrowserPixel,
+          deliveryMode,
+        });
+
         const waitForNavigationPixelFlush = async () => {
           if (deliveryMode === "navigation" && browserPixelTracked) {
-            await sleep(NAVIGATION_PIXEL_FLUSH_MS);
+            // Use longer delay for Instagram browser
+            const flushDelay = isInstagramBrowser() ? 1200 : NAVIGATION_PIXEL_FLUSH_MS;
+            debugLog(`waitForNavigationPixelFlush: Waiting ${flushDelay}ms`, {
+              isInstagram: isInstagramBrowser(),
+            });
+            await sleep(flushDelay);
           }
         };
 
