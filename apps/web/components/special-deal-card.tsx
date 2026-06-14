@@ -8,7 +8,6 @@ import {
   Plus,
   Minus,
   Package,
-  Sparkles,
   Zap,
   ArrowRight,
   TrendingDown,
@@ -20,7 +19,7 @@ import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { useCartStore } from "@/lib/store/cart-store";
 import { calculatePrice, formatCurrency, getPricePerKg } from "@/lib/utils";
-import { storage, STORAGE_BUCKET_ID } from "@/lib/appwrite";
+import { STORAGE_BUCKET_ID } from "@/lib/appwrite";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useMetaTracking } from "@/lib/hooks/use-meta-tracking";
@@ -38,7 +37,7 @@ export function SpecialDealCard({
   const addBag = useCartStore((state) => state.addBag);
   const removeBag = useCartStore((state) => state.removeBag);
   const router = useRouter();
-  const { trackAddToCart } = useMetaTracking();
+  const { trackAddToCart, trackInitiateCheckout } = useMetaTracking();
 
   const totalKg = bagCount * 25;
   const pricePerKg = getPricePerKg(product, totalKg || 25);
@@ -84,7 +83,7 @@ export function SpecialDealCard({
     }
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     if (bagCount === 0) {
       toast.error("Please add at least one 25kg bag to continue!");
       return;
@@ -101,6 +100,14 @@ export function SpecialDealCard({
         color: "#ffff03",
         fontWeight: "bold",
       },
+    });
+
+    await trackInitiateCheckout({
+      value: totalPrice,
+      currency: "PKR",
+      numItems: totalKg,
+      contentIds: [product.$id],
+      stableKey: `${product.$id}:${totalKg}:special-deal`,
     });
 
     setTimeout(() => {

@@ -10,15 +10,20 @@ import {
 } from "@/lib/meta";
 import type { AgentLabel, OrderChannel } from "@/lib/tracking/order-channel";
 
+const NAVIGATION_PIXEL_FLUSH_MS = 450;
+const NAVIGATION_PIXEL_READY_TIMEOUT_MS = 300;
+const PIXEL_READY_POLL_MS = 50;
+
 // Extend Window interface for Meta Pixel
 declare global {
   interface Window {
     fbq?: (
       action: string,
       eventName: string,
-      data?: Record<string, any>,
+      data?: MetaCustomData,
       options?: { eventID: string },
     ) => void;
+    __metaPageViewEventId?: string;
   }
 }
 
@@ -72,6 +77,52 @@ function createSynchronousEventId(eventName: string, stableKey: string): string 
   return `${eventPrefix}_${stablePart || Date.now()}`;
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForFbq(timeoutMs: number) {
+  if (typeof window === "undefined") return undefined;
+  if (window.fbq || timeoutMs <= 0) return window.fbq;
+
+  const deadline = Date.now() + timeoutMs;
+  while (!window.fbq && Date.now() < deadline) {
+    await sleep(PIXEL_READY_POLL_MS);
+  }
+
+  return window.fbq;
+}
+
+async function trackBrowserPixel({
+  eventName,
+  customData,
+  eventId,
+  waitForPixel,
+}: {
+  eventName: string;
+  customData: MetaCustomData;
+  eventId: string;
+  waitForPixel: boolean;
+}) {
+  if (typeof window === "undefined") return false;
+
+  const fbq = await waitForFbq(
+    waitForPixel ? NAVIGATION_PIXEL_READY_TIMEOUT_MS : 0,
+  );
+  if (!fbq) {
+    if (waitForPixel) {
+      console.warn(
+        `[Meta Pixel] ${eventName} browser event skipped because fbq was not ready before navigation.`,
+      );
+    }
+    return false;
+  }
+
+  fbq("track", eventName, customData, { eventID: eventId });
+  console.log(`[Meta Pixel] ${eventName} tracked with ID: ${eventId}`);
+  return true;
+}
+
 export function useMetaTracking() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -109,11 +160,22 @@ export function useMetaTracking() {
         // Get Facebook cookies
         const { fbp, fbc } = getFacebookCookies();
 
-        // 1. Browser-side: Track with Meta Pixel
-        if (!skipBrowserPixel && typeof window !== "undefined" && window.fbq) {
-          window.fbq("track", eventName, customData, { eventID: eventId });
-          console.log(`[Meta Pixel] ${eventName} tracked with ID: ${eventId}`);
-        }
+        // 1. Browser-side: Track with Meta Pixel. Instagram's in-app browser
+        // can drop Pixel requests if route navigation starts immediately.
+        const browserPixelTracked = skipBrowserPixel
+          ? false
+          : await trackBrowserPixel({
+              eventName,
+              customData,
+              eventId,
+              waitForPixel: deliveryMode === "navigation",
+            });
+
+        const waitForNavigationPixelFlush = async () => {
+          if (deliveryMode === "navigation" && browserPixelTracked) {
+            await sleep(NAVIGATION_PIXEL_FLUSH_MS);
+          }
+        };
 
         const payload = {
           event_name: eventName,
@@ -154,6 +216,7 @@ export function useMetaTracking() {
             new Blob([JSON.stringify(payload)], { type: "application/json" }),
           );
           if (beaconOk) {
+            await waitForNavigationPixelFlush();
             return { success: true, eventId };
           }
         }
@@ -180,6 +243,7 @@ export function useMetaTracking() {
                 error,
               });
             });
+          await waitForNavigationPixelFlush();
           return { success: true, eventId };
         }
 
@@ -203,7 +267,7 @@ export function useMetaTracking() {
 
   // Convenience methods for common events
   const trackPageView = useCallback(() => {
-    const win = typeof window !== "undefined" ? (window as any) : null;
+    const win = typeof window !== "undefined" ? window : null;
     const initialEventId = win?.__metaPageViewEventId ?? undefined;
     if (win) win.__metaPageViewEventId = undefined;
     return trackEvent({

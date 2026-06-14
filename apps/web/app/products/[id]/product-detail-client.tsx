@@ -154,7 +154,7 @@ export default function ProductDetailClient({
   };
 
   // Wrapper for handleBuyNow with analytics tracking
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     if (totalKg === 0) {
       return; // Hook already shows error toast
     }
@@ -173,7 +173,7 @@ export default function ProductDetailClient({
             }
           : undefined;
 
-      trackInitiateCheckout({
+      await trackInitiateCheckout({
         value: totalPrice,
         currency: "PKR",
         numItems: totalKg,

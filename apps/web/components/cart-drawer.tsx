@@ -12,7 +12,7 @@ import {
   getPricePerKg,
   calculateSavings,
 } from "@/lib/utils";
-import { storage, STORAGE_BUCKET_ID } from "@/lib/appwrite";
+import { STORAGE_BUCKET_ID } from "@/lib/appwrite";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMetaTracking } from "@/lib/hooks/use-meta-tracking";
@@ -48,7 +48,7 @@ export function CartDrawer() {
     return total + savingsInfo.originalPrice;
   }, 0);
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     const agentLabel = getAgentLabelFromLabels(user?.labels);
     const isAgent = Boolean(agentLabel);
     const orderChannel = getOrderChannelFromAgentLabel(agentLabel);
@@ -75,7 +75,7 @@ export function CartDrawer() {
 
     // Track InitiateCheckout event (skip for agents)
     if (!isAgent) {
-      trackInitiateCheckout({
+      await trackInitiateCheckout({
         value: totalPrice,
         currency: "PKR",
         numItems: itemsForTracking.reduce((sum, item) => sum + item.quantity, 0),
@@ -121,7 +121,7 @@ export function CartDrawer() {
                       Your cart is empty
                     </Drawer.Description>
                     <p className="text-sm text-gray-500">
-                      Looks like you haven't added anything yet.
+                      Looks like you haven&apos;t added anything yet.
                     </p>
                   </div>
                   <Button onClick={() => setIsOpen(false)} className="mt-4">
@@ -208,7 +208,7 @@ export function CartDrawer() {
 
                                 {/* Bag Controls */}
                                 <div className="space-y-1.5 mt-3">
-                                  {[3, 5, 10, 25].map((size) => {
+                                  {([3, 5, 10, 25] as const).map((size) => {
                                     const count =
                                       item.bags[
                                         `kg${size}` as keyof typeof item.bags
@@ -229,7 +229,7 @@ export function CartDrawer() {
                                               onClick={() =>
                                                 removeBag(
                                                   item.product.$id,
-                                                  size as any,
+                                                  size,
                                                   item.isColdDrinkBundle,
                                                 )
                                               }
@@ -243,7 +243,7 @@ export function CartDrawer() {
                                               onClick={() =>
                                                 addBag(
                                                   item.product,
-                                                  size as any,
+                                                  size,
                                                   item.isColdDrinkBundle,
                                                 )
                                               }
