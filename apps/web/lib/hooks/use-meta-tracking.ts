@@ -5,26 +5,36 @@ import { usePathname, useSearchParams } from "next/navigation";
 import {
   generateEventId,
   getFacebookCookies,
+  META_DATASET_ID,
   sanitizeCustomerNameForMeta,
-  type MetaCustomData,
-} from "@/lib/meta";
+} from "@/lib/meta-browser";
+import type { MetaCustomData } from "@/lib/meta";
 import type { AgentLabel, OrderChannel } from "@/lib/tracking/order-channel";
 
 const NAVIGATION_PIXEL_FLUSH_MS = 800;
 const NAVIGATION_PIXEL_READY_TIMEOUT_MS = 1000;
 const PIXEL_READY_POLL_MS = 50;
-const META_PIXEL_INIT_TIMEOUT_MS = 2000;
 const META_PIXEL_SCRIPT_URL = "https://connect.facebook.net/en_US/fbevents.js";
 const META_PIXEL_FALLBACK_URL = "https://www.facebook.com/tr/";
-const META_DATASET_ID = process.env.NEXT_PUBLIC_META_DATASET_ID;
+
+type MetaFbq = {
+  (...args: unknown[]): void;
+  callMethod?: (...args: unknown[]) => void;
+  queue?: unknown[][];
+  push?: MetaFbq;
+  loaded?: boolean;
+  version?: string;
+};
 
 // Extend Window interface for Meta Pixel
 declare global {
   interface Window {
-    fbq?: (...args: unknown[]) => void;
+    fbq?: MetaFbq;
+    _fbq?: MetaFbq;
     __metaPageViewEventId?: string;
     __metaPixelInitialized?: boolean;
     __metaDebugMode?: boolean;
+    __metaPixelBeacons?: HTMLImageElement[];
   }
 }
 
@@ -100,21 +110,6 @@ function debugLog(...args: unknown[]) {
   }
 }
 
-async function waitForFbq(timeoutMs: number) {
-  if (typeof window === "undefined") return undefined;
-  if (window.fbq || timeoutMs <= 0) return window.fbq;
-
-  const deadline = Date.now() + timeoutMs;
-  let attempts = 0;
-  while (!window.fbq && Date.now() < deadline) {
-    attempts++;
-    await sleep(PIXEL_READY_POLL_MS);
-  }
-
-  debugLog(`waitForFbq: fbq ${window.fbq ? "found" : "not found"} after ${attempts * PIXEL_READY_POLL_MS}ms`);
-  return window.fbq;
-}
-
 async function waitForPixelInit(timeoutMs: number): Promise<boolean> {
   if (typeof window === "undefined") return false;
   if (window.__metaPixelInitialized) return true;
@@ -133,33 +128,85 @@ function hasMetaPixelScript(): boolean {
   if (typeof document === "undefined") return false;
   return Boolean(
     document.querySelector(`script[src="${META_PIXEL_SCRIPT_URL}"]`) ||
-      document.querySelector('script[data-meta-pixel="true"]'),
+      document.querySelector(
+        'script[src*="connect.facebook.net"][src*="fbevents.js"]',
+      ),
   );
 }
 
-function injectMetaPixelScript(): Promise<boolean> {
-  if (typeof document === "undefined") return Promise.resolve(false);
-  if (hasMetaPixelScript()) return Promise.resolve(true);
+function isFbeventsLoaded(): boolean {
+  return Boolean(
+    typeof window !== "undefined" &&
+      window.fbq &&
+      typeof window.fbq.callMethod === "function",
+  );
+}
 
-  return new Promise((resolve) => {
-    const script = document.createElement("script");
-    script.async = true;
-    script.src = META_PIXEL_SCRIPT_URL;
-    script.dataset.metaPixel = "true";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.head.appendChild(script);
-  });
+async function waitForFbeventsLoaded(timeoutMs: number): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  if (isFbeventsLoaded()) return true;
+  if (timeoutMs <= 0) return false;
+
+  const deadline = Date.now() + timeoutMs;
+  while (!isFbeventsLoaded() && Date.now() < deadline) {
+    await sleep(PIXEL_READY_POLL_MS);
+  }
+
+  debugLog(
+    `waitForFbeventsLoaded: ${isFbeventsLoaded() ? "loaded" : "not loaded"}`,
+  );
+  return isFbeventsLoaded();
+}
+
+function installMetaPixelBase(): MetaFbq | undefined {
+  if (typeof window === "undefined") return undefined;
+  if (window.fbq) return window.fbq;
+
+  const fbq = function metaFbq(...args: unknown[]) {
+    if (fbq.callMethod) {
+      fbq.callMethod(...args);
+      return;
+    }
+
+    fbq.queue?.push(args);
+  } as MetaFbq;
+
+  if (!window._fbq) window._fbq = fbq;
+  fbq.push = fbq;
+  fbq.loaded = true;
+  fbq.version = "2.0";
+  fbq.queue = [];
+  window.fbq = fbq;
+
+  return fbq;
+}
+
+function injectMetaPixelScript(): boolean {
+  if (typeof document === "undefined") return false;
+  if (hasMetaPixelScript()) return true;
+
+  const script = document.createElement("script");
+  script.async = true;
+  script.src = META_PIXEL_SCRIPT_URL;
+  script.dataset.metaPixel = "true";
+  script.dataset.metaPixelSource = "tracking-hook";
+  document.head.appendChild(script);
+  return true;
 }
 
 function initializeMetaPixel(): boolean {
-  if (typeof window === "undefined" || !META_DATASET_ID || !window.fbq) {
+  if (typeof window === "undefined" || !META_DATASET_ID) {
     return false;
   }
 
   try {
-    window.fbq("set", "autoConfig", false, META_DATASET_ID);
-    window.fbq("init", META_DATASET_ID);
+    const fbq = installMetaPixelBase();
+    if (!fbq) return false;
+
+    if (window.__metaPixelInitialized) return true;
+
+    fbq("set", "autoConfig", false, META_DATASET_ID);
+    fbq("init", META_DATASET_ID);
     window.__metaPixelInitialized = true;
     return true;
   } catch (error) {
@@ -168,21 +215,13 @@ function initializeMetaPixel(): boolean {
   }
 }
 
-async function ensureMetaPixel(): Promise<boolean> {
+function ensureMetaPixel(): boolean {
   if (typeof window === "undefined" || !META_DATASET_ID) return false;
   if (window.fbq && window.__metaPixelInitialized) return true;
 
-  const scriptLoaded = await injectMetaPixelScript();
-  if (!scriptLoaded && !window.fbq) return false;
-
-  await waitForFbq(META_PIXEL_INIT_TIMEOUT_MS);
-  if (!window.fbq) return false;
-
-  if (!window.__metaPixelInitialized) {
-    return initializeMetaPixel();
-  }
-
-  return true;
+  installMetaPixelBase();
+  injectMetaPixelScript();
+  return initializeMetaPixel();
 }
 
 function appendMetaPixelCustomData(
@@ -192,6 +231,7 @@ function appendMetaPixelCustomData(
   if (customData.value !== undefined) params.set("cd[value]", String(customData.value));
   if (customData.currency) params.set("cd[currency]", customData.currency);
   if (customData.content_name) params.set("cd[content_name]", customData.content_name);
+  if (customData.content_category) params.set("cd[content_category]", customData.content_category);
   if (customData.content_type) params.set("cd[content_type]", customData.content_type);
   if (customData.num_items !== undefined) params.set("cd[num_items]", String(customData.num_items));
   if (customData.order_id) params.set("cd[order_id]", customData.order_id);
@@ -199,6 +239,7 @@ function appendMetaPixelCustomData(
   customData.content_ids?.forEach((contentId) =>
     params.append("cd[content_ids][]", contentId),
   );
+  if (customData.contents) params.set("cd[contents]", JSON.stringify(customData.contents));
 }
 
 function buildMetaPixelFallbackUrl({
@@ -217,11 +258,15 @@ function buildMetaPixelFallbackUrl({
   const params = new URLSearchParams({
     id: META_DATASET_ID || "",
     ev: eventName,
+    eid: eventId,
     eventID: eventId,
     dl: eventSourceUrl,
+    if: "false",
     ts: String(eventTime),
-    noscript: "1",
   });
+  const { fbp, fbc } = getFacebookCookies();
+  if (fbp) params.set("fbp", fbp);
+  if (fbc) params.set("fbc", fbc);
 
   appendMetaPixelCustomData(params, customData);
   return `${META_PIXEL_FALLBACK_URL}?${params.toString()}`;
@@ -250,11 +295,16 @@ function sendMetaPixelFallback({
     eventTime,
   });
 
-  if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
-    return navigator.sendBeacon(url);
-  }
-
   const image = new Image();
+  window.__metaPixelBeacons = window.__metaPixelBeacons || [];
+  window.__metaPixelBeacons.push(image);
+  const releaseBeacon = () => {
+    window.__metaPixelBeacons = window.__metaPixelBeacons?.filter(
+      (beacon) => beacon !== image,
+    );
+  };
+  image.onload = releaseBeacon;
+  image.onerror = releaseBeacon;
   image.decoding = "async";
   image.referrerPolicy = "no-referrer-when-downgrade";
   image.src = url;
@@ -289,7 +339,7 @@ async function trackBrowserPixel({
     pixelScriptLoaded: hasMetaPixelScript(),
   });
 
-  const pixelReady = await ensureMetaPixel();
+  const pixelReady = ensureMetaPixel();
   const fbq = window.fbq;
 
   if (!fbq) {
@@ -309,16 +359,51 @@ async function trackBrowserPixel({
     return fallbackTracked;
   }
 
+  let fallbackTracked = false;
   if (waitForPixel) {
     const isInitialized = await waitForPixelInit(NAVIGATION_PIXEL_READY_TIMEOUT_MS);
     if (!isInitialized) {
       initializeMetaPixel();
     }
+
+    const remoteLoaded = await waitForFbeventsLoaded(
+      NAVIGATION_PIXEL_READY_TIMEOUT_MS,
+    );
+    if (!remoteLoaded) {
+      fallbackTracked = sendMetaPixelFallback({
+        eventName,
+        customData,
+        eventId,
+        eventSourceUrl,
+        eventTime,
+      });
+      console.warn(
+        `[Meta Pixel] ${eventName} queued before fbevents.js loaded; direct browser fallback ${
+          fallbackTracked ? "scheduled" : "failed"
+        }.`,
+        { eventId },
+      );
+    }
   }
 
   try {
     fbq("track", eventName, customData, { eventID: eventId });
-    console.log(`[Meta Pixel] ${eventName} tracked with ID: ${eventId}`);
+    if (!fallbackTracked) {
+      // Keep an explicit browser-side /tr beacon visible in Network even when
+      // fbq queues or silently delays its own transport in webviews.
+      fallbackTracked = sendMetaPixelFallback({
+        eventName,
+        customData,
+        eventId,
+        eventSourceUrl,
+        eventTime,
+      });
+    }
+    console.log(
+      `[Meta Pixel] ${eventName} tracked with ID: ${eventId} (direct beacon: ${
+        fallbackTracked ? "scheduled" : "not scheduled"
+      })`,
+    );
     debugLog(`trackBrowserPixel: Event fired successfully`, { eventId, eventName });
 
     window.dispatchEvent(new CustomEvent("metaPixelEvent", {
@@ -327,7 +412,7 @@ async function trackBrowserPixel({
 
     return true;
   } catch (error) {
-    const fallbackTracked = sendMetaPixelFallback({
+    fallbackTracked = sendMetaPixelFallback({
       eventName,
       customData,
       eventId,

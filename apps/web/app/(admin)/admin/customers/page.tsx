@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { formatCurrency } from '@/lib/utils';
 import { User, Mail, Phone, ShoppingBag, Search, Users, TrendingUp, DollarSign, Award, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { sanitizeCustomerNameForMeta } from '@/lib/meta';
+import { sanitizeCustomerNameForMeta } from '@/lib/meta-browser';
 import { requestAdminGraphQL } from '@/lib/admin/graphql-client';
 import { useAuthStore } from '@/lib/store/auth-store';
 

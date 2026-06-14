@@ -35,7 +35,7 @@ import {
   formatPhoneNumberForDisplay,
   validatePakistaniPhoneNumber,
 } from "@/lib/utils";
-import { sanitizeCustomerNameForMeta } from "@/lib/meta";
+import { sanitizeCustomerNameForMeta } from "@/lib/meta-browser";
 import { useMetaTracking } from "@/lib/hooks/use-meta-tracking";
 import {
   getAgentLabelFromLabels,

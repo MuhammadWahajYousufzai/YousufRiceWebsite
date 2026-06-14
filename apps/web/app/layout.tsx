@@ -138,10 +138,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
-      <head>
-        <MetaPixel />
-      </head>
       <body className="antialiased">
+        <MetaPixel />
         <MetaPixelDebug />
         {/* Transitions removed */}
 
