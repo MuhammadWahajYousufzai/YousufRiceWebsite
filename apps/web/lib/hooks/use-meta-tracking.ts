@@ -16,6 +16,7 @@ const NAVIGATION_PIXEL_READY_TIMEOUT_MS = 1000;
 const PIXEL_READY_POLL_MS = 50;
 const META_PIXEL_SCRIPT_URL = "https://connect.facebook.net/en_US/fbevents.js";
 const META_PIXEL_FALLBACK_URL = "https://www.facebook.com/tr/";
+const META_TEST_EVENT_CODE = process.env.NEXT_PUBLIC_META_TEST_EVENT_CODE;
 
 type MetaFbq = {
   (...args: unknown[]): void;
@@ -35,6 +36,19 @@ declare global {
     __metaPixelInitialized?: boolean;
     __metaDebugMode?: boolean;
     __metaPixelBeacons?: HTMLImageElement[];
+    __metaTestEventCode?: string;
+    __metaTrackingDiagnostics?: {
+      pixelScriptLoaded: boolean;
+      fbqExists: boolean;
+      fbqLoaded: boolean;
+      pixelInitialized: boolean;
+      lastEventName: string;
+      lastEventId: string;
+      lastBrowserResult: string;
+      lastCapiResult: string;
+      resourceTimings: string[];
+      errors: string[];
+    };
   }
 }
 
@@ -108,6 +122,54 @@ function debugLog(...args: unknown[]) {
   if (typeof window !== "undefined" && (window.__metaDebugMode || isDebugMode())) {
     console.log("[Meta Pixel Debug]", ...args);
   }
+}
+
+function getMetaResourceTimings(): string[] {
+  if (typeof performance === "undefined") return [];
+
+  return performance
+    .getEntriesByType("resource")
+    .filter((entry) => {
+      const name = String(entry.name || "");
+      return (
+        name.includes("facebook") ||
+        name.includes("fbevents") ||
+        name.includes("connect.facebook")
+      );
+    })
+    .map((entry) => {
+      const resource = entry as PerformanceResourceTiming;
+      return JSON.stringify({
+        name: resource.name,
+        type: resource.initiatorType,
+        status: resource.responseStatus || "unknown",
+        duration: Math.round(resource.duration),
+        transferSize: resource.transferSize,
+      });
+    });
+}
+
+function updateTrackingDiagnostics(patch: Partial<
+  NonNullable<Window["__metaTrackingDiagnostics"]>
+>) {
+  if (typeof window === "undefined") return;
+
+  const previous = window.__metaTrackingDiagnostics;
+
+  window.__metaTrackingDiagnostics = {
+    pixelScriptLoaded: hasMetaPixelScript(),
+    fbqExists: Boolean(window.fbq),
+    fbqLoaded: Boolean(window.fbq?.callMethod),
+    pixelInitialized: Boolean(window.__metaPixelInitialized),
+    lastEventName: previous?.lastEventName || "",
+    lastEventId: previous?.lastEventId || "",
+    lastBrowserResult: previous?.lastBrowserResult || "",
+    lastCapiResult: previous?.lastCapiResult || "",
+    resourceTimings: getMetaResourceTimings(),
+    errors: previous?.errors || [],
+    ...previous,
+    ...patch,
+  };
 }
 
 async function waitForPixelInit(timeoutMs: number): Promise<boolean> {
@@ -207,7 +269,12 @@ function initializeMetaPixel(): boolean {
 
     fbq("set", "autoConfig", false, META_DATASET_ID);
     fbq("init", META_DATASET_ID);
+    if (META_TEST_EVENT_CODE) {
+      fbq("set", "test_event_code", META_TEST_EVENT_CODE);
+      window.__metaTestEventCode = META_TEST_EVENT_CODE;
+    }
     window.__metaPixelInitialized = true;
+    updateTrackingDiagnostics({ pixelInitialized: true });
     return true;
   } catch (error) {
     console.warn("[Meta Pixel] Failed to initialize Pixel:", error);
@@ -220,7 +287,9 @@ function ensureMetaPixel(): boolean {
   if (window.fbq && window.__metaPixelInitialized) return true;
 
   installMetaPixelBase();
-  injectMetaPixelScript();
+  if (!hasMetaPixelScript()) {
+    injectMetaPixelScript();
+  }
   return initializeMetaPixel();
 }
 
@@ -267,6 +336,7 @@ function buildMetaPixelFallbackUrl({
   const { fbp, fbc } = getFacebookCookies();
   if (fbp) params.set("fbp", fbp);
   if (fbc) params.set("fbc", fbc);
+  if (META_TEST_EVENT_CODE) params.set("test_event_code", META_TEST_EVENT_CODE);
 
   appendMetaPixelCustomData(params, customData);
   return `${META_PIXEL_FALLBACK_URL}?${params.toString()}`;
@@ -340,6 +410,8 @@ async function trackBrowserPixel({
   });
 
   const pixelReady = ensureMetaPixel();
+  updateTrackingDiagnostics({ pixelScriptLoaded: hasMetaPixelScript() });
+
   const fbq = window.fbq;
 
   if (!fbq) {
@@ -349,6 +421,11 @@ async function trackBrowserPixel({
       eventId,
       eventSourceUrl,
       eventTime,
+    });
+    updateTrackingDiagnostics({
+      lastEventName: eventName,
+      lastEventId: eventId,
+      lastBrowserResult: fallbackTracked ? "fallback-image" : "failed",
     });
 
     console.warn(`[Meta Pixel] ${eventName} used fallback because fbq is unavailable.`, {
@@ -387,7 +464,10 @@ async function trackBrowserPixel({
   }
 
   try {
-    fbq("track", eventName, customData, { eventID: eventId });
+    fbq("track", eventName, customData, {
+      eventID: eventId,
+      ...(META_TEST_EVENT_CODE ? { test_event_code: META_TEST_EVENT_CODE } : {}),
+    });
     if (!fallbackTracked) {
       // Keep an explicit browser-side /tr beacon visible in Network even when
       // fbq queues or silently delays its own transport in webviews.
@@ -405,6 +485,11 @@ async function trackBrowserPixel({
       })`,
     );
     debugLog(`trackBrowserPixel: Event fired successfully`, { eventId, eventName });
+    updateTrackingDiagnostics({
+      lastEventName: eventName,
+      lastEventId: eventId,
+      lastBrowserResult: fallbackTracked ? "fbq-plus-fallback" : "fbq",
+    });
 
     window.dispatchEvent(new CustomEvent("metaPixelEvent", {
       detail: { eventName, eventId }
@@ -421,6 +506,15 @@ async function trackBrowserPixel({
     });
 
     console.error(`[Meta Pixel] Error firing ${eventName}; fallback ${fallbackTracked ? "succeeded" : "failed"}:`, error);
+    updateTrackingDiagnostics({
+      lastEventName: eventName,
+      lastEventId: eventId,
+      lastBrowserResult: fallbackTracked ? "fallback-after-error" : "failed",
+      errors: [
+        ...(window.__metaTrackingDiagnostics?.errors || []),
+        error instanceof Error ? error.message : String(error),
+      ],
+    });
     debugLog(`trackBrowserPixel: Error firing event`, { error, fallbackTracked });
     return fallbackTracked;
   }
@@ -489,6 +583,11 @@ export function useMetaTracking() {
           skipBrowserPixel,
           deliveryMode,
         });
+        updateTrackingDiagnostics({
+          lastEventName: eventName,
+          lastEventId: eventId,
+          lastCapiResult: "pending",
+        });
 
         const waitForNavigationPixelFlush = async () => {
           if (deliveryMode === "navigation" && browserPixelTracked) {
@@ -540,11 +639,13 @@ export function useMetaTracking() {
             new Blob([JSON.stringify(payload)], { type: "application/json" }),
           );
           if (beaconOk) {
+            updateTrackingDiagnostics({ lastCapiResult: "beacon-queued" });
             await waitForNavigationPixelFlush();
             return { success: true, eventId };
           }
 
           const message = `Meta CAPI ${eventName} was not queued: sendBeacon rejected the request.`;
+          updateTrackingDiagnostics({ lastCapiResult: "beacon-rejected" });
           console.warn(`[Meta Conversions API] ${message}`, {
             eventName,
             eventId,
@@ -559,15 +660,31 @@ export function useMetaTracking() {
               if (!response.ok) {
                 const responseText = await response.text().catch(() => "");
                 const message = `Meta CAPI ${eventName} failed: HTTP ${response.status}`;
+                updateTrackingDiagnostics({
+                  lastCapiResult: `http-${response.status}`,
+                  errors: [
+                    ...(window.__metaTrackingDiagnostics?.errors || []),
+                    message,
+                  ],
+                });
                 console.warn(message, {
                   eventName,
                   eventId,
                   responseText,
                 });
+              } else {
+                updateTrackingDiagnostics({ lastCapiResult: "sent" });
               }
             })
             .catch((error) => {
               const message = `Meta CAPI ${eventName} failed: ${error instanceof Error ? error.message : String(error)}`;
+              updateTrackingDiagnostics({
+                lastCapiResult: "failed",
+                errors: [
+                  ...(window.__metaTrackingDiagnostics?.errors || []),
+                  message,
+                ],
+              });
               console.error(`[Meta Conversions API] ${message}`, {
                 eventName,
                 eventId,
@@ -581,6 +698,13 @@ export function useMetaTracking() {
         if (!response.ok) {
           const error = `HTTP ${response.status}`;
           const message = `Meta CAPI ${eventName} failed: ${error}`;
+          updateTrackingDiagnostics({
+            lastCapiResult: `http-${response.status}`,
+            errors: [
+              ...(window.__metaTrackingDiagnostics?.errors || []),
+              message,
+            ],
+          });
           console.warn(`[Meta Conversions API] ${message}`, {
             eventName,
             eventId,
@@ -588,6 +712,7 @@ export function useMetaTracking() {
           return { success: false, error };
         }
 
+        updateTrackingDiagnostics({ lastCapiResult: "sent" });
         console.log(
           `[Meta Conversions API] ${eventName} sent with ID: ${eventId}`,
         );
@@ -596,6 +721,13 @@ export function useMetaTracking() {
         return { success: true, eventId };
       } catch (error) {
         const message = `Meta tracking failed: ${error instanceof Error ? error.message : String(error)}`;
+        updateTrackingDiagnostics({
+          lastCapiResult: "failed",
+          errors: [
+            ...(window.__metaTrackingDiagnostics?.errors || []),
+            message,
+          ],
+        });
         console.error(`[Meta Tracking] ${message}`, {
           eventName,
         });
