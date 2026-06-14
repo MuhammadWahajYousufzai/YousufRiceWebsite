@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { OrderWithDetails, OrderItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,9 +22,17 @@ import {
 import Link from "next/link";
 import { useAuthStore } from "@/lib/store/auth-store";
 
-// Remove old interfaces since we're using the new OrderWithDetails type
+function OrderDetailLoading() {
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="text-center py-12">
+        <p className="text-gray-600">Loading order details...</p>
+      </div>
+    </div>
+  );
+}
 
-export default function OrderDetailPage() {
+function OrderDetailContent() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -90,13 +98,7 @@ export default function OrderDetailPage() {
   }
 
   if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center py-12">
-          <p className="text-gray-600">Loading order details...</p>
-        </div>
-      </div>
-    );
+    return <OrderDetailLoading />;
   }
 
   if (!data) {
@@ -531,5 +533,13 @@ export default function OrderDetailPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function OrderDetailPage() {
+  return (
+    <Suspense fallback={<OrderDetailLoading />}>
+      <OrderDetailContent />
+    </Suspense>
   );
 }

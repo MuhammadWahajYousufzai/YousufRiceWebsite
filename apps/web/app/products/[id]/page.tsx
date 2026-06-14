@@ -54,13 +54,11 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     },
   };
 }
-export default async function ProductPage({ params }: ProductPageProps) {
-  const { id } = await params;
-
+export default function ProductPage({ params }: ProductPageProps) {
   return (
     <div className="min-h-screen bg-linear-to-b from-gray-50 to-white">
       <Suspense fallback={<ProductDetailSkeleton />}>
-        <ProductDetailContent productId={id} />
+        <ProductDetailContent params={params} />
       </Suspense>
     </div>
   );
@@ -70,7 +68,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
  * Async component that fetches and displays product details
  * Wrapped in Suspense boundary for PPR optimization
  */
-async function ProductDetailContent({ productId }: { productId: string }) {
+async function ProductDetailContent({ params }: ProductPageProps) {
+  const { id: productId } = await params;
+
   // Fetch product and images using cached data functions
   const [product, images] = await Promise.all([
     getCachedProduct(productId),
