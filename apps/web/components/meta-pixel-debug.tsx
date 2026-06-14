@@ -37,6 +37,13 @@ export function MetaPixelDebug() {
     errors: [],
   });
   const [isVisible, setIsVisible] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const copyDebugInfo = async () => {
+    await navigator.clipboard.writeText(JSON.stringify(debugInfo, null, 2));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
     // Check if debug mode is enabled via query param
@@ -204,20 +211,36 @@ export function MetaPixelDebug() {
       <div style={{ fontSize: "10px", color: "#888", marginTop: "10px" }}>
         User Agent: {debugInfo.userAgent.substring(0, 50)}...
       </div>
-      <button
-        onClick={() => setIsVisible(false)}
-        style={{
-          marginTop: "10px",
-          padding: "5px 10px",
-          backgroundColor: "#f87171",
-          color: "white",
-          border: "none",
-          borderRadius: "4px",
-          cursor: "pointer",
-        }}
-      >
-        Close
-      </button>
+      <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+        <button
+          onClick={copyDebugInfo}
+          style={{
+            padding: "5px 10px",
+            backgroundColor: copied ? "#22c55e" : "#27247b",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontWeight: "bold",
+          }}
+        >
+          {copied ? "Copied" : "Copy Debug"}
+        </button>
+        <button
+          onClick={() => setIsVisible(false)}
+          style={{
+            padding: "5px 10px",
+            backgroundColor: "#f87171",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontWeight: "bold",
+          }}
+        >
+          Close
+        </button>
+      </div>
     </div>
   );
 }
