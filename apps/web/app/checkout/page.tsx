@@ -699,7 +699,7 @@ function CheckoutContent() {
         const cleanedName =
           sanitizeCustomerNameForMeta(fullName) || fullName;
 
-        trackPurchase({
+        await trackPurchase({
           value: getTotalPrice(),
           currency: "PKR",
           orderId,
@@ -724,11 +724,6 @@ function CheckoutContent() {
             placedByUserId: user?.$id,
             customerUserId: customerId,
           },
-        }).catch((trackingError) => {
-          console.error("[Meta Purchase] non-blocking send failed:", {
-            orderId,
-            trackingError,
-          });
         });
       }
 

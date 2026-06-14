@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback } from "react";
-import toast from "react-hot-toast";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   generateEventId,
@@ -14,17 +13,15 @@ import type { AgentLabel, OrderChannel } from "@/lib/tracking/order-channel";
 const NAVIGATION_PIXEL_FLUSH_MS = 800;
 const NAVIGATION_PIXEL_READY_TIMEOUT_MS = 1000;
 const PIXEL_READY_POLL_MS = 50;
-const META_DIAGNOSTIC_TOAST_DURATION = 8000;
+const META_PIXEL_INIT_TIMEOUT_MS = 2000;
+const META_PIXEL_SCRIPT_URL = "https://connect.facebook.net/en_US/fbevents.js";
+const META_PIXEL_FALLBACK_URL = "https://www.facebook.com/tr/";
+const META_DATASET_ID = process.env.NEXT_PUBLIC_META_DATASET_ID;
 
 // Extend Window interface for Meta Pixel
 declare global {
   interface Window {
-    fbq?: (
-      action: string,
-      eventName: string,
-      data?: MetaCustomData,
-      options?: { eventID: string },
-    ) => void;
+    fbq?: (...args: unknown[]) => void;
     __metaPageViewEventId?: string;
     __metaPixelInitialized?: boolean;
     __metaDebugMode?: boolean;
@@ -103,33 +100,6 @@ function debugLog(...args: unknown[]) {
   }
 }
 
-function shouldShowMetaDiagnostics(): boolean {
-  if (typeof window === "undefined") return false;
-  return isDebugMode() || isInstagramBrowser();
-}
-
-function formatMetaError(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return String(error);
-  }
-}
-
-function showMetaTrackingToast(message: string, type: "success" | "error") {
-  if (!shouldShowMetaDiagnostics()) return;
-  if (type === "success" && !isDebugMode()) return;
-
-  toast[type](message, { duration: META_DIAGNOSTIC_TOAST_DURATION });
-}
-
-function getPixelScriptLoaded(): boolean {
-  if (typeof document === "undefined") return false;
-  return Boolean(document.querySelector('script[src*="fbevents.js"]'));
-}
-
 async function waitForFbq(timeoutMs: number) {
   if (typeof window === "undefined") return undefined;
   if (window.fbq || timeoutMs <= 0) return window.fbq;
@@ -159,15 +129,151 @@ async function waitForPixelInit(timeoutMs: number): Promise<boolean> {
   return window.__metaPixelInitialized || false;
 }
 
+function hasMetaPixelScript(): boolean {
+  if (typeof document === "undefined") return false;
+  return Boolean(
+    document.querySelector(`script[src="${META_PIXEL_SCRIPT_URL}"]`) ||
+      document.querySelector('script[data-meta-pixel="true"]'),
+  );
+}
+
+function injectMetaPixelScript(): Promise<boolean> {
+  if (typeof document === "undefined") return Promise.resolve(false);
+  if (hasMetaPixelScript()) return Promise.resolve(true);
+
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = META_PIXEL_SCRIPT_URL;
+    script.dataset.metaPixel = "true";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
+  });
+}
+
+function initializeMetaPixel(): boolean {
+  if (typeof window === "undefined" || !META_DATASET_ID || !window.fbq) {
+    return false;
+  }
+
+  try {
+    window.fbq("set", "autoConfig", false, META_DATASET_ID);
+    window.fbq("init", META_DATASET_ID);
+    window.__metaPixelInitialized = true;
+    return true;
+  } catch (error) {
+    console.warn("[Meta Pixel] Failed to initialize Pixel:", error);
+    return false;
+  }
+}
+
+async function ensureMetaPixel(): Promise<boolean> {
+  if (typeof window === "undefined" || !META_DATASET_ID) return false;
+  if (window.fbq && window.__metaPixelInitialized) return true;
+
+  const scriptLoaded = await injectMetaPixelScript();
+  if (!scriptLoaded && !window.fbq) return false;
+
+  await waitForFbq(META_PIXEL_INIT_TIMEOUT_MS);
+  if (!window.fbq) return false;
+
+  if (!window.__metaPixelInitialized) {
+    return initializeMetaPixel();
+  }
+
+  return true;
+}
+
+function appendMetaPixelCustomData(
+  params: URLSearchParams,
+  customData: MetaCustomData,
+) {
+  if (customData.value !== undefined) params.set("cd[value]", String(customData.value));
+  if (customData.currency) params.set("cd[currency]", customData.currency);
+  if (customData.content_name) params.set("cd[content_name]", customData.content_name);
+  if (customData.content_type) params.set("cd[content_type]", customData.content_type);
+  if (customData.num_items !== undefined) params.set("cd[num_items]", String(customData.num_items));
+  if (customData.order_id) params.set("cd[order_id]", customData.order_id);
+  if (customData.search_string) params.set("cd[search_string]", customData.search_string);
+  customData.content_ids?.forEach((contentId) =>
+    params.append("cd[content_ids][]", contentId),
+  );
+}
+
+function buildMetaPixelFallbackUrl({
+  eventName,
+  customData,
+  eventId,
+  eventSourceUrl,
+  eventTime,
+}: {
+  eventName: string;
+  customData: MetaCustomData;
+  eventId: string;
+  eventSourceUrl: string;
+  eventTime: number;
+}): string {
+  const params = new URLSearchParams({
+    id: META_DATASET_ID || "",
+    ev: eventName,
+    eventID: eventId,
+    dl: eventSourceUrl,
+    ts: String(eventTime),
+    noscript: "1",
+  });
+
+  appendMetaPixelCustomData(params, customData);
+  return `${META_PIXEL_FALLBACK_URL}?${params.toString()}`;
+}
+
+function sendMetaPixelFallback({
+  eventName,
+  customData,
+  eventId,
+  eventSourceUrl,
+  eventTime,
+}: {
+  eventName: string;
+  customData: MetaCustomData;
+  eventId: string;
+  eventSourceUrl: string;
+  eventTime: number;
+}): boolean {
+  if (typeof window === "undefined" || !META_DATASET_ID) return false;
+
+  const url = buildMetaPixelFallbackUrl({
+    eventName,
+    customData,
+    eventId,
+    eventSourceUrl,
+    eventTime,
+  });
+
+  if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+    return navigator.sendBeacon(url);
+  }
+
+  const image = new Image();
+  image.decoding = "async";
+  image.referrerPolicy = "no-referrer-when-downgrade";
+  image.src = url;
+  return true;
+}
+
 async function trackBrowserPixel({
   eventName,
   customData,
   eventId,
+  eventSourceUrl,
+  eventTime,
   waitForPixel,
 }: {
   eventName: string;
   customData: MetaCustomData;
   eventId: string;
+  eventSourceUrl: string;
+  eventTime: number;
   waitForPixel: boolean;
 }) {
   if (typeof window === "undefined") return false;
@@ -180,68 +286,58 @@ async function trackBrowserPixel({
     waitForPixel,
     fbqExists: !!window.fbq,
     pixelInitialized: window.__metaPixelInitialized,
-    pixelScriptLoaded: getPixelScriptLoaded(),
+    pixelScriptLoaded: hasMetaPixelScript(),
   });
 
-  // Wait for fbq to be available
-  const fbq = await waitForFbq(
-    waitForPixel ? NAVIGATION_PIXEL_READY_TIMEOUT_MS : 0,
-  );
+  const pixelReady = await ensureMetaPixel();
+  const fbq = window.fbq;
+
   if (!fbq) {
-    const message = waitForPixel
-      ? `Meta Pixel ${eventName} skipped: fbq was not ready before navigation.`
-      : `Meta Pixel ${eventName} skipped: fbq is not available.`;
-    console.warn(`[Meta Pixel] ${message}`, {
+    const fallbackTracked = sendMetaPixelFallback({
+      eventName,
+      customData,
       eventId,
-      waitedMs: waitForPixel ? NAVIGATION_PIXEL_READY_TIMEOUT_MS : 0,
-      pixelScriptLoaded: getPixelScriptLoaded(),
+      eventSourceUrl,
+      eventTime,
     });
-    debugLog(`trackBrowserPixel: fbq not available`, {
-      waitForPixel,
-      waitedMs: waitForPixel ? NAVIGATION_PIXEL_READY_TIMEOUT_MS : 0,
+
+    console.warn(`[Meta Pixel] ${eventName} used fallback because fbq is unavailable.`, {
+      eventId,
+      pixelReady,
+      fallbackTracked,
     });
-    showMetaTrackingToast(`${message} Event ID: ${eventId}`, "error");
-    return false;
+    return fallbackTracked;
   }
 
-  // For navigation events, also wait for Pixel initialization
   if (waitForPixel) {
     const isInitialized = await waitForPixelInit(NAVIGATION_PIXEL_READY_TIMEOUT_MS);
     if (!isInitialized) {
-      const message = `Meta Pixel ${eventName} fired before initialization completed.`;
-      console.warn(`[Meta Pixel] ${message}`, {
-        eventId,
-        waitedMs: NAVIGATION_PIXEL_READY_TIMEOUT_MS,
-        pixelScriptLoaded: getPixelScriptLoaded(),
-      });
-      debugLog(`trackBrowserPixel: Pixel not initialized after ${NAVIGATION_PIXEL_READY_TIMEOUT_MS}ms`);
-      showMetaTrackingToast(`${message} Event ID: ${eventId}`, "error");
-      // Still try to fire the event even if init flag is not set
+      initializeMetaPixel();
     }
   }
 
-  // Fire the Pixel event
   try {
     fbq("track", eventName, customData, { eventID: eventId });
     console.log(`[Meta Pixel] ${eventName} tracked with ID: ${eventId}`);
     debugLog(`trackBrowserPixel: Event fired successfully`, { eventId, eventName });
 
-    showMetaTrackingToast(`Meta Pixel ${eventName} fired. Event ID: ${eventId}`, "success");
-
-    // Dispatch event for debug component
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("metaPixelEvent", {
-        detail: { eventName, eventId }
-      }));
-    }
+    window.dispatchEvent(new CustomEvent("metaPixelEvent", {
+      detail: { eventName, eventId }
+    }));
 
     return true;
   } catch (error) {
-    const message = `Meta Pixel ${eventName} failed: ${formatMetaError(error)}`;
-    console.error(`[Meta Pixel] Error firing ${eventName}:`, error);
-    debugLog(`trackBrowserPixel: Error firing event`, { error });
-    showMetaTrackingToast(`${message}. Event ID: ${eventId}`, "error");
-    return false;
+    const fallbackTracked = sendMetaPixelFallback({
+      eventName,
+      customData,
+      eventId,
+      eventSourceUrl,
+      eventTime,
+    });
+
+    console.error(`[Meta Pixel] Error firing ${eventName}; fallback ${fallbackTracked ? "succeeded" : "failed"}:`, error);
+    debugLog(`trackBrowserPixel: Error firing event`, { error, fallbackTracked });
+    return fallbackTracked;
   }
 }
 
@@ -296,6 +392,8 @@ export function useMetaTracking() {
               eventName,
               customData,
               eventId,
+              eventSourceUrl,
+              eventTime,
               waitForPixel: deliveryMode === "navigation",
             });
 
@@ -358,7 +456,6 @@ export function useMetaTracking() {
           );
           if (beaconOk) {
             await waitForNavigationPixelFlush();
-            showMetaTrackingToast(`Meta CAPI ${eventName} queued with beacon. Event ID: ${eventId}`, "success");
             return { success: true, eventId };
           }
 
@@ -367,7 +464,6 @@ export function useMetaTracking() {
             eventName,
             eventId,
           });
-          showMetaTrackingToast(`${message} Event ID: ${eventId}`, "error");
         }
 
         const responsePromise = fetch("/api/meta-events", requestInit);
@@ -383,16 +479,14 @@ export function useMetaTracking() {
                   eventId,
                   responseText,
                 });
-                showMetaTrackingToast(`${message}. Event ID: ${eventId}`, "error");
               }
             })
             .catch((error) => {
-              const message = `Meta CAPI ${eventName} failed: ${formatMetaError(error)}`;
+              const message = `Meta CAPI ${eventName} failed: ${error instanceof Error ? error.message : String(error)}`;
               console.error(`[Meta Conversions API] ${message}`, {
                 eventName,
                 eventId,
               });
-              showMetaTrackingToast(`${message}. Event ID: ${eventId}`, "error");
             });
           await waitForNavigationPixelFlush();
           return { success: true, eventId };
@@ -406,7 +500,6 @@ export function useMetaTracking() {
             eventName,
             eventId,
           });
-          showMetaTrackingToast(`${message}. Event ID: ${eventId}`, "error");
           return { success: false, error };
         }
 
@@ -414,15 +507,13 @@ export function useMetaTracking() {
           `[Meta Conversions API] ${eventName} sent with ID: ${eventId}`,
         );
 
-        showMetaTrackingToast(`Meta CAPI ${eventName} sent. Event ID: ${eventId}`, "success");
 
         return { success: true, eventId };
       } catch (error) {
-        const message = `Meta tracking failed: ${formatMetaError(error)}`;
+        const message = `Meta tracking failed: ${error instanceof Error ? error.message : String(error)}`;
         console.error(`[Meta Tracking] ${message}`, {
           eventName,
         });
-        showMetaTrackingToast(`${message}`, "error");
         return { success: false, error: "Tracking failed" };
       }
     },
