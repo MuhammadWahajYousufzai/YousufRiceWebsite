@@ -14,9 +14,9 @@ NEXT_PUBLIC_META_DATASET_ID="your_dataset_id_here"
 META_ACCESS_TOKEN="your_system_user_access_token_here"
 
 # Meta Test Event Code (Optional - for testing Conversions API)
-# Set this to "yousufrice" or your test code to enable test mode
+# Server-only. Set this to your Meta Test Events code to enable CAPI test mode
 # Remove or leave empty for production (no test events)
-NEXT_PUBLIC_META_TEST_EVENT_CODE=""
+META_TEST_EVENT_CODE=""
 
 ===========================================
 HOW TO GET THESE VALUES
@@ -59,10 +59,10 @@ TESTING CONVERSIONS API
    - Click: Test Events tab
    - Copy your Test Event Code (e.g., "TEST12345")
 
-2. Enable Test Mode:
+2. Enable Server-Side Test Mode:
    - Open your .env.local file
-   - Set: NEXT_PUBLIC_META_TEST_EVENT_CODE="yousufrice"
-   - (or use your actual test code from Meta)
+   - Set: META_TEST_EVENT_CODE="TEST16775"
+   - Do not expose this as a public/client env var; test_event_code is for server-side Conversions API payloads only
 
 3. Restart Development Server:
    - Stop your server (Ctrl+C)
@@ -79,13 +79,13 @@ TESTING CONVERSIONS API
    - Events will show "Test" label
 
 6. Switch to Production:
-   - Remove the test code: NEXT_PUBLIC_META_TEST_EVENT_CODE=""
+   - Remove the test code: META_TEST_EVENT_CODE=""
    - Or delete the line entirely
    - Restart server
    - Events will now be sent as production events
 
 ⚠️ IMPORTANT:
-- Test events do NOT affect your ad performance or analytics
+- Events sent with test_event_code are not dropped by Meta and can still flow into Events Manager
 - Always test before going live
 - Remove test code for production deployment
 

@@ -452,7 +452,7 @@ cp apps/web/env.example apps/web/.env.local
 | `VAPID_EMAIL` | ❌ | VAPID contact email |
 | `NEXT_PUBLIC_META_DATASET_ID` | ❌ | Meta Pixel dataset ID |
 | `META_ACCESS_TOKEN` | ❌ | Meta Conversions API token |
-| `META_TEST_EVENT_CODE` | ❌ | Meta test event code |
+| `META_TEST_EVENT_CODE` | ❌ | Server-only Meta Conversions API test event code |
 | `OPENAI_API_KEY` | ❌ | OpenAI API key for AI chat |
 | `NEXT_TELEMETRY_DISABLED` | ❌ | Disable Next.js telemetry |
 

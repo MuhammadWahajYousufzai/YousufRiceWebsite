@@ -10,9 +10,6 @@ import {
 } from "@/lib/meta";
 import type { AgentLabel, OrderChannel } from "@/lib/tracking/order-channel";
 
-// Get test event code from environment variable
-const TEST_EVENT_CODE = process.env.NEXT_PUBLIC_META_TEST_EVENT_CODE || "";
-
 // Extend Window interface for Meta Pixel
 declare global {
   interface Window {
@@ -40,7 +37,6 @@ interface TrackEventParams {
     externalId?: string;
   };
   customData?: MetaCustomData;
-  testEventCode?: string;
   deliveryMode?: "await" | "background" | "navigation";
   skipBrowserPixel?: boolean;
 }
@@ -87,7 +83,6 @@ export function useMetaTracking() {
       eventId: providedEventId,
       userData = {},
       customData = {},
-      testEventCode,
       deliveryMode = "await",
       skipBrowserPixel = false,
     }: TrackEventParams) => {
@@ -137,7 +132,6 @@ export function useMetaTracking() {
             fbc,
           },
           custom_data: customData,
-          test_event_code: testEventCode,
         };
 
         // 2. Server-side: Send to Conversions API via our endpoint
@@ -194,9 +188,8 @@ export function useMetaTracking() {
           return { success: false, error: `HTTP ${response.status}` };
         }
 
-        const testModeIndicator = testEventCode ? " [TEST MODE]" : "";
         console.log(
-          `[Meta Conversions API] ${eventName} sent with ID: ${eventId}${testModeIndicator}`,
+          `[Meta Conversions API] ${eventName} sent with ID: ${eventId}`,
         );
 
         return { success: true, eventId };
@@ -217,7 +210,6 @@ export function useMetaTracking() {
       eventName: "PageView",
       eventId: initialEventId,
       skipBrowserPixel: !!initialEventId,
-      testEventCode: TEST_EVENT_CODE || undefined,
     });
   }, [trackEvent]);
 
@@ -255,7 +247,6 @@ export function useMetaTracking() {
           productData.trackingContext,
         ),
         deliveryMode: "background",
-        testEventCode: TEST_EVENT_CODE || undefined,
       });
     },
     [trackEvent],
@@ -302,7 +293,6 @@ export function useMetaTracking() {
           cartData.trackingContext,
         ),
         deliveryMode: "await",
-        testEventCode: TEST_EVENT_CODE || undefined,
       });
     },
     [trackEvent],
@@ -347,7 +337,6 @@ export function useMetaTracking() {
           checkoutData.trackingContext,
         ),
         deliveryMode: "navigation",
-        testEventCode: TEST_EVENT_CODE || undefined,
       });
     },
     [trackEvent],
@@ -397,7 +386,6 @@ export function useMetaTracking() {
           purchaseData.trackingContext,
         ),
         deliveryMode: "navigation",
-        testEventCode: TEST_EVENT_CODE || undefined,
       });
     },
     [trackEvent],
@@ -410,7 +398,6 @@ export function useMetaTracking() {
         customData: {
           search_string: searchQuery,
         },
-        testEventCode: TEST_EVENT_CODE || undefined,
       });
     },
     [trackEvent],

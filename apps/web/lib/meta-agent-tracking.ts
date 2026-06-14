@@ -4,10 +4,6 @@ import {
 } from "@/lib/meta";
 import type { AgentLabel } from "@/lib/tracking/order-channel";
 
-const TEST_EVENT_CODE =
-  process.env.META_TEST_EVENT_CODE ||
-  process.env.NEXT_PUBLIC_META_TEST_EVENT_CODE ||
-  "";
 const BASE_URL = process.env.NEXT_PUBLIC_PRIMARY_DOMAIN || "https://yousufrice.com";
 
 interface AgentOrderData {
@@ -41,10 +37,7 @@ async function sendAgentEvent(payload: Record<string, any>): Promise<{
     const response = await fetch(`${BASE_URL}/api/meta-events`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...payload,
-        test_event_code: TEST_EVENT_CODE || undefined,
-      }),
+      body: JSON.stringify(payload),
     });
     const result = await response.json();
     if (!response.ok) {

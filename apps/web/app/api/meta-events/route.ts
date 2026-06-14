@@ -9,10 +9,7 @@ import {
   type MetaCustomData,
 } from "@/lib/meta";
 
-const SERVER_META_TEST_EVENT_CODE =
-  process.env.META_TEST_EVENT_CODE ||
-  process.env.NEXT_PUBLIC_META_TEST_EVENT_CODE ||
-  "";
+const SERVER_META_TEST_EVENT_CODE = process.env.META_TEST_EVENT_CODE || "";
 
 function getRequestSourceUrl(request: NextRequest): string | undefined {
   const referer = request.headers.get("referer");
@@ -46,7 +43,6 @@ export async function POST(request: NextRequest) {
       event_source_url,
       user_data,
       custom_data,
-      test_event_code,
     } = body;
 
     console.log("[Meta API] Received event", {
@@ -120,7 +116,7 @@ export async function POST(request: NextRequest) {
     // Send to Meta Conversions API
     const result = await sendMetaEvent(
       metaEvent,
-      test_event_code || SERVER_META_TEST_EVENT_CODE || undefined,
+      SERVER_META_TEST_EVENT_CODE || undefined,
     );
 
     if (!result.success) {
