@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import toast from "react-hot-toast";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   generateEventId,
@@ -13,6 +14,7 @@ import type { AgentLabel, OrderChannel } from "@/lib/tracking/order-channel";
 const NAVIGATION_PIXEL_FLUSH_MS = 800;
 const NAVIGATION_PIXEL_READY_TIMEOUT_MS = 1000;
 const PIXEL_READY_POLL_MS = 50;
+const META_DIAGNOSTIC_TOAST_DURATION = 8000;
 
 // Extend Window interface for Meta Pixel
 declare global {
@@ -101,6 +103,33 @@ function debugLog(...args: unknown[]) {
   }
 }
 
+function shouldShowMetaDiagnostics(): boolean {
+  if (typeof window === "undefined") return false;
+  return isDebugMode() || isInstagramBrowser();
+}
+
+function formatMetaError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+function showMetaTrackingToast(message: string, type: "success" | "error") {
+  if (!shouldShowMetaDiagnostics()) return;
+  if (type === "success" && !isDebugMode()) return;
+
+  toast[type](message, { duration: META_DIAGNOSTIC_TOAST_DURATION });
+}
+
+function getPixelScriptLoaded(): boolean {
+  if (typeof document === "undefined") return false;
+  return Boolean(document.querySelector('script[src*="fbevents.js"]'));
+}
+
 async function waitForFbq(timeoutMs: number) {
   if (typeof window === "undefined") return undefined;
   if (window.fbq || timeoutMs <= 0) return window.fbq;
@@ -144,14 +173,14 @@ async function trackBrowserPixel({
   if (typeof window === "undefined") return false;
 
   const isInsta = isInstagramBrowser();
-  const debug = isDebugMode();
-  
+
   debugLog(`trackBrowserPixel: ${eventName}`, {
     eventId,
     isInstagram: isInsta,
     waitForPixel,
     fbqExists: !!window.fbq,
     pixelInitialized: window.__metaPixelInitialized,
+    pixelScriptLoaded: getPixelScriptLoaded(),
   });
 
   // Wait for fbq to be available
@@ -159,12 +188,19 @@ async function trackBrowserPixel({
     waitForPixel ? NAVIGATION_PIXEL_READY_TIMEOUT_MS : 0,
   );
   if (!fbq) {
-    if (waitForPixel) {
-      console.warn(
-        `[Meta Pixel] ${eventName} browser event skipped because fbq was not ready before navigation.`,
-      );
-      debugLog(`trackBrowserPixel: fbq not ready after ${NAVIGATION_PIXEL_READY_TIMEOUT_MS}ms`);
-    }
+    const message = waitForPixel
+      ? `Meta Pixel ${eventName} skipped: fbq was not ready before navigation.`
+      : `Meta Pixel ${eventName} skipped: fbq is not available.`;
+    console.warn(`[Meta Pixel] ${message}`, {
+      eventId,
+      waitedMs: waitForPixel ? NAVIGATION_PIXEL_READY_TIMEOUT_MS : 0,
+      pixelScriptLoaded: getPixelScriptLoaded(),
+    });
+    debugLog(`trackBrowserPixel: fbq not available`, {
+      waitForPixel,
+      waitedMs: waitForPixel ? NAVIGATION_PIXEL_READY_TIMEOUT_MS : 0,
+    });
+    showMetaTrackingToast(`${message} Event ID: ${eventId}`, "error");
     return false;
   }
 
@@ -172,10 +208,14 @@ async function trackBrowserPixel({
   if (waitForPixel) {
     const isInitialized = await waitForPixelInit(NAVIGATION_PIXEL_READY_TIMEOUT_MS);
     if (!isInitialized) {
-      console.warn(
-        `[Meta Pixel] ${eventName} browser event skipped because Pixel was not initialized.`,
-      );
+      const message = `Meta Pixel ${eventName} fired before initialization completed.`;
+      console.warn(`[Meta Pixel] ${message}`, {
+        eventId,
+        waitedMs: NAVIGATION_PIXEL_READY_TIMEOUT_MS,
+        pixelScriptLoaded: getPixelScriptLoaded(),
+      });
       debugLog(`trackBrowserPixel: Pixel not initialized after ${NAVIGATION_PIXEL_READY_TIMEOUT_MS}ms`);
+      showMetaTrackingToast(`${message} Event ID: ${eventId}`, "error");
       // Still try to fire the event even if init flag is not set
     }
   }
@@ -185,18 +225,22 @@ async function trackBrowserPixel({
     fbq("track", eventName, customData, { eventID: eventId });
     console.log(`[Meta Pixel] ${eventName} tracked with ID: ${eventId}`);
     debugLog(`trackBrowserPixel: Event fired successfully`, { eventId, eventName });
-    
+
+    showMetaTrackingToast(`Meta Pixel ${eventName} fired. Event ID: ${eventId}`, "success");
+
     // Dispatch event for debug component
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("metaPixelEvent", {
         detail: { eventName, eventId }
       }));
     }
-    
+
     return true;
   } catch (error) {
+    const message = `Meta Pixel ${eventName} failed: ${formatMetaError(error)}`;
     console.error(`[Meta Pixel] Error firing ${eventName}:`, error);
     debugLog(`trackBrowserPixel: Error firing event`, { error });
+    showMetaTrackingToast(`${message}. Event ID: ${eventId}`, "error");
     return false;
   }
 }
@@ -314,8 +358,16 @@ export function useMetaTracking() {
           );
           if (beaconOk) {
             await waitForNavigationPixelFlush();
+            showMetaTrackingToast(`Meta CAPI ${eventName} queued with beacon. Event ID: ${eventId}`, "success");
             return { success: true, eventId };
           }
+
+          const message = `Meta CAPI ${eventName} was not queued: sendBeacon rejected the request.`;
+          console.warn(`[Meta Conversions API] ${message}`, {
+            eventName,
+            eventId,
+          });
+          showMetaTrackingToast(`${message} Event ID: ${eventId}`, "error");
         }
 
         const responsePromise = fetch("/api/meta-events", requestInit);
@@ -325,20 +377,22 @@ export function useMetaTracking() {
             .then(async (response) => {
               if (!response.ok) {
                 const responseText = await response.text().catch(() => "");
-                console.warn("[Meta Conversions API] Background send returned error:", {
+                const message = `Meta CAPI ${eventName} failed: HTTP ${response.status}`;
+                console.warn(message, {
                   eventName,
                   eventId,
-                  status: response.status,
                   responseText,
                 });
+                showMetaTrackingToast(`${message}. Event ID: ${eventId}`, "error");
               }
             })
             .catch((error) => {
-              console.error("[Meta Conversions API] Background send failed:", {
+              const message = `Meta CAPI ${eventName} failed: ${formatMetaError(error)}`;
+              console.error(`[Meta Conversions API] ${message}`, {
                 eventName,
                 eventId,
-                error,
               });
+              showMetaTrackingToast(`${message}. Event ID: ${eventId}`, "error");
             });
           await waitForNavigationPixelFlush();
           return { success: true, eventId };
@@ -346,16 +400,29 @@ export function useMetaTracking() {
 
         const response = await responsePromise;
         if (!response.ok) {
-          return { success: false, error: `HTTP ${response.status}` };
+          const error = `HTTP ${response.status}`;
+          const message = `Meta CAPI ${eventName} failed: ${error}`;
+          console.warn(`[Meta Conversions API] ${message}`, {
+            eventName,
+            eventId,
+          });
+          showMetaTrackingToast(`${message}. Event ID: ${eventId}`, "error");
+          return { success: false, error };
         }
 
         console.log(
           `[Meta Conversions API] ${eventName} sent with ID: ${eventId}`,
         );
 
+        showMetaTrackingToast(`Meta CAPI ${eventName} sent. Event ID: ${eventId}`, "success");
+
         return { success: true, eventId };
       } catch (error) {
-        console.error("[Meta Tracking] Error:", error);
+        const message = `Meta tracking failed: ${formatMetaError(error)}`;
+        console.error(`[Meta Tracking] ${message}`, {
+          eventName,
+        });
+        showMetaTrackingToast(`${message}`, "error");
         return { success: false, error: "Tracking failed" };
       }
     },
