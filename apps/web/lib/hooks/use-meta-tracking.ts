@@ -118,6 +118,15 @@ function isDebugMode(): boolean {
   return url.searchParams.has("debug_pixel");
 }
 
+function isBrowserOnlyTestMode(): boolean {
+  if (typeof window === "undefined") return false;
+  const url = new URL(window.location.href);
+  return (
+    url.searchParams.get("meta_test_browser_only") === "true" ||
+    url.searchParams.get("debug_pixel_browser_only") === "true"
+  );
+}
+
 function debugLog(...args: unknown[]) {
   if (typeof window !== "undefined" && (window.__metaDebugMode || isDebugMode())) {
     console.log("[Meta Pixel Debug]", ...args);
@@ -583,11 +592,6 @@ export function useMetaTracking() {
           skipBrowserPixel,
           deliveryMode,
         });
-        updateTrackingDiagnostics({
-          lastEventName: eventName,
-          lastEventId: eventId,
-          lastCapiResult: "pending",
-        });
 
         const waitForNavigationPixelFlush = async () => {
           if (deliveryMode === "navigation" && browserPixelTracked) {
@@ -599,6 +603,22 @@ export function useMetaTracking() {
             await sleep(flushDelay);
           }
         };
+
+        if (isBrowserOnlyTestMode()) {
+          updateTrackingDiagnostics({
+            lastEventName: eventName,
+            lastEventId: eventId,
+            lastCapiResult: "skipped-browser-only-test",
+          });
+          await waitForNavigationPixelFlush();
+          return { success: true, eventId, browserOnlyTest: true };
+        }
+
+        updateTrackingDiagnostics({
+          lastEventName: eventName,
+          lastEventId: eventId,
+          lastCapiResult: "pending",
+        });
 
         const payload = {
           event_name: eventName,
