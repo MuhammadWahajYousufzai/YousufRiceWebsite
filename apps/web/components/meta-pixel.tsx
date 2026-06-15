@@ -4,8 +4,6 @@ import Script from "next/script";
 import { useEffect, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useMetaTracking } from "@/lib/hooks/use-meta-tracking";
-import { useAuthStore } from "@/lib/store/auth-store";
-import { getAgentLabelFromLabels } from "@/lib/tracking/order-channel";
 
 // 2025: Use Dataset ID for unified browser + server tracking
 const META_DATASET_ID = process.env.NEXT_PUBLIC_META_DATASET_ID;
@@ -16,24 +14,13 @@ function MetaPixelContent() {
   const searchParams = useSearchParams();
 
   const { trackPageView } = useMetaTracking();
-  const { user, checkAuth } = useAuthStore();
-
-  const agentLabel = getAgentLabelFromLabels(user?.labels);
-  const isAgent = Boolean(agentLabel);
 
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
-
-  useEffect(() => {
-    if (!META_DATASET_ID || isAgent) return;
+    if (!META_DATASET_ID) return;
 
     // Track page views on route change
     trackPageView();
-  }, [pathname, searchParams, trackPageView, isAgent]);
-
-  // Don't load pixel if the logged-in user is an agent (Kiran/Saima)
-  if (isAgent) return null;
+  }, [pathname, searchParams, trackPageView]);
 
   if (!META_DATASET_ID) {
     console.warn(

@@ -37,10 +37,6 @@ import {
 } from "@/lib/utils";
 import { sanitizeCustomerNameForMeta } from "@/lib/meta-browser";
 import { useMetaTracking } from "@/lib/hooks/use-meta-tracking";
-import {
-  getAgentLabelFromLabels,
-  getOrderChannelFromAgentLabel,
-} from "@/lib/tracking/order-channel";
 import { ID, Query } from "appwrite";
 import toast from "react-hot-toast";
 import { MapPin, Gift, Check, X } from "lucide-react";
@@ -60,10 +56,6 @@ function CheckoutContent() {
   const { trackPurchase } = useMetaTracking();
   const [loading, setLoading] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
-
-  const agentLabel = getAgentLabelFromLabels(user?.labels);
-  const isAgent = Boolean(agentLabel);
-  const orderChannel = getOrderChannelFromAgentLabel(agentLabel);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -93,9 +85,9 @@ function CheckoutContent() {
     checkAuth();
   }, [checkAuth]);
 
-  // Auto-fill customer information if logged in (SKIP FOR AGENTS)
+  // Auto-fill customer information if logged in
   useEffect(() => {
-    if (user && !isAgent) {
+    if (user) {
       setFormData((prev) => ({
         ...prev,
         fullName: user.name || prev.fullName,
@@ -105,7 +97,7 @@ function CheckoutContent() {
         email: user.email || prev.email,
       }));
     }
-  }, [user, isAgent]);
+  }, [user]);
 
   useEffect(() => {
     // Only redirect if items are empty AND order hasn't been placed
@@ -694,38 +686,28 @@ function CheckoutContent() {
         throw creationError; // Re-throw to be caught by main try-catch
       }
 
-      // Track Purchase event (skip for agents)
-      if (!isAgent) {
-        const cleanedName =
-          sanitizeCustomerNameForMeta(fullName) || fullName;
+      const cleanedName = sanitizeCustomerNameForMeta(fullName) || fullName;
 
-        await trackPurchase({
-          value: getTotalPrice(),
-          currency: "PKR",
-          orderId,
-          numItems: items.reduce((sum, item) => sum + item.quantity, 0),
-          contentIds: items.map((item) => item.product.$id),
-          contents: items.map((item) => ({
-            id: item.product.$id,
-            quantity: item.quantity,
-            item_price: item.product.base_price_per_kg,
-          })),
-          userData: {
-            email: emailForOrder || undefined,
-            phone: formattedPhone,
-            firstName: cleanedName.split(" ")[0],
-            lastName: cleanedName.split(" ").slice(1).join(" "),
-            city: finalCity || undefined,
-            externalId: !isAgent && user?.$id ? user.$id : customerId,
-          },
-          trackingContext: {
-            orderChannel,
-            agentLabel,
-            placedByUserId: user?.$id,
-            customerUserId: customerId,
-          },
-        });
-      }
+      await trackPurchase({
+        value: getTotalPrice(),
+        currency: "PKR",
+        orderId,
+        numItems: items.reduce((sum, item) => sum + item.quantity, 0),
+        contentIds: items.map((item) => item.product.$id),
+        contents: items.map((item) => ({
+          id: item.product.$id,
+          quantity: item.quantity,
+          item_price: item.product.base_price_per_kg,
+        })),
+        userData: {
+          email: emailForOrder || undefined,
+          phone: formattedPhone,
+          firstName: cleanedName.split(" ")[0],
+          lastName: cleanedName.split(" ").slice(1).join(" "),
+          city: finalCity || undefined,
+          externalId: customerId,
+        },
+      });
 
       // Mark discount code as used if applied
       if (appliedDiscount) {

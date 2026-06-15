@@ -9,7 +9,6 @@ import {
   sanitizeCustomerNameForMeta,
 } from "@/lib/meta-browser";
 import type { MetaCustomData } from "@/lib/meta";
-import type { AgentLabel, OrderChannel } from "@/lib/tracking/order-channel";
 
 const NAVIGATION_PIXEL_FLUSH_MS = 800;
 const NAVIGATION_PIXEL_READY_TIMEOUT_MS = 1000;
@@ -69,27 +68,6 @@ interface TrackEventParams {
   customData?: MetaCustomData;
   deliveryMode?: "await" | "background" | "navigation";
   skipBrowserPixel?: boolean;
-}
-
-interface TrackingContext {
-  orderChannel: OrderChannel;
-  agentLabel?: AgentLabel | null;
-  placedByUserId?: string;
-  customerUserId?: string;
-}
-
-function buildTrackingCustomData(
-  customData: MetaCustomData,
-  trackingContext?: TrackingContext,
-): MetaCustomData {
-  if (!trackingContext) return customData;
-  return {
-    ...customData,
-    order_channel: trackingContext.orderChannel,
-    agent_label: trackingContext.agentLabel ?? undefined,
-    placed_by_user_id: trackingContext.placedByUserId,
-    customer_user_id: trackingContext.customerUserId,
-  };
 }
 
 function createSynchronousEventId(eventName: string, stableKey: string): string {
@@ -787,21 +765,17 @@ export function useMetaTracking() {
         country?: string;
         externalId?: string;
       };
-      trackingContext?: TrackingContext;
     }) => {
       return trackEvent({
         eventName: "ViewContent",
         userData: productData.userData,
-        customData: buildTrackingCustomData(
-          {
-            content_name: productData.contentName,
-            content_ids: [productData.contentId],
-            content_type: productData.contentType || "product",
-            value: productData.value,
-            currency: productData.currency || "PKR",
-          },
-          productData.trackingContext,
-        ),
+        customData: {
+          content_name: productData.contentName,
+          content_ids: [productData.contentId],
+          content_type: productData.contentType || "product",
+          value: productData.value,
+          currency: productData.currency || "PKR",
+        },
         deliveryMode: "background",
       });
     },
@@ -826,28 +800,24 @@ export function useMetaTracking() {
         country?: string;
         externalId?: string;
       };
-      trackingContext?: TrackingContext;
     }) => {
       return trackEvent({
         eventName: "AddToCart",
         userData: cartData.userData,
-        customData: buildTrackingCustomData(
-          {
-            content_name: cartData.contentName,
-            content_ids: [cartData.contentId],
-            content_type: "product",
-            value: cartData.value,
-            currency: cartData.currency || "PKR",
-            contents: [
-              {
-                id: cartData.contentId,
-                quantity: cartData.quantity || 1,
-                item_price: cartData.value,
-              },
-            ],
-          },
-          cartData.trackingContext,
-        ),
+        customData: {
+          content_name: cartData.contentName,
+          content_ids: [cartData.contentId],
+          content_type: "product",
+          value: cartData.value,
+          currency: cartData.currency || "PKR",
+          contents: [
+            {
+              id: cartData.contentId,
+              quantity: cartData.quantity || 1,
+              item_price: cartData.value,
+            },
+          ],
+        },
         deliveryMode: "await",
       });
     },
@@ -871,7 +841,6 @@ export function useMetaTracking() {
         country?: string;
         externalId?: string;
       };
-      trackingContext?: TrackingContext;
       stableKey?: string;
     }) => {
       const eventId = createSynchronousEventId(
@@ -884,16 +853,13 @@ export function useMetaTracking() {
         eventName: "InitiateCheckout",
         eventId,
         userData: checkoutData.userData,
-        customData: buildTrackingCustomData(
-          {
-            value: checkoutData.value,
-            currency: checkoutData.currency || "PKR",
-            num_items: checkoutData.numItems,
-            content_ids: checkoutData.contentIds,
-            content_type: "product",
-          },
-          checkoutData.trackingContext,
-        ),
+        customData: {
+          value: checkoutData.value,
+          currency: checkoutData.currency || "PKR",
+          num_items: checkoutData.numItems,
+          content_ids: checkoutData.contentIds,
+          content_type: "product",
+        },
         deliveryMode: "navigation",
       });
     },
@@ -923,7 +889,6 @@ export function useMetaTracking() {
         country?: string;
         externalId?: string;
       };
-      trackingContext?: TrackingContext;
     }) => {
       const eventId = createSynchronousEventId("Purchase", purchaseData.orderId);
 
@@ -931,18 +896,15 @@ export function useMetaTracking() {
         eventName: "Purchase",
         eventId,
         userData: purchaseData.userData,
-        customData: buildTrackingCustomData(
-          {
-            value: purchaseData.value,
-            currency: purchaseData.currency || "PKR",
-            order_id: purchaseData.orderId,
-            content_ids: purchaseData.contentIds,
-            content_type: "product",
-            num_items: purchaseData.numItems,
-            contents: purchaseData.contents,
-          },
-          purchaseData.trackingContext,
-        ),
+        customData: {
+          value: purchaseData.value,
+          currency: purchaseData.currency || "PKR",
+          order_id: purchaseData.orderId,
+          content_ids: purchaseData.contentIds,
+          content_type: "product",
+          num_items: purchaseData.numItems,
+          contents: purchaseData.contents,
+        },
         deliveryMode: "navigation",
       });
     },

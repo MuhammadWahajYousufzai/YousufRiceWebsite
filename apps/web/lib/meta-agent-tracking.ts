@@ -2,7 +2,6 @@ import {
   generateEventId,
   sanitizeCustomerNameForMeta,
 } from "@/lib/meta";
-import type { AgentLabel } from "@/lib/tracking/order-channel";
 
 const BASE_URL = process.env.NEXT_PUBLIC_PRIMARY_DOMAIN || "https://yousufrice.com";
 
@@ -25,7 +24,6 @@ interface AgentOrderData {
   eventSourceUrl?: string;
   placedByUserId?: string;
   customerUserId?: string;
-  agentLabel?: AgentLabel | null;
 }
 
 async function sendAgentEvent(payload: Record<string, any>): Promise<{
@@ -92,8 +90,6 @@ export async function trackAgentPurchase(orderData: AgentOrderData): Promise<{
       })),
       num_items: orderData.items.length,
       order_id: orderData.orderId,
-      order_channel: "ai_agent",
-      agent_label: orderData.agentLabel ?? undefined,
       placed_by_user_id: orderData.placedByUserId,
       customer_user_id: orderData.customerUserId,
     },
@@ -116,7 +112,6 @@ export async function trackAgentInitiateCheckout(orderData: {
   eventSourceUrl?: string;
   placedByUserId?: string;
   customerUserId?: string;
-  agentLabel?: AgentLabel | null;
   stableKey?: string;
 }): Promise<{
   success: boolean;
@@ -149,8 +144,6 @@ export async function trackAgentInitiateCheckout(orderData: {
       content_type: "product",
       content_ids: orderData.items.map((i) => i.productId),
       num_items: orderData.items.length,
-      order_channel: "ai_agent",
-      agent_label: orderData.agentLabel ?? undefined,
       placed_by_user_id: orderData.placedByUserId,
       customer_user_id: orderData.customerUserId,
     },

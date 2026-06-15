@@ -2,7 +2,6 @@
 
 import { Drawer } from "@base-ui/react/drawer";
 import { useCartStore } from "@/lib/store/cart-store";
-import { useAuthStore } from "@/lib/store/auth-store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Trash2, Plus, Minus, ShoppingBag, X } from "lucide-react";
@@ -16,10 +15,6 @@ import { STORAGE_BUCKET_ID } from "@/lib/appwrite";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMetaTracking } from "@/lib/hooks/use-meta-tracking";
-import {
-  getAgentLabelFromLabels,
-  getOrderChannelFromAgentLabel,
-} from "@/lib/tracking/order-channel";
 
 export function CartDrawer() {
   const {
@@ -32,7 +27,6 @@ export function CartDrawer() {
     getTotalPrice,
     clearCart,
   } = useCartStore();
-  const { user } = useAuthStore();
   const { trackInitiateCheckout } = useMetaTracking();
   const totalPrice = getTotalPrice();
   const router = useRouter();
@@ -49,10 +43,6 @@ export function CartDrawer() {
   }, 0);
 
   const handleCheckout = async () => {
-    const agentLabel = getAgentLabelFromLabels(user?.labels);
-    const isAgent = Boolean(agentLabel);
-    const orderChannel = getOrderChannelFromAgentLabel(agentLabel);
-
     // Make tracking deterministic: stable item ordering + stable IDs
     const itemsForTracking = [...items].sort((a, b) =>
       a.product.$id.localeCompare(b.product.$id),
@@ -61,36 +51,15 @@ export function CartDrawer() {
       new Set(itemsForTracking.map((item) => item.product.$id)),
     );
 
-    // Don't send user data if it's an agent
-    const userData =
-      user && !isAgent
-        ? {
-            email: user.email,
-            phone: user.phone,
-            externalId: user.$id,
-            firstName: user.name?.split(" ")[0],
-            lastName: user.name?.split(" ").slice(1).join(" "),
-          }
-        : undefined;
-
-    // Track InitiateCheckout event (skip for agents)
-    if (!isAgent) {
-      await trackInitiateCheckout({
-        value: totalPrice,
-        currency: "PKR",
-        numItems: itemsForTracking.reduce((sum, item) => sum + item.quantity, 0),
-        contentIds: uniqueContentIds,
-        userData,
-        trackingContext: {
-          orderChannel,
-          agentLabel,
-          placedByUserId: user?.$id,
-        },
-        stableKey: itemsForTracking
-          .map((item) => `${item.product.$id}:${item.quantity}`)
-          .join("|"),
-      });
-    }
+    await trackInitiateCheckout({
+      value: totalPrice,
+      currency: "PKR",
+      numItems: itemsForTracking.reduce((sum, item) => sum + item.quantity, 0),
+      contentIds: uniqueContentIds,
+      stableKey: itemsForTracking
+        .map((item) => `${item.product.$id}:${item.quantity}`)
+        .join("|"),
+    });
 
     setIsOpen(false);
     router.push("/checkout");

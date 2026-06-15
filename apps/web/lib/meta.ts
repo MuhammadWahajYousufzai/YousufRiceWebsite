@@ -1,5 +1,4 @@
 import crypto from 'crypto';
-import type { AgentLabel, OrderChannel } from "@/lib/tracking/order-channel";
 
 export const META_DATASET_ID = process.env.NEXT_PUBLIC_META_DATASET_ID!;
 export const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN!;
@@ -40,8 +39,6 @@ export interface MetaCustomData {
   search_string?: string;
   status?: string;
   order_id?: string;
-  order_channel?: OrderChannel;
-  agent_label?: AgentLabel;
   placed_by_user_id?: string;
   customer_user_id?: string;
 }

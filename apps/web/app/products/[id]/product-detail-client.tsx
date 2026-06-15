@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { useAuthStore } from "@/lib/store/auth-store";
 import { useCartStore } from "@/lib/store/cart-store";
 import {
   Plus,
@@ -16,10 +15,6 @@ import { Product } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, getPricePerKg, calculatePrice } from "@/lib/utils";
 import { useMetaTracking } from "@/lib/hooks/use-meta-tracking";
-import {
-  getAgentLabelFromLabels,
-  getOrderChannelFromAgentLabel,
-} from "@/lib/tracking/order-channel";
 import { useBagSelection } from "@/lib/hooks/use-bag-selection";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -41,12 +36,7 @@ export default function ProductDetailClient({
   const { trackViewContent, trackAddToCart, trackInitiateCheckout } =
     useMetaTracking();
   const hasTrackedViewRef = useRef(false);
-  const { user } = useAuthStore();
   const { items: cartItems } = useCartStore();
-
-  const agentLabel = getAgentLabelFromLabels(user?.labels);
-  const isAgent = Boolean(agentLabel);
-  const orderChannel = getOrderChannelFromAgentLabel(agentLabel);
 
   const searchParams = useSearchParams();
   const isColdDrinkBundle =
@@ -72,22 +62,6 @@ export default function ProductDetailClient({
   // Track ViewContent event when product page loads
   useEffect(() => {
     if (hasTrackedViewRef.current) return;
-    if (isAgent) {
-      hasTrackedViewRef.current = true;
-      return;
-    }
-
-    // Don't send user data if it's an agent
-    const userData =
-      user && !isAgent
-        ? {
-            email: user.email,
-            phone: user.phone,
-            externalId: user.$id,
-            firstName: user.name?.split(" ")[0],
-            lastName: user.name?.split(" ").slice(1).join(" "),
-          }
-        : undefined;
 
     trackViewContent({
       contentName: product.name,
@@ -95,46 +69,15 @@ export default function ProductDetailClient({
       contentType: "product",
       value: totalPrice,
       currency: "PKR",
-      userData,
-      trackingContext: {
-        orderChannel,
-        agentLabel,
-        placedByUserId: user?.$id,
-      },
     });
 
     hasTrackedViewRef.current = true;
-  }, [
-    agentLabel,
-    isAgent,
-    orderChannel,
-    product.$id,
-    product.name,
-    totalPrice,
-    trackViewContent,
-    user,
-  ]);
+  }, [product.$id, product.name, totalPrice, trackViewContent]);
 
   // Wrapper for handleAddBag with AddToCart tracking
   const onAddBag = (weight: 3 | 5 | 10 | 25) => {
-    if (isAgent) {
-      handleAddBag(weight);
-      return;
-    }
-
     const newTotalKg = totalKg + weight;
     const newTotalPrice = calculatePrice(product, newTotalKg);
-
-    const userData =
-      user && !isAgent
-        ? {
-            email: user.email,
-            phone: user.phone,
-            externalId: user.$id,
-            firstName: user.name?.split(" ")[0],
-            lastName: user.name?.split(" ").slice(1).join(" "),
-          }
-        : undefined;
 
     trackAddToCart({
       contentName: product.name,
@@ -142,12 +85,6 @@ export default function ProductDetailClient({
       value: newTotalPrice,
       currency: "PKR",
       quantity: newTotalKg,
-      userData,
-      trackingContext: {
-        orderChannel,
-        agentLabel,
-        placedByUserId: user?.$id,
-      },
     });
 
     handleAddBag(weight);
@@ -159,34 +96,14 @@ export default function ProductDetailClient({
       return; // Hook already shows error toast
     }
 
-    // Track InitiateCheckout event (skip for agents)
-    if (!isAgent) {
-      // Don't send user data if it's an agent
-      const userData =
-        user && !isAgent
-          ? {
-              email: user.email,
-              phone: user.phone,
-              externalId: user.$id,
-              firstName: user.name?.split(" ")[0],
-              lastName: user.name?.split(" ").slice(1).join(" "),
-            }
-          : undefined;
-
-      await trackInitiateCheckout({
-        value: totalPrice,
-        currency: "PKR",
-        numItems: totalKg,
-        contentIds: [product.$id],
-        userData,
-        trackingContext: {
-          orderChannel,
-          agentLabel,
-          placedByUserId: user?.$id,
-        },
-        stableKey: `${product.$id}:${totalKg}`,
-      });
-    }
+    // Track InitiateCheckout event
+    await trackInitiateCheckout({
+      value: totalPrice,
+      currency: "PKR",
+      numItems: totalKg,
+      contentIds: [product.$id],
+      stableKey: `${product.$id}:${totalKg}`,
+    });
 
     // Call the hook's buyNow function
     buyNow();
