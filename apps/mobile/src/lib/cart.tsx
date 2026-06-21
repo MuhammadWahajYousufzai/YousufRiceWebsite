@@ -1,13 +1,18 @@
 import type { CartItem, Product } from "@repo/types";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { calculatePrice, calculateQuantityFromBags } from "@repo/utils";
 import {
   createContext,
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+
+import { selectionFeedback } from "@/lib/native-feedback";
 
 type BagSize = 3 | 5 | 10 | 25;
 type BagKey = keyof CartItem["bags"];
@@ -24,6 +29,7 @@ interface CartContextValue {
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
+const CART_STORAGE_KEY = "@yousuf-rice/mobile-cart-v1";
 
 const emptyBags = (): CartItem["bags"] => ({
   kg3: 0,
@@ -39,9 +45,33 @@ const sameLine = (item: CartItem, productId: string, isColdDrinkBundle = false) 
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const hydrated = useRef(false);
+
+  useEffect(() => {
+    let mounted = true;
+    AsyncStorage.getItem(CART_STORAGE_KEY)
+      .then((saved) => {
+        if (!mounted || !saved) return;
+        const parsed = JSON.parse(saved) as CartItem[];
+        if (Array.isArray(parsed)) setItems(parsed);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        hydrated.current = true;
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated.current) return;
+    void AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
 
   const addBag = useCallback(
     (product: Product, bagSize: BagSize, isColdDrinkBundle = false) => {
+      void selectionFeedback();
       setItems((current) => {
         const bagKey = bagKeyForSize(bagSize);
         const existing = current.find((item) => sameLine(item, product.$id, isColdDrinkBundle));
@@ -81,6 +111,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const removeBag = useCallback(
     (productId: string, bagSize: BagSize, isColdDrinkBundle = false) => {
+      void selectionFeedback();
       setItems((current) => {
         const bagKey = bagKeyForSize(bagSize);
 
@@ -113,6 +144,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = useCallback(() => {
     setItems([]);
+    void AsyncStorage.removeItem(CART_STORAGE_KEY);
   }, []);
 
   const getItem = useCallback(

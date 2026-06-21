@@ -1,4 +1,4 @@
-import type { CartItem } from "@repo/types";
+import type { Address, CartItem, Customer, Order, OrderItem } from "@repo/types";
 import {
   calculateItemTotal,
   calculateTierPricing,
@@ -36,6 +36,17 @@ export interface PlaceOrderResult {
   totalPrice: number;
 }
 
+export interface OrderWithDetails extends Omit<Order, "address" | "customer" | "items"> {
+  address: Address | null;
+  customer: Customer | null;
+  items: OrderItem[];
+}
+
+export interface SavedCheckoutDetails {
+  address: Address | null;
+  customer: Customer | null;
+}
+
 interface RowList<T> {
   rows?: T[];
   documents?: T[];
@@ -63,6 +74,116 @@ function assertOrderConfig() {
   if (missing.length > 0) {
     throw new Error(`Missing mobile order env: ${missing.map(([key]) => key).join(", ")}`);
   }
+}
+
+export async function getOrderWithDetails(orderId: string): Promise<OrderWithDetails> {
+  assertOrderConfig();
+
+  const order = (await tablesDB.getRow({
+    databaseId: DATABASE_ID,
+    tableId: ORDERS_TABLE_ID,
+    rowId: orderId,
+  })) as unknown as Order;
+
+  const [itemsResult, customerResult, addressResult] = await Promise.all([
+    tablesDB.listRows({
+      databaseId: DATABASE_ID,
+      tableId: ORDER_ITEMS_TABLE_ID,
+      queries: [Query.equal("order_id", orderId), Query.limit(100)],
+    }),
+    tablesDB
+      .getRow({
+        databaseId: DATABASE_ID,
+        tableId: CUSTOMERS_TABLE_ID,
+        rowId: order.customer_id,
+      })
+      .catch(() => null),
+    order.address_id
+      ? tablesDB
+          .getRow({
+            databaseId: DATABASE_ID,
+            tableId: ADDRESSES_TABLE_ID,
+            rowId: order.address_id,
+          })
+          .catch(() => null)
+      : tablesDB
+          .listRows({
+            databaseId: DATABASE_ID,
+            tableId: ADDRESSES_TABLE_ID,
+            queries: [Query.equal("order_id", orderId), Query.limit(1)],
+          })
+          .then((result) => rowsFromResponse<Address>(result as unknown as RowList<Address>)[0] ?? null)
+          .catch(() => null),
+  ]);
+
+  return {
+    ...order,
+    address: addressResult as Address | null,
+    customer: customerResult as Customer | null,
+    items: rowsFromResponse<OrderItem>(itemsResult as unknown as RowList<OrderItem>),
+  };
+}
+
+export async function findOrdersByPhone(phone: string) {
+  assertOrderConfig();
+  const normalizedPhone = formatPhoneNumber(phone);
+  const customersResult = await tablesDB.listRows({
+    databaseId: DATABASE_ID,
+    tableId: CUSTOMERS_TABLE_ID,
+    queries: [Query.equal("phone", normalizedPhone), Query.limit(1)],
+  });
+  const customer = rowsFromResponse<Customer>(
+    customersResult as unknown as RowList<Customer>,
+  )[0];
+
+  if (!customer) {
+    return { customer: null, orders: [] as Order[] };
+  }
+
+  const ordersResult = await tablesDB.listRows({
+    databaseId: DATABASE_ID,
+    tableId: ORDERS_TABLE_ID,
+    queries: [
+      Query.equal("customer_id", customer.$id),
+      Query.orderDesc("$createdAt"),
+      Query.limit(50),
+    ],
+  });
+
+  return {
+    customer,
+    orders: rowsFromResponse<Order>(ordersResult as unknown as RowList<Order>),
+  };
+}
+
+export async function loadSavedCheckoutDetails(userId: string): Promise<SavedCheckoutDetails> {
+  assertOrderConfig();
+  const customersResult = await tablesDB.listRows({
+    databaseId: DATABASE_ID,
+    tableId: CUSTOMERS_TABLE_ID,
+    queries: [Query.equal("user_id", userId), Query.limit(1)],
+  });
+  const customer = rowsFromResponse<Customer>(
+    customersResult as unknown as RowList<Customer>,
+  )[0];
+
+  if (!customer) return { address: null, customer: null };
+
+  const addressesResult = await tablesDB.listRows({
+    databaseId: DATABASE_ID,
+    tableId: ADDRESSES_TABLE_ID,
+    queries: [
+      Query.equal("customer_id", customer.$id),
+      Query.orderDesc("$createdAt"),
+      Query.limit(1),
+    ],
+  });
+
+  return {
+    address:
+      rowsFromResponse<Address>(addressesResult as unknown as RowList<Address>)[0] ?? null,
+    customer,
+  };
 }
 
 export async function placeCodOrder(

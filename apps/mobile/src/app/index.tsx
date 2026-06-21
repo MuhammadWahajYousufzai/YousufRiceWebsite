@@ -8,8 +8,10 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -54,15 +56,24 @@ export default function HomeScreen() {
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<ProductWithImage | null>(null);
   const [selectedBundle, setSelectedBundle] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredProducts = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return products;
+    return products.filter((product) =>
+      `${product.name} ${product.description ?? ""}`.toLowerCase().includes(query),
+    );
+  }, [products, searchQuery]);
 
   const groupedProducts = useMemo(
-    () => groupProductsByCatalogCategory(products),
-    [products],
+    () => groupProductsByCatalogCategory(filteredProducts),
+    [filteredProducts],
   );
 
   const bundleProducts = useMemo(
-    () => products.filter(isColdDrinkBundleProduct),
-    [products],
+    () => filteredProducts.filter(isColdDrinkBundleProduct),
+    [filteredProducts],
   );
 
   const selectedCartItem = selectedProduct
@@ -108,6 +119,14 @@ export default function HomeScreen() {
     if (!selectedProduct || totalKg === 0) return;
     closeProduct();
     router.push("/explore");
+  };
+
+  const handleShareProduct = async () => {
+    if (!selectedProduct) return;
+    await Share.share({
+      message: `${selectedProduct.name} from Yousuf Rice — from ${formatCurrency(getPricePerKg(selectedProduct, 5))}/kg. Cash on Delivery across Karachi. https://yousufrice.com/products/${selectedProduct.$id}`,
+      title: selectedProduct.name,
+    });
   };
 
   return (
@@ -187,6 +206,26 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        <View style={styles.searchShell}>
+          <Text style={styles.searchLabel}>Search the catalog</Text>
+          <TextInput
+            accessibilityLabel="Search rice products"
+            autoCorrect={false}
+            clearButtonMode="while-editing"
+            onChangeText={setSearchQuery}
+            placeholder="Basmati, sela, premium…"
+            placeholderTextColor="#A3A5B5"
+            returnKeyType="search"
+            style={styles.searchInput}
+            value={searchQuery}
+          />
+          {!!searchQuery && (
+            <Text style={styles.searchResultText}>
+              {filteredProducts.length} {filteredProducts.length === 1 ? "product" : "products"} found
+            </Text>
+          )}
+        </View>
+
         {updatedAt && (
           <Text style={styles.updatedAt}>
             Updated {new Date(updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -247,10 +286,13 @@ export default function HomeScreen() {
           </View>
         ))}
 
-        {!loading && products.length === 0 && !error && (
+        {!loading && filteredProducts.length === 0 && !error && (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No Products Available</Text>
-            <Text style={styles.emptyText}>Check back soon for our premium rice selection.</Text>
+            <Text style={styles.emptyTitle}>{searchQuery ? "No matching rice" : "No Products Available"}</Text>
+            <Text style={styles.emptyText}>
+              {searchQuery ? "Try a shorter product name or clear the search." : "Check back soon for our premium rice selection."}
+            </Text>
+            {!!searchQuery && <Button variant="outline" onPress={() => setSearchQuery("")}>Clear Search</Button>}
           </View>
         )}
       </ScrollView>
@@ -262,6 +304,7 @@ export default function HomeScreen() {
         onBuyNow={handleBuyNow}
         onClose={closeProduct}
         onRemoveBag={handleRemoveBag}
+        onShare={handleShareProduct}
         pricePerKg={pricePerKg}
         product={selectedProduct}
         totalKg={totalKg}
@@ -341,6 +384,7 @@ function ProductSelectionModal({
   onBuyNow,
   onClose,
   onRemoveBag,
+  onShare,
   pricePerKg,
   product,
   totalKg,
@@ -353,6 +397,7 @@ function ProductSelectionModal({
   onBuyNow: () => void;
   onClose: () => void;
   onRemoveBag: (bagSize: BagSize) => void;
+  onShare: () => void;
   pricePerKg: number;
   product: ProductWithImage | null;
   totalKg: number;
@@ -377,6 +422,9 @@ function ProductSelectionModal({
       <SafeAreaView style={styles.modalSafeArea}>
         <ScrollView contentContainerStyle={styles.modalContainer}>
           <View style={styles.modalHeader}>
+            <Pressable accessibilityRole="button" onPress={onShare} style={styles.shareButton}>
+              <Text style={styles.shareButtonText}>Share</Text>
+            </Pressable>
             <Pressable accessibilityRole="button" onPress={onClose} style={styles.closeButton}>
               <Text style={styles.closeButtonText}>Close</Text>
             </Pressable>
@@ -480,7 +528,7 @@ function ProductSelectionModal({
 }
 
 const brandBlue = "#27247b";
-const brandYellow = "#ffff03";
+const brandYellow = "#D4AD54";
 
 const styles = StyleSheet.create({
   announcementBar: {
@@ -525,9 +573,9 @@ const styles = StyleSheet.create({
   },
   bagPill: {
     alignSelf: "flex-start",
-    backgroundColor: "#dcfce7",
+    backgroundColor: "#F6EDD7",
     borderRadius: 999,
-    color: "#166534",
+    color: "#735A23",
     fontSize: 11,
     fontWeight: "800",
     marginTop: 4,
@@ -818,7 +866,9 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   modalHeader: {
-    alignItems: "flex-end",
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   modalSafeArea: {
     backgroundColor: "#f8fafc",
@@ -860,7 +910,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   priceText: {
-    color: "#047857",
+    color: brandBlue,
     fontSize: 17,
     fontWeight: "900",
   },
@@ -922,6 +972,34 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
     flex: 1,
   },
+  searchInput: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "#CFD0DA",
+    borderRadius: 12,
+    borderWidth: 1,
+    color: "#1D1E28",
+    fontSize: 16,
+    minHeight: 48,
+    paddingHorizontal: 14,
+  },
+  searchLabel: {
+    color: "#27247B",
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  searchResultText: {
+    color: "#7B7D8F",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  searchShell: {
+    backgroundColor: "#F7F7FC",
+    borderColor: "#DCDDF2",
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 7,
+    padding: 12,
+  },
   section: {
     gap: 14,
   },
@@ -943,6 +1021,19 @@ const styles = StyleSheet.create({
     fontSize: 21,
     fontWeight: "900",
     textAlign: "center",
+  },
+  shareButton: {
+    backgroundColor: "#FBF8F0",
+    borderColor: "#EDDBAE",
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 15,
+    paddingVertical: 9,
+  },
+  shareButtonText: {
+    color: "#735A23",
+    fontSize: 13,
+    fontWeight: "900",
   },
   soldOutOverlay: {
     alignItems: "center",

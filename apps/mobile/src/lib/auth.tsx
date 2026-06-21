@@ -20,6 +20,7 @@ interface AuthContextValue {
   isGuest: boolean;
   loading: boolean;
   refreshUser: () => Promise<AppwriteUser | null>;
+  requestPasswordReset: (email: string) => Promise<void>;
   register: (data: { email: string; name: string; password: string }) => Promise<void>;
   signIn: (data: { email: string; password: string }) => Promise<void>;
   signOut: () => Promise<void>;
@@ -126,6 +127,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [refreshUser],
   );
 
+  const requestPasswordReset = useCallback(async (email: string) => {
+    setError(null);
+    try {
+      await account.createRecovery({
+        email: email.trim().toLowerCase(),
+        url: "https://yousufrice.com/auth/reset-password",
+      });
+    } catch (caughtError) {
+      const message = errorMessage(caughtError);
+      setError(message);
+      throw new Error(message);
+    }
+  }, []);
+
   const ensureGuestSession = useCallback(async () => {
     const currentUser = await refreshUser();
     if (currentUser) return currentUser;
@@ -160,11 +175,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       refreshUser,
       register,
+      requestPasswordReset,
       signIn,
       signOut,
       user,
     }),
-    [ensureGuestSession, error, isGuest, loading, refreshUser, register, signIn, signOut, user],
+    [ensureGuestSession, error, isGuest, loading, refreshUser, register, requestPasswordReset, signIn, signOut, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

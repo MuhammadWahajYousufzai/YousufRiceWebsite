@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   RefreshControl,
@@ -25,8 +26,11 @@ import {
 } from "@/lib/appwrite";
 import { useAuth } from "@/lib/auth";
 import { registerMobilePushTarget } from "@/lib/mobile-notifications";
+import { OrderDetailsModal } from "@/components/order-details-modal";
+import { findOrdersByPhone } from "@/lib/orders";
+import { successFeedback, warningFeedback } from "@/lib/native-feedback";
 
-type AuthMode = "signIn" | "register";
+type AuthMode = "signIn" | "register" | "forgot";
 
 interface RowList<T> {
   rows?: T[];
@@ -58,7 +62,17 @@ function canLoadOrders() {
 }
 
 export default function AccountScreen() {
-  const { error, isAuthenticated, loading, refreshUser, register, signIn, signOut, user } = useAuth();
+  const {
+    error,
+    isAuthenticated,
+    loading,
+    refreshUser,
+    register,
+    requestPasswordReset,
+    signIn,
+    signOut,
+    user,
+  } = useAuth();
   const [mode, setMode] = useState<AuthMode>("signIn");
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -67,6 +81,11 @@ export default function AccountScreen() {
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [pushStatus, setPushStatus] = useState<string | null>(null);
   const [registeringPush, setRegisteringPush] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [trackPhone, setTrackPhone] = useState("");
+  const [trackedCustomer, setTrackedCustomer] = useState<Customer | null>(null);
+  const [trackedOrders, setTrackedOrders] = useState<Order[]>([]);
+  const [tracking, setTracking] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     name: "",
@@ -139,19 +158,27 @@ export default function AccountScreen() {
     const password = formData.password;
     const name = formData.name.trim();
 
-    if (!email || !password || (mode === "register" && !name)) {
+    if (!email || (mode !== "forgot" && !password) || (mode === "register" && !name)) {
       Alert.alert("Missing details", "Please fill in the required account fields.");
       return;
     }
 
-    if (password.length < 8) {
+    if (mode !== "forgot" && password.length < 8) {
       Alert.alert("Password too short", "Use at least 8 characters.");
       return;
     }
 
     setSubmitting(true);
     try {
-      if (mode === "register") {
+      if (mode === "forgot") {
+        await requestPasswordReset(email);
+        await successFeedback();
+        Alert.alert(
+          "Check your email",
+          "We sent a secure password reset link. Open it on this phone or any browser to choose a new password.",
+        );
+        setMode("signIn");
+      } else if (mode === "register") {
         await register({ email, name, password });
       } else {
         await signIn({ email, password });
@@ -166,6 +193,32 @@ export default function AccountScreen() {
       );
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleTrackOrders = async () => {
+    if (!trackPhone.trim()) {
+      Alert.alert("Phone required", "Enter the phone number used at checkout.");
+      return;
+    }
+    setTracking(true);
+    try {
+      const result = await findOrdersByPhone(trackPhone);
+      setTrackedCustomer(result.customer);
+      setTrackedOrders(result.orders);
+      if (result.orders.length === 0) {
+        void warningFeedback();
+        Alert.alert("No orders found", "Check the phone number and try again.");
+      } else {
+        void successFeedback();
+      }
+    } catch (caughtError) {
+      Alert.alert(
+        "Could not track orders",
+        caughtError instanceof Error ? caughtError.message : "Please try again.",
+      );
+    } finally {
+      setTracking(false);
     }
   };
 
@@ -197,6 +250,7 @@ export default function AccountScreen() {
   if (!isAuthenticated) {
     return (
       <SafeAreaView style={styles.safeArea}>
+        <OrderDetailsModal onClose={() => setSelectedOrderId(null)} orderId={selectedOrderId} />
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.keyboardView}
@@ -223,6 +277,33 @@ export default function AccountScreen() {
               <Button disabled={registeringPush} size="sm" onPress={handleRegisterPush}>
                 {registeringPush ? "Enabling..." : "Enable"}
               </Button>
+            </View>
+
+            <View style={styles.formCard}>
+              <Text style={styles.notificationTitle}>Track a guest order</Text>
+              <Text style={styles.profileMeta}>
+                Use the same phone number entered during checkout. No account is required.
+              </Text>
+              <Field
+                keyboardType="phone-pad"
+                label="Checkout phone"
+                onChangeText={setTrackPhone}
+                placeholder="03001234567"
+                value={trackPhone}
+              />
+              <Button disabled={tracking} onPress={handleTrackOrders}>
+                {tracking ? "Searching…" : "Find My Orders"}
+              </Button>
+              {!!trackedCustomer && (
+                <Text style={styles.trackedFor}>Orders for {trackedCustomer.full_name}</Text>
+              )}
+              {trackedOrders.map((order) => (
+                <OrderSummary
+                  key={order.$id}
+                  onPress={() => setSelectedOrderId(order.$id)}
+                  order={order}
+                />
+              ))}
             </View>
 
             <View style={styles.segmentedControl}>
@@ -264,13 +345,32 @@ export default function AccountScreen() {
                 placeholder="you@example.com"
                 value={formData.email}
               />
-              <Field
-                label="Password"
-                onChangeText={(value) => setField("password", value)}
-                placeholder="Minimum 8 characters"
-                secureTextEntry
-                value={formData.password}
-              />
+              {mode !== "forgot" && (
+                <Field
+                  label="Password"
+                  onChangeText={(value) => setField("password", value)}
+                  placeholder="Minimum 8 characters"
+                  secureTextEntry
+                  value={formData.password}
+                />
+              )}
+
+              {mode === "signIn" && (
+                <Pressable accessibilityRole="button" onPress={() => setMode("forgot")}>
+                  <Text style={styles.forgotLink}>Forgot your password?</Text>
+                </Pressable>
+              )}
+
+              {mode === "forgot" && (
+                <View style={styles.resetBand}>
+                  <Text style={styles.resetText}>
+                    We will email a secure reset link to your Appwrite account address.
+                  </Text>
+                  <Pressable accessibilityRole="button" onPress={() => setMode("signIn")}>
+                    <Text style={styles.forgotLink}>Back to sign in</Text>
+                  </Pressable>
+                </View>
+              )}
 
               {!!error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -279,9 +379,13 @@ export default function AccountScreen() {
                   ? "Please wait..."
                   : mode === "register"
                     ? "Create Account"
-                    : "Sign In"}
+                    : mode === "forgot"
+                      ? "Send Reset Link"
+                      : "Sign In"}
               </Button>
             </View>
+
+            <SupportCard />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -290,6 +394,7 @@ export default function AccountScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <OrderDetailsModal onClose={() => setSelectedOrderId(null)} orderId={selectedOrderId} />
       <ScrollView
         contentContainerStyle={styles.container}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
@@ -359,30 +464,56 @@ export default function AccountScreen() {
         )}
 
         {orders.map((order) => (
-          <View key={order.$id} style={styles.orderCard}>
-            <View style={styles.orderTop}>
-              <View>
-                <Text style={styles.orderId}>Order {order.$id.slice(-8).toUpperCase()}</Text>
-                <Text style={styles.orderDate}>
-                  {new Date(order.$createdAt).toLocaleDateString([], {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </Text>
-              </View>
-              <View style={styles.statusPill}>
-                <Text style={styles.statusText}>{orderStatusLabel(order.status)}</Text>
-              </View>
-            </View>
-            <View style={styles.orderFooter}>
-              <Text style={styles.orderMeta}>{order.total_weight_kg || 0}kg</Text>
-              <Text style={styles.orderTotal}>{formatCurrency(order.total_price)}</Text>
-            </View>
-          </View>
+          <OrderSummary
+            key={order.$id}
+            onPress={() => setSelectedOrderId(order.$id)}
+            order={order}
+          />
         ))}
+
+        <SupportCard />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function OrderSummary({ onPress, order }: { onPress: () => void; order: Order }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={styles.orderCard}>
+      <View style={styles.orderTop}>
+        <View>
+          <Text style={styles.orderId}>Order {order.$id.slice(-8).toUpperCase()}</Text>
+          <Text style={styles.orderDate}>
+            {new Date(order.$createdAt).toLocaleDateString([], {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}
+          </Text>
+        </View>
+        <View style={styles.statusPill}>
+          <Text style={styles.statusText}>{orderStatusLabel(order.status)}</Text>
+        </View>
+      </View>
+      <View style={styles.orderFooter}>
+        <Text style={styles.orderMeta}>{order.total_weight_kg || 0}kg · View details</Text>
+        <Text style={styles.orderTotal}>{formatCurrency(order.total_price)}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function SupportCard() {
+  return (
+    <View style={styles.supportCard}>
+      <Text style={styles.cardLabel}>Karachi customer care</Text>
+      <Text style={styles.notificationTitle}>Need help with an order?</Text>
+      <Text style={styles.profileMeta}>Call or email Yousuf Rice directly from your phone.</Text>
+      <View style={styles.supportActions}>
+        <Button variant="outline" onPress={() => Linking.openURL("tel:+923332339557")}>Call Support</Button>
+        <Button variant="outline" onPress={() => Linking.openURL("mailto:support@yousufrice.com")}>Email</Button>
+      </View>
+    </View>
   );
 }
 
@@ -412,7 +543,7 @@ function Field({
 }
 
 const brandBlue = "#27247b";
-const brandYellow = "#ffff03";
+const brandYellow = "#D4AD54";
 
 const styles = StyleSheet.create({
   cardLabel: {
@@ -471,6 +602,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 13,
     padding: 14,
+  },
+  forgotLink: {
+    color: "#5A5DA8",
+    fontSize: 13,
+    fontWeight: "900",
+    textAlign: "right",
   },
   header: {
     gap: 6,
@@ -568,7 +705,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   orderTotal: {
-    color: "#047857",
+    color: brandBlue,
     fontSize: 18,
     fontWeight: "900",
   },
@@ -596,7 +733,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   pushStatus: {
-    color: "#047857",
+    color: "#423F8C",
     fontSize: 12,
     fontWeight: "800",
     lineHeight: 17,
@@ -605,6 +742,19 @@ const styles = StyleSheet.create({
   safeArea: {
     backgroundColor: "#f8fafc",
     flex: 1,
+  },
+  resetBand: {
+    backgroundColor: "#F7F7FC",
+    borderColor: "#DCDDF2",
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 8,
+    padding: 12,
+  },
+  resetText: {
+    color: "#565869",
+    fontSize: 13,
+    lineHeight: 19,
   },
   sectionHeader: {
     alignItems: "center",
@@ -652,6 +802,25 @@ const styles = StyleSheet.create({
   statusText: {
     color: brandBlue,
     fontSize: 11,
+    fontWeight: "900",
+  },
+  supportActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8,
+  },
+  supportCard: {
+    backgroundColor: "#FBF8F0",
+    borderColor: "#EDDBAE",
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 4,
+    padding: 16,
+  },
+  trackedFor: {
+    color: "#27247B",
+    fontSize: 13,
     fontWeight: "900",
   },
   subtitle: {

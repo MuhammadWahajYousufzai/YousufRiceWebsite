@@ -1,5 +1,6 @@
 import { Image } from "expo-image";
 import * as Location from "expo-location";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Alert,
@@ -23,17 +24,28 @@ import {
 import { Button } from "@repo/ui";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
-import { placeCodOrder } from "@/lib/orders";
+import { CheckoutSuccessModal } from "@/components/checkout-success-modal";
+import { OrderDetailsModal } from "@/components/order-details-modal";
+import { successFeedback, warningFeedback } from "@/lib/native-feedback";
+import {
+  loadSavedCheckoutDetails,
+  placeCodOrder,
+  type PlaceOrderResult,
+} from "@/lib/orders";
 
 type BagSize = 3 | 5 | 10 | 25;
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function CartScreen() {
+  const router = useRouter();
   const { clearCart, getTotalItems, getTotalPrice, items, removeBag, addBag, removeItem } = useCart();
   const { user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
+  const [loadingSavedDetails, setLoadingSavedDetails] = useState(false);
+  const [placedOrder, setPlacedOrder] = useState<PlaceOrderResult | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     addressLine: "",
     city: "Karachi",
@@ -46,14 +58,42 @@ export default function CartScreen() {
   });
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.email) return;
+    let cancelled = false;
+    setLoadingSavedDetails(true);
 
-    setFormData((current) => ({
-      ...current,
-      email: current.email || user.email || "",
-      fullName: current.fullName || user.name || "",
-      phone: current.phone || formatPhoneNumberForDisplay(user.phone || ""),
-    }));
+    loadSavedCheckoutDetails(user.$id)
+      .then(({ address, customer }) => {
+        if (cancelled) return;
+        setFormData((current) => ({
+          ...current,
+          addressLine: current.addressLine || address?.address_line || "",
+          city: current.city || address?.city || "Karachi",
+          email: current.email || customer?.email || user.email || "",
+          fullName: current.fullName || customer?.full_name || user.name || "",
+          latitude: current.latitude || address?.latitude || 0,
+          longitude: current.longitude || address?.longitude || 0,
+          phone:
+            current.phone ||
+            formatPhoneNumberForDisplay(customer?.phone || user.phone || ""),
+        }));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFormData((current) => ({
+          ...current,
+          email: current.email || user.email || "",
+          fullName: current.fullName || user.name || "",
+          phone: current.phone || formatPhoneNumberForDisplay(user.phone || ""),
+        }));
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingSavedDetails(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   const setField = (field: keyof typeof formData, value: string | number) => {
@@ -81,6 +121,7 @@ export default function CartScreen() {
       }));
 
       Alert.alert("Location captured", `Accuracy: ${Math.round(position.coords.accuracy ?? 0)}m`);
+      await successFeedback();
     } catch (error) {
       Alert.alert(
         "Location unavailable",
@@ -99,6 +140,7 @@ export default function CartScreen() {
     const email = formData.email.trim();
 
     if (items.length === 0) {
+      void warningFeedback();
       Alert.alert("Cart is empty", "Please add at least one rice bag before checkout.");
       return;
     }
@@ -148,11 +190,10 @@ export default function CartScreen() {
         phone: "",
       });
 
-      Alert.alert(
-        "Order placed",
-        `Your COD order was created successfully.\nOrder ID: ${result.orderId}\nTotal: ${formatCurrency(result.totalPrice)}`,
-      );
+      await successFeedback();
+      setPlacedOrder(result);
     } catch (error) {
+      void warningFeedback();
       Alert.alert(
         "Could not place order",
         error instanceof Error ? error.message : "Please try again.",
@@ -164,6 +205,18 @@ export default function CartScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <CheckoutSuccessModal
+        onClose={() => {
+          setPlacedOrder(null);
+          router.push("/");
+        }}
+        onViewOrder={(orderId) => {
+          setPlacedOrder(null);
+          setSelectedOrderId(orderId);
+        }}
+        result={placedOrder}
+      />
+      <OrderDetailsModal onClose={() => setSelectedOrderId(null)} orderId={selectedOrderId} />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.keyboardView}
@@ -183,6 +236,7 @@ export default function CartScreen() {
             <View style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>Your cart is empty</Text>
               <Text style={styles.emptyText}>Select bag sizes from any product card and they will appear here immediately.</Text>
+              <Button variant="outline" onPress={() => router.push("/")}>Browse Rice</Button>
             </View>
           ) : (
             <View style={styles.cartList}>
@@ -268,6 +322,9 @@ export default function CartScreen() {
 
           <View style={styles.formCard}>
             <Text style={styles.formTitle}>Delivery Details</Text>
+            {loadingSavedDetails && (
+              <Text style={styles.savedDetailsText}>Loading your saved delivery details…</Text>
+            )}
 
             <Field
               autoCapitalize="words"
@@ -552,6 +609,11 @@ const styles = StyleSheet.create({
   safeArea: {
     backgroundColor: "#f8fafc",
     flex: 1,
+  },
+  savedDetailsText: {
+    color: "#7B7D8F",
+    fontSize: 12,
+    fontWeight: "700",
   },
   stepper: {
     alignItems: "center",
