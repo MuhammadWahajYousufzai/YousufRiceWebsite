@@ -8,9 +8,10 @@ import { ShieldAlert } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: ReactNode;
+  orderModal: ReactNode;
 }
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
+export default function AdminLayout({ children, orderModal }: AdminLayoutProps) {
   const { adminPermission } = useAuthStore();
   const isReadOnly = adminPermission === AdminPermission.READ_ONLY;
   
@@ -32,6 +33,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           {children}
         </div>
       </div>
+      {orderModal}
     </AdminAuthGuard>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore, AdminPermission } from "@/lib/store/auth-store";
 import AdminAuthGuard from "@/components/admin/AdminAuthGuard";
@@ -68,7 +67,6 @@ interface OrderWithCustomer extends Order {
 }
 
 export default function AdminOrdersPage() {
-  const router = useRouter();
   const { hasWritePermission } = useAuthStore();
   const [orders, setOrders] = useState<OrderWithCustomer[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<OrderWithCustomer[]>([]);
@@ -695,7 +693,11 @@ export default function AdminOrdersPage() {
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </ReadOnlyGuard>
-                        <Link href={`/orders/${order.$id}?from=admin`}>
+                        <Link
+                          href={`/admin/orders/${order.$id}`}
+                          scroll={false}
+                          aria-label={`View order ${order.$id}`}
+                        >
                           <Button variant="outline" size="sm" className="h-8">
                             <ExternalLink className="w-3 h-3" />
                           </Button>
