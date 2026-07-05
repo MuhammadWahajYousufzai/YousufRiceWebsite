@@ -48,6 +48,8 @@
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",
+    "ios:asc:upload": "./scripts/ios-app-store-connect.sh upload",
+    "ios:asc:export": "./scripts/ios-app-store-connect.sh export",
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit"
