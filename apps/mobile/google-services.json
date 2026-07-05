@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "960437207492",
+    "project_id": "yousuf-rice",
+    "storage_bucket": "yousuf-rice.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:960437207492:android:29f9e205215dee48faa491",
+        "android_client_info": {
+          "package_name": "com.yousufrice.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBBS09hbtRadGO2nvUCnlGXG0GKzZj2XYQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

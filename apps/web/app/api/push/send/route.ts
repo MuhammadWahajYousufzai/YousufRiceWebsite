@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { sendPushNotifications, getSubscriptions } from "@/lib/push";
+import {
+  listAppwritePushTargets,
+  sendAppwritePushNotifications,
+} from "@/lib/appwrite-messaging-push";
 
 export async function POST(req: Request) {
   console.log("[Push API] POST /api/push/send received");
@@ -18,8 +21,8 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log("[Push API] calling sendPushNotifications...");
-    const result = await sendPushNotifications({
+    console.log("[Push API] calling Appwrite Messaging...");
+    const result = await sendAppwritePushNotifications({
       title: body.title,
       body: body.body,
       url: body.url || "/",
@@ -39,9 +42,29 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  const subs = await getSubscriptions();
-  return NextResponse.json({
-    count: subs.length,
-    endpoints: subs.map((s) => s.endpoint.slice(0, 80)),
-  });
+  try {
+    const subscriptions = await listAppwritePushTargets();
+    return NextResponse.json({
+      count: subscriptions.targets.length,
+      users: subscriptions.users.length,
+      endpoints: subscriptions.targets.map((target) => target.targetId),
+      providerIds: [
+        ...new Set(
+          subscriptions.targets
+            .map((target) => target.providerId)
+            .filter(Boolean),
+        ),
+      ],
+      backend: "appwrite-messaging",
+    });
+  } catch (error: any) {
+    console.error("[Push API] Diagnostics error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message || "Failed to load Appwrite Messaging targets",
+      },
+      { status: 500 },
+    );
+  }
 }

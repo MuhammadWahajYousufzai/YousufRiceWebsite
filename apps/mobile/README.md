@@ -1,56 +1,82 @@
-# Welcome to your Expo app 👋
+# Yousuf Rice Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo/React Native app for the Yousuf Rice customer storefront.
 
-## Get started
+## iOS App Store Launch Without EAS
 
-1. Install dependencies
+Current iOS identifiers:
 
-   ```bash
-   npm install
-   ```
+- App name: `Yousuf Rice`
+- Bundle ID: `com.yousufrice.mobile`
+- Apple Team ID in Xcode project: `V4AYP7YKGS`
+- Xcode workspace: `ios/YousufRice.xcworkspace`
+- Xcode scheme: `YousufRice`
+- App version: `1.0.0`
+- Build number: `1`
 
-2. Start the app
+## Local Checks
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Run from the repository root:
 
 ```bash
-npm run reset-project
+pnpm --filter @yousuf-rice/mobile typecheck
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Then run the app locally:
 
-### Other setup steps
+```bash
+pnpm --filter @yousuf-rice/mobile ios
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Prepare App Store Connect
 
-## Learn more
+In App Store Connect, create the app before uploading the first archive:
 
-To learn more about developing your project with Expo, look at the following resources:
+1. Select the same Apple Developer team as `V4AYP7YKGS`.
+2. Create a new iOS app named `Yousuf Rice`.
+3. Use bundle ID `com.yousufrice.mobile`.
+4. Use SKU `com.yousufrice.mobile` unless you already have a store SKU.
+5. Complete pricing and availability, age rating, app privacy, support URL, review contact, and demo/review notes.
+6. Add screenshots. Because the current native project supports iPad, include iPad screenshots too or disable iPad support before release.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Archive With Xcode
 
-## Join the community
+From a Mac with Xcode signed into the Apple Developer account:
 
-Join our community of developers creating universal apps.
+1. Open `apps/mobile/ios/YousufRice.xcworkspace`.
+2. Select scheme `YousufRice`.
+3. Select destination `Any iOS Device (arm64)`.
+4. In `Signing & Capabilities`, confirm team `V4AYP7YKGS` and bundle ID `com.yousufrice.mobile`.
+5. Choose `Product > Archive`.
+6. When Organizer opens, choose `Distribute App`.
+7. Select `App Store Connect`.
+8. Upload the archive.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Command Line Archive
+
+You can also create an archive from the repository root:
+
+```bash
+xcodebuild archive \
+  -workspace apps/mobile/ios/YousufRice.xcworkspace \
+  -scheme YousufRice \
+  -configuration Release \
+  -destination "generic/platform=iOS" \
+  -archivePath "$PWD/apps/mobile/build/YousufRice.xcarchive"
+```
+
+Then open Xcode Organizer and upload the archive, or export an `.ipa` with an `ExportOptions.plist` configured for App Store distribution.
+
+## Versioning
+
+Before each upload, increment the iOS build number so Apple accepts the new binary:
+
+- App Store version: `expo.version` in `app.json`
+- iOS build number: `expo.ios.buildNumber` in `app.json`
+- Native build number: `CURRENT_PROJECT_VERSION` in `ios/YousufRice.xcodeproj/project.pbxproj`
+
+If you change `app.json`, run prebuild or update the native Xcode project so the committed iOS project matches the release version.
+
+## Privacy Notes
+
+The iOS project already declares location usage copy and `ITSAppUsesNonExemptEncryption=false`. Review App Store Connect privacy answers against the actual production backend behavior before submitting for review.

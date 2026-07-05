@@ -28,7 +28,9 @@ export default function AdminNotificationsPage() {
   } | null>(null);
   const [diagnostics, setDiagnostics] = useState<{
     count: number;
+    users?: number;
     endpoints: string[];
+    backend?: string;
   } | null>(null);
   const [loadingDiag, setLoadingDiag] = useState(false);
 
@@ -56,7 +58,7 @@ export default function AdminNotificationsPage() {
 
       setResult(data);
       if (data.sent > 0) {
-        toast.success(`Sent to ${data.sent} subscribers!`);
+        toast.success(`Queued for ${data.sent} Appwrite user(s)!`);
       } else {
         toast.error("No notifications delivered — check diagnostics below");
       }
@@ -94,9 +96,12 @@ export default function AdminNotificationsPage() {
     try {
       const res = await fetch("/api/push/send");
       const data = await res.json();
+      if (!data.success && data.error) {
+        throw new Error(data.error);
+      }
       setDiagnostics(data);
-    } catch {
-      toast.error("Failed to load diagnostics");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load diagnostics");
     } finally {
       setLoadingDiag(false);
     }
@@ -199,7 +204,7 @@ export default function AdminNotificationsPage() {
                     <p className="text-2xl font-bold text-gray-900">
                       {result.total}
                     </p>
-                    <p className="text-xs text-gray-500">Subscribers</p>
+                    <p className="text-xs text-gray-500">Appwrite users</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-green-600">
@@ -268,12 +273,15 @@ export default function AdminNotificationsPage() {
               <div>
                 <p className="text-sm text-gray-600 mb-2">
                   <span className="font-medium">{diagnostics.count}</span>{" "}
-                  active subscription(s)
+                  Appwrite push target(s)
+                  {typeof diagnostics.users === "number"
+                    ? ` across ${diagnostics.users} user(s)`
+                    : ""}
                 </p>
                 {diagnostics.endpoints.length > 0 && (
                   <div className="bg-gray-50 rounded p-3 max-h-48 overflow-auto">
                     <p className="text-xs font-medium text-gray-500 mb-1">
-                      Endpoints:
+                      Target IDs:
                     </p>
                     {diagnostics.endpoints.map((ep, i) => (
                       <p
@@ -288,7 +296,7 @@ export default function AdminNotificationsPage() {
               </div>
             ) : (
               <p className="text-sm text-gray-500">
-                Click Refresh to see active subscriptions
+                Click Refresh to see active Appwrite push targets
               </p>
             )}
           </CardContent>

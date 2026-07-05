@@ -139,6 +139,33 @@ export default function HomeScreen() {
         ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => refresh("manual")} />}
       >
+        <View style={styles.commerceHeader}>
+          <View style={styles.logoLockup}>
+            <Image
+              source={require("@/assets/images/splash-icon.png")}
+              style={styles.headerLogo}
+              contentFit="contain"
+            />
+            <View>
+              <Text style={styles.headerBrand}>Yousuf Rice</Text>
+              <Text style={styles.headerMeta}>Karachi delivery</Text>
+            </View>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${getTotalItems()} bags in cart`}
+            onPress={() => router.push("/explore")}
+            style={styles.headerCartButton}
+          >
+            <Text style={styles.headerCartText}>Cart</Text>
+            {getTotalItems() > 0 && (
+              <View style={styles.headerCartBadge}>
+                <Text style={styles.headerCartBadgeText}>{getTotalItems()}</Text>
+              </View>
+            )}
+          </Pressable>
+        </View>
+
         <View style={styles.announcementBar}>
           <Text style={styles.announcementText}>{announcementText}</Text>
           <Pressable
@@ -152,7 +179,7 @@ export default function HomeScreen() {
 
         <View style={styles.brandHeader}>
           <Text style={styles.brandName}>Yousuf Rice</Text>
-          <Text style={styles.brandSubtitle}>Fresh premium rice delivered cash on delivery.</Text>
+          <Text style={styles.brandSubtitle}>Aged premium rice that cooks fluffy without breaking.</Text>
         </View>
 
         <View style={styles.bannerShell}>
@@ -201,9 +228,7 @@ export default function HomeScreen() {
               {loading ? "Loading products" : `${products.length} available products`}
             </Text>
           </View>
-          <View style={styles.cartPill}>
-            <Text style={styles.cartPillText}>{getTotalItems()} bags</Text>
-          </View>
+          <Text style={styles.liveStripMeta}>Cash on delivery</Text>
         </View>
 
         <View style={styles.searchShell}>
@@ -533,8 +558,8 @@ const brandYellow = "#D4AD54";
 const styles = StyleSheet.create({
   announcementBar: {
     alignItems: "center",
-    backgroundColor: "#f8fafc",
-    borderColor: "#e2e8f0",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E6E6ED",
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: "row",
@@ -543,7 +568,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   announcementButton: {
-    backgroundColor: "#111827",
+    backgroundColor: brandBlue,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 7,
@@ -554,7 +579,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   announcementText: {
-    color: "#111827",
+    color: "#1D1E28",
     flex: 1,
     fontSize: 12,
     fontWeight: "700",
@@ -667,7 +692,7 @@ const styles = StyleSheet.create({
     lineHeight: 39,
   },
   brandSubtitle: {
-    color: "#475569",
+    color: "#565869",
     fontSize: 15,
     fontWeight: "600",
     lineHeight: 21,
@@ -701,16 +726,77 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
   },
-  cartPill: {
+  commerceHeader: {
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E6E6ED",
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  headerBrand: {
+    color: brandBlue,
+    fontSize: 15,
+    fontWeight: "900",
+    lineHeight: 18,
+  },
+  headerCartBadge: {
+    alignItems: "center",
     backgroundColor: brandYellow,
     borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    height: 20,
+    justifyContent: "center",
+    minWidth: 20,
+    paddingHorizontal: 6,
+    position: "absolute",
+    right: -6,
+    top: -7,
   },
-  cartPillText: {
+  headerCartBadgeText: {
     color: brandBlue,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  headerCartButton: {
+    alignItems: "center",
+    backgroundColor: brandBlue,
+    borderRadius: 999,
+    justifyContent: "center",
+    minHeight: 42,
+    paddingHorizontal: 18,
+  },
+  headerCartText: {
+    color: "#FFFFFF",
     fontSize: 13,
     fontWeight: "900",
+  },
+  headerLogo: {
+    height: 40,
+    width: 66,
+  },
+  headerMeta: {
+    color: "#7B7D8F",
+    fontSize: 11,
+    fontWeight: "700",
+    lineHeight: 14,
+  },
+  logoLockup: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 10,
+  },
+  liveStripMeta: {
+    backgroundColor: "#F6EDD7",
+    borderRadius: 999,
+    color: "#735A23",
+    fontSize: 12,
+    fontWeight: "900",
+    overflow: "hidden",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   closeButton: {
     alignItems: "center",
@@ -726,6 +812,8 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   compactProductCard: {
+    flexBasis: "auto",
+    flexGrow: 0,
     width: 278,
   },
   container: {
@@ -842,20 +930,22 @@ const styles = StyleSheet.create({
   },
   liveStrip: {
     alignItems: "center",
-    backgroundColor: brandBlue,
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E6E6ED",
     borderRadius: 8,
+    borderWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
     padding: 14,
   },
   liveStripLabel: {
-    color: "#c7d2fe",
+    color: "#7B7D8F",
     fontSize: 12,
     fontWeight: "800",
     textTransform: "uppercase",
   },
   liveStripText: {
-    color: "#ffffff",
+    color: brandBlue,
     fontSize: 17,
     fontWeight: "900",
     marginTop: 2,
@@ -892,11 +982,11 @@ const styles = StyleSheet.create({
     backgroundColor: brandBlue,
     borderRadius: 999,
     color: "#ffffff",
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "900",
     overflow: "hidden",
-    paddingHorizontal: 13,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
   },
   premiumBadge: {
     alignSelf: "flex-start",
@@ -911,44 +1001,49 @@ const styles = StyleSheet.create({
   },
   priceText: {
     color: brandBlue,
-    fontSize: 17,
+    flexShrink: 1,
+    fontSize: 13,
     fontWeight: "900",
   },
   productCard: {
     backgroundColor: "#ffffff",
-    borderColor: "#e5e7eb",
+    borderColor: "#E6E6ED",
     borderRadius: 8,
     borderWidth: 1,
+    flexBasis: "47.5%",
+    flexGrow: 1,
     overflow: "hidden",
   },
   productContent: {
-    padding: 13,
+    padding: 10,
   },
   productDescription: {
-    color: "#64748b",
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 8,
+    color: "#565869",
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 6,
   },
   productGrid: {
-    gap: 14,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
   },
   productImage: {
     height: "100%",
     width: "100%",
   },
   productImageShell: {
-    aspectRatio: 4 / 3,
-    backgroundColor: "#e2e8f0",
+    aspectRatio: 1,
+    backgroundColor: "#F7F7FC",
     position: "relative",
     width: "100%",
   },
   productName: {
     color: brandBlue,
     flex: 1,
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "900",
-    lineHeight: 23,
+    lineHeight: 18,
   },
   productTitleRow: {
     alignItems: "flex-start",

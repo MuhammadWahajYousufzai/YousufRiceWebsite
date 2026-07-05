@@ -4,9 +4,9 @@ import { createAppwriteServerClient } from "@/lib/appwrite-server";
 import { ID, Query } from "node-appwrite";
 import { revalidatePath } from "next/cache";
 import {
-  sendPushNotifications,
-  type NotificationPayload,
-} from "@/lib/push-production";
+  sendAppwritePushNotifications,
+  type AppwritePushPayload,
+} from "@/lib/appwrite-messaging-push";
 
 const NOTIFICATION_IMAGES_BUCKET_ID =
   process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATION_IMAGES_BUCKET_ID ||
@@ -210,18 +210,13 @@ export async function sendCampaign(campaignId: string) {
     );
 
     // Build notification payload
-    const payload: NotificationPayload = {
+    const payload: AppwritePushPayload = {
       title: campaign.title,
       body: campaign.body,
       url: campaign.target_url || "/",
       icon: campaign.icon_url || "/logo.png",
-      badge: campaign.badge_url || "/badge.png",
       image: campaign.image_url || undefined,
       tag: campaign.tag || "campaign",
-      requireInteraction: campaign.require_interaction || false,
-      actions: campaign.actions ? JSON.parse(campaign.actions) : undefined,
-      ttl: 86400 * 3,
-      urgency: "high",
     };
 
     // Update status to sending
@@ -232,23 +227,8 @@ export async function sendCampaign(campaignId: string) {
       { status: "sending", sent_at: new Date().toISOString() },
     );
 
-    const sendOptions: any = {
-      urgent: true,
-      priority: "high",
-      batchSize: 500,
-      batchDelayMs: 0,
-    };
-
-    if (
-      campaign.target_tags &&
-      Array.isArray(campaign.target_tags) &&
-      campaign.target_tags.length > 0
-    ) {
-      sendOptions.tags = campaign.target_tags;
-    }
-
     try {
-      const result = await sendPushNotifications(payload, sendOptions);
+      const result = await sendAppwritePushNotifications(payload);
 
       // Update campaign with results
       await databases.updateDocument(
