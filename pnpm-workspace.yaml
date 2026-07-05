@@ -2,7 +2,8 @@ packages:
   - "apps/*"
   - "packages/*"
 overrides:
-  "@expo/metro-runtime": 57.0.2
+  "@expo/metro-runtime": 57.0.3
+  expo-constants: 57.0.3
   expo-file-system: 57.0.0
   react-native: 0.86.0
 onlyBuiltDependencies:
@@ -15,5 +16,5 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
 minimumReleaseAgeExclude:
-  - expo-modules-autolinking@56.0.14
-  - expo@56.0.6
+  - expo-modules-autolinking@57.0.4
+  - expo@57.0.2
