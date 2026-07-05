@@ -94,6 +94,7 @@ xcodebuild archive \
   -configuration Release \
   -destination "generic/platform=iOS" \
   -archivePath "$ARCHIVE_PATH" \
+  -quiet \
   -allowProvisioningUpdates \
   -authenticationKeyPath "$ASC_KEY_PATH" \
   -authenticationKeyID "$ASC_KEY_ID" \
@@ -104,6 +105,7 @@ xcodebuild -exportArchive \
   -archivePath "$ARCHIVE_PATH" \
   -exportPath "$EXPORT_PATH" \
   -exportOptionsPlist "$EXPORT_OPTIONS_PLIST" \
+  -quiet \
   -allowProvisioningUpdates \
   -authenticationKeyPath "$ASC_KEY_PATH" \
   -authenticationKeyID "$ASC_KEY_ID" \

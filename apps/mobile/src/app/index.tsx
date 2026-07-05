@@ -157,7 +157,7 @@ export default function HomeScreen() {
             onPress={() => router.push("/explore")}
             style={styles.headerCartButton}
           >
-            <Text style={styles.headerCartText}>Cart</Text>
+            <Text style={styles.headerCartText}>Bag</Text>
             {getTotalItems() > 0 && (
               <View style={styles.headerCartBadge}>
                 <Text style={styles.headerCartBadgeText}>{getTotalItems()}</Text>
@@ -178,8 +178,23 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.brandHeader}>
-          <Text style={styles.brandName}>Yousuf Rice</Text>
-          <Text style={styles.brandSubtitle}>Aged premium rice that cooks fluffy without breaking.</Text>
+          <Text style={styles.brandName}>Premium rice for Karachi homes</Text>
+          <Text style={styles.brandSubtitle}>Aged basmati, clear prices, and cash on delivery at your doorstep.</Text>
+        </View>
+
+        <View style={styles.promiseGrid}>
+          <View style={styles.promiseItem}>
+            <Text style={styles.promiseValue}>Free</Text>
+            <Text style={styles.promiseLabel}>Karachi delivery</Text>
+          </View>
+          <View style={styles.promiseItem}>
+            <Text style={styles.promiseValue}>COD</Text>
+            <Text style={styles.promiseLabel}>Pay on arrival</Text>
+          </View>
+          <View style={styles.promiseItem}>
+            <Text style={styles.promiseValue}>Fresh</Text>
+            <Text style={styles.promiseLabel}>Live catalog</Text>
+          </View>
         </View>
 
         <View style={styles.bannerShell}>
@@ -560,7 +575,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     borderColor: "#E6E6ED",
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: "row",
     gap: 10,
@@ -679,7 +694,7 @@ const styles = StyleSheet.create({
   },
   bannerShell: {
     backgroundColor: "#e2e8f0",
-    borderRadius: 8,
+    borderRadius: 14,
     overflow: "hidden",
   },
   brandHeader: {
@@ -687,9 +702,9 @@ const styles = StyleSheet.create({
   },
   brandName: {
     color: brandBlue,
-    fontSize: 34,
-    fontWeight: "900",
-    lineHeight: 39,
+    fontSize: 30,
+    fontWeight: "800",
+    lineHeight: 35,
   },
   brandSubtitle: {
     color: "#565869",
@@ -730,7 +745,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     borderColor: "#E6E6ED",
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -774,8 +789,8 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   headerLogo: {
-    height: 40,
-    width: 66,
+    height: 42,
+    width: 70,
   },
   headerMeta: {
     color: "#7B7D8F",
@@ -932,7 +947,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     borderColor: "#E6E6ED",
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -990,9 +1005,9 @@ const styles = StyleSheet.create({
   },
   premiumBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#f59e0b",
+    backgroundColor: "#F6EDD7",
     borderRadius: 999,
-    color: "#ffffff",
+    color: "#735A23",
     fontSize: 11,
     fontWeight: "900",
     overflow: "hidden",
@@ -1008,14 +1023,15 @@ const styles = StyleSheet.create({
   productCard: {
     backgroundColor: "#ffffff",
     borderColor: "#E6E6ED",
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
     flexBasis: "47.5%",
     flexGrow: 1,
     overflow: "hidden",
   },
   productContent: {
-    padding: 10,
+    minHeight: 118,
+    padding: 11,
   },
   productDescription: {
     color: "#565869",
@@ -1026,7 +1042,7 @@ const styles = StyleSheet.create({
   productGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 10,
   },
   productImage: {
     height: "100%",
@@ -1041,9 +1057,9 @@ const styles = StyleSheet.create({
   productName: {
     color: brandBlue,
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "900",
-    lineHeight: 18,
+    lineHeight: 17,
   },
   productTitleRow: {
     alignItems: "flex-start",
@@ -1090,7 +1106,7 @@ const styles = StyleSheet.create({
   searchShell: {
     backgroundColor: "#F7F7FC",
     borderColor: "#DCDDF2",
-    borderRadius: 14,
+    borderRadius: 18,
     borderWidth: 1,
     gap: 7,
     padding: 12,
@@ -1254,6 +1270,32 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "900",
     marginTop: 3,
+  },
+  promiseGrid: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  promiseItem: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E6E6ED",
+    borderRadius: 14,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 74,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+  },
+  promiseLabel: {
+    color: "#7B7D8F",
+    fontSize: 11,
+    fontWeight: "700",
+    lineHeight: 15,
+    marginTop: 4,
+  },
+  promiseValue: {
+    color: brandBlue,
+    fontSize: 16,
+    fontWeight: "900",
   },
   updatedAt: {
     color: "#64748b",

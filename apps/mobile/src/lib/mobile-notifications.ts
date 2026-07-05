@@ -5,7 +5,13 @@ import { Platform } from "react-native";
 
 import { account } from "@/lib/appwrite";
 
-const APPWRITE_PUSH_PROVIDER_ID = process.env.EXPO_PUBLIC_APPWRITE_PUSH_PROVIDER_ID;
+const APPWRITE_PUSH_PROVIDER_ID =
+  Platform.OS === "ios"
+    ? process.env.EXPO_PUBLIC_APPWRITE_IOS_PUSH_PROVIDER_ID ||
+      process.env.EXPO_PUBLIC_APPWRITE_APNS_PROVIDER_ID
+    : process.env.EXPO_PUBLIC_APPWRITE_ANDROID_PUSH_PROVIDER_ID ||
+      process.env.EXPO_PUBLIC_APPWRITE_FCM_PROVIDER_ID ||
+      process.env.EXPO_PUBLIC_APPWRITE_PUSH_PROVIDER_ID;
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -40,7 +46,9 @@ function isNativePushProviderError(message: string) {
   return /firebase|fcm|apns|google|sender|service/i.test(message);
 }
 
-export async function registerMobilePushTarget() {
+export async function registerMobilePushTarget(options: { requestPermission?: boolean } = {}) {
+  const requestPermission = options.requestPermission ?? true;
+
   await account.get().catch(async () => {
     await account.createAnonymousSession();
   });
@@ -54,7 +62,7 @@ export async function registerMobilePushTarget() {
   const currentPermissions = await Notifications.getPermissionsAsync();
   let finalStatus = currentPermissions.status;
 
-  if (finalStatus !== "granted") {
+  if (finalStatus !== "granted" && requestPermission) {
     const requestedPermissions = await Notifications.requestPermissionsAsync();
     finalStatus = requestedPermissions.status;
   }
@@ -70,7 +78,7 @@ export async function registerMobilePushTarget() {
     const message = toErrorMessage(error);
     if (isNativePushProviderError(message)) {
       throw new Error(
-        "Appwrite Messaging push provider is not configured for this app build. Add the Android FCM and/or iOS APNs provider in your self-hosted Appwrite 1.9.0 project, rebuild the app with the matching native push credentials, then try again.",
+        "Appwrite Messaging push provider is not configured for this app build. Add the iOS APNs and/or Android FCM provider in Appwrite, set EXPO_PUBLIC_APPWRITE_IOS_PUSH_PROVIDER_ID or EXPO_PUBLIC_APPWRITE_ANDROID_PUSH_PROVIDER_ID, rebuild the app, then try again.",
       );
     }
 
@@ -109,4 +117,14 @@ export async function registerMobilePushTarget() {
     targetId,
     tokenType: token.type,
   };
+}
+
+export async function registerMobilePushTargetIfAllowed() {
+  const permissions = await Notifications.getPermissionsAsync();
+
+  if (permissions.status !== "granted") {
+    return null;
+  }
+
+  return registerMobilePushTarget({ requestPermission: false });
 }

@@ -60,7 +60,7 @@ export default function AdminNotificationsPage() {
       if (data.sent > 0) {
         toast.success(`Queued for ${data.sent} Appwrite user(s)!`);
       } else {
-        toast.error("No notifications delivered — check diagnostics below");
+        toast.error("No push targets yet. Open the iPhone app and tap Account > Enable.");
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to send notification");
@@ -115,7 +115,7 @@ export default function AdminNotificationsPage() {
             Send Push Notification
           </h1>
           <p className="text-gray-600">
-            Send a notification to all subscribed users instantly.
+            Send a notification to registered mobile Appwrite push targets.
           </p>
         </div>
 
@@ -278,6 +278,13 @@ export default function AdminNotificationsPage() {
                     ? ` across ${diagnostics.users} user(s)`
                     : ""}
                 </p>
+                {diagnostics.count === 0 && (
+                  <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                    No iPhone or Android device has registered a push target yet.
+                    Open the mobile app, go to Account, tap Enable under Mobile
+                    notifications, then refresh this diagnostics panel.
+                  </div>
+                )}
                 {diagnostics.endpoints.length > 0 && (
                   <div className="bg-gray-50 rounded p-3 max-h-48 overflow-auto">
                     <p className="text-xs font-medium text-gray-500 mb-1">
@@ -296,7 +303,9 @@ export default function AdminNotificationsPage() {
               </div>
             ) : (
               <p className="text-sm text-gray-500">
-                Click Refresh to see active Appwrite push targets
+                Click Refresh to see active Appwrite push targets. The Appwrite
+                console error "has no recipients" means no user, target, or topic
+                was selected for that message.
               </p>
             )}
           </CardContent>
