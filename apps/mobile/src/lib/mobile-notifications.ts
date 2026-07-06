@@ -5,13 +5,15 @@ import { Platform } from "react-native";
 
 import { account } from "@/lib/appwrite";
 
+const APPWRITE_ANDROID_PUSH_PROVIDER_ID =
+  process.env.EXPO_PUBLIC_APPWRITE_ANDROID_PUSH_PROVIDER_ID ||
+  process.env.EXPO_PUBLIC_APPWRITE_FCM_PROVIDER_ID ||
+  process.env.EXPO_PUBLIC_APPWRITE_PUSH_PROVIDER_ID;
+const APPWRITE_IOS_PUSH_PROVIDER_ID =
+  process.env.EXPO_PUBLIC_APPWRITE_IOS_PUSH_PROVIDER_ID ||
+  process.env.EXPO_PUBLIC_APPWRITE_APNS_PROVIDER_ID;
 const APPWRITE_PUSH_PROVIDER_ID =
-  Platform.OS === "ios"
-    ? process.env.EXPO_PUBLIC_APPWRITE_IOS_PUSH_PROVIDER_ID ||
-      process.env.EXPO_PUBLIC_APPWRITE_APNS_PROVIDER_ID
-    : process.env.EXPO_PUBLIC_APPWRITE_ANDROID_PUSH_PROVIDER_ID ||
-      process.env.EXPO_PUBLIC_APPWRITE_FCM_PROVIDER_ID ||
-      process.env.EXPO_PUBLIC_APPWRITE_PUSH_PROVIDER_ID;
+  Platform.OS === "ios" ? APPWRITE_IOS_PUSH_PROVIDER_ID : APPWRITE_ANDROID_PUSH_PROVIDER_ID;
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -35,7 +37,13 @@ async function ensureAndroidChannel() {
 
 function getTargetId() {
   const runtime = Constants.executionEnvironment || "native";
-  return `mobile-${Platform.OS}-${runtime}`.replace(/[^a-zA-Z0-9._-]/g, "-").slice(0, 36);
+  const provider = APPWRITE_PUSH_PROVIDER_ID || runtime;
+  return `mobile-${Platform.OS}-${provider}`.replace(/[^a-zA-Z0-9._-]/g, "-").slice(0, 36);
+}
+
+function getLegacyTargetIds() {
+  const runtime = Constants.executionEnvironment || "native";
+  return [`mobile-${Platform.OS}-${runtime}`.replace(/[^a-zA-Z0-9._-]/g, "-").slice(0, 36)];
 }
 
 function toErrorMessage(error: unknown) {
@@ -55,6 +63,17 @@ export async function registerMobilePushTarget(options: { requestPermission?: bo
 
   if (!Device.isDevice) {
     throw new Error("Push notifications need a physical iOS or Android device.");
+  }
+
+  if (!APPWRITE_PUSH_PROVIDER_ID) {
+    const providerName = Platform.OS === "ios" ? "iOS APNs" : "Android FCM";
+    const envName =
+      Platform.OS === "ios"
+        ? "EXPO_PUBLIC_APPWRITE_IOS_PUSH_PROVIDER_ID"
+        : "EXPO_PUBLIC_APPWRITE_ANDROID_PUSH_PROVIDER_ID";
+    throw new Error(
+      `${providerName} is not configured for this app build. Add the provider in Appwrite, set ${envName}, rebuild the app, then enable notifications again.`,
+    );
   }
 
   await ensureAndroidChannel();
@@ -91,6 +110,13 @@ export async function registerMobilePushTarget(options: { requestPermission?: bo
   }
 
   const targetId = getTargetId();
+  await Promise.all(
+    getLegacyTargetIds()
+      .filter((legacyTargetId) => legacyTargetId !== targetId)
+      .map((legacyTargetId) =>
+        account.deletePushTarget({ targetId: legacyTargetId }).catch(() => null),
+      ),
+  );
 
   try {
     await account.createPushTarget({

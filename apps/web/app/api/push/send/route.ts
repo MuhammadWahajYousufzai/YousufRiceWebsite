@@ -48,6 +48,7 @@ export async function GET() {
       count: subscriptions.targets.length,
       users: subscriptions.users.length,
       endpoints: subscriptions.targets.map((target) => target.targetId),
+      skipped: subscriptions.skippedTargets,
       providerIds: [
         ...new Set(
           subscriptions.targets

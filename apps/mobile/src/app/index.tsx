@@ -193,7 +193,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.promiseItem}>
             <Text style={styles.promiseValue}>Fresh</Text>
-            <Text style={styles.promiseLabel}>Live catalog</Text>
+            <Text style={styles.promiseLabel}>Daily stock</Text>
           </View>
         </View>
 
@@ -238,7 +238,7 @@ export default function HomeScreen() {
 
         <View style={styles.liveStrip}>
           <View>
-            <Text style={styles.liveStripLabel}>Live catalog</Text>
+            <Text style={styles.liveStripLabel}>Available today</Text>
             <Text style={styles.liveStripText}>
               {loading ? "Loading products" : `${products.length} available products`}
             </Text>
