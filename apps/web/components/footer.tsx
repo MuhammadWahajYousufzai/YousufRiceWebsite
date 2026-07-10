@@ -94,6 +94,17 @@ export async function Footer() {
               </li>
               <li>
                 <Link
+                  href="/privacy"
+                  className="text-white/80 hover:text-[#ffff03] transition-colors text-sm flex items-center group"
+                >
+                  <span className="mr-2 group-hover:translate-x-1 transition-transform">
+                    →
+                  </span>
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/track-order"
                   className="text-white/80 hover:text-[#ffff03] transition-colors text-sm flex items-center group"
                 >
