@@ -48,6 +48,45 @@ async function hashString(str: string): Promise<string> {
   return fallbackHash(normalized);
 }
 
+function normalizePhoneForMeta(phone: string | undefined | null): string | undefined {
+  if (!phone) return undefined;
+
+  let digits = phone.replace(/\D/g, "");
+  if (!digits) return undefined;
+
+  if (digits.startsWith("00")) {
+    digits = digits.slice(2);
+  }
+
+  if (digits.startsWith("0") && digits.length === 11) {
+    digits = `92${digits.slice(1)}`;
+  }
+
+  return digits;
+}
+
+/**
+ * Hash a phone number before it leaves the browser. Never fall back to a
+ * non-cryptographic hash for customer data; if Web Crypto is unavailable,
+ * omit the match key instead.
+ */
+export async function hashPhoneForMeta(
+  phone: string | undefined | null,
+): Promise<string | undefined> {
+  const normalized = normalizePhoneForMeta(phone);
+  if (!normalized || !window.crypto?.subtle) return undefined;
+
+  const encoder = new TextEncoder();
+  const hashBuffer = await window.crypto.subtle.digest(
+    "SHA-256",
+    encoder.encode(normalized),
+  );
+
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 export async function generateEventId(options?: {
   eventName?: string;
   stableKey?: string;

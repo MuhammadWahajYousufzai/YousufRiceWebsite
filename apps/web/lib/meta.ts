@@ -268,6 +268,7 @@ export function getClientIp(request: Request): string | undefined {
 export function prepareUserData(rawUserData: {
   email?: string;
   phone?: string;
+  phoneHash?: string;
   firstName?: string;
   lastName?: string;
   city?: string;
@@ -282,7 +283,7 @@ export function prepareUserData(rawUserData: {
 }): MetaUserData {
   return {
     em: hashData(rawUserData.email),
-    ph: hashPhoneData(rawUserData.phone),
+    ph: rawUserData.phoneHash || hashPhoneData(rawUserData.phone),
     fn: hashData(rawUserData.firstName),
     ln: hashData(rawUserData.lastName),
     ct: hashData(rawUserData.city),
@@ -293,7 +294,7 @@ export function prepareUserData(rawUserData: {
     client_user_agent: rawUserData.userAgent,
     fbp: rawUserData.fbp,
     fbc: rawUserData.fbc,
-    external_id: rawUserData.externalId,
+    external_id: hashData(rawUserData.externalId),
   };
 }
 

@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import {
   generateEventId,
   getFacebookCookies,
+  hashPhoneForMeta,
   META_DATASET_ID,
   sanitizeCustomerNameForMeta,
 } from "@/lib/meta-browser";
@@ -549,6 +550,8 @@ export function useMetaTracking() {
 
         // Get Facebook cookies
         const { fbp, fbc } = getFacebookCookies();
+        const { phone: rawPhone, ...userDataWithoutPhone } = userData;
+        const phoneHash = await hashPhoneForMeta(rawPhone);
 
         // 1. Browser-side: Track with Meta Pixel. Instagram's in-app browser
         // can drop Pixel requests if route navigation starts immediately.
@@ -604,13 +607,14 @@ export function useMetaTracking() {
           event_time: eventTime,
           event_source_url: eventSourceUrl,
           user_data: {
-            ...userData,
-            firstName: userData.firstName
-              ? sanitizeCustomerNameForMeta(userData.firstName)
+            ...userDataWithoutPhone,
+            firstName: userDataWithoutPhone.firstName
+              ? sanitizeCustomerNameForMeta(userDataWithoutPhone.firstName)
               : undefined,
-            lastName: userData.lastName
-              ? sanitizeCustomerNameForMeta(userData.lastName)
+            lastName: userDataWithoutPhone.lastName
+              ? sanitizeCustomerNameForMeta(userDataWithoutPhone.lastName)
               : undefined,
+            phone_hash: phoneHash,
             fbp,
             fbc,
           },

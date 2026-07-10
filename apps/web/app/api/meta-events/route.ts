@@ -67,7 +67,9 @@ export async function POST(request: NextRequest) {
     // Prepare user data with hashing
     const preparedUserData = prepareUserData({
       email: user_data?.email,
-      phone: user_data?.phone,
+      // The browser sends only phone_hash. Ignore raw phone fields so a
+      // malformed or older client payload can never forward them to Meta.
+      phoneHash: user_data?.phone_hash,
       firstName: sanitizeCustomerNameForMeta(user_data?.firstName),
       lastName: sanitizeCustomerNameForMeta(user_data?.lastName),
       city: user_data?.city,
