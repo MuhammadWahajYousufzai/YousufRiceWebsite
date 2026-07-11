@@ -16,7 +16,7 @@ const sections = [
       <>
         <p>
           <strong>When you place an order</strong>, we collect the information
-          needed to process and deliver it:
+          needed to process and deliver it: 
         </p>
         <ul>
           <li>
