@@ -91,6 +91,7 @@ export const metadata: Metadata = {
       "Order premium quality rice online with tier-based pricing and free delivery",
   },
   verification: {
+    google: "Agv-pQpEz2u5E8A9B_tsHrne4JOmYvN6qNuzFKABux4",
     other: {
       "facebook-domain-verification": "r6916j8ribq3asb275o4dejdttfgqy",
     },
