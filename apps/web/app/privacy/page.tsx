@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "Learn how Yousuf Rice collects, uses, and protects information when you order rice online or use our mobile app.",
+    "Learn how Yousuf Rice collects, uses, stores, and shares information when you use our website or mobile app.",
   alternates: {
     canonical: "/privacy",
   },
@@ -11,85 +11,246 @@ export const metadata: Metadata = {
 
 const sections = [
   {
-    title: "Information we collect",
+    title: "1. Information We Collect",
     body: (
       <>
         <p>
-          When you use Yousuf Rice, we may collect information you choose to
-          provide, including your name, email address, phone number, account
-          details, delivery address, and order information.
+          <strong>When you place an order</strong>, we collect the information
+          needed to process and deliver it:
+        </p>
+        <ul>
+          <li>
+            Name, email address, and phone number — so we can confirm your order
+            and contact you about it.
+          </li>
+          <li>Delivery address — so we know where to deliver your rice.</li>
+          <li>
+            Order details and order history — so we can prepare, track, and
+            support your order.
+          </li>
+        </ul>
+        <p>
+          <strong>When you create an account</strong>, we store your login details
+          so you don't have to re-enter your information on future orders.
         </p>
         <p>
-          If you choose <strong>Use GPS</strong> during checkout, the app uses
-          your device location to save delivery coordinates. Location access
-          is requested only for this purpose and is not required for browsing
-          the catalog.
+          <strong>Location information (optional):</strong>
         </p>
+        <ul>
+          <li>
+            If you choose <strong>Use GPS</strong> at checkout, we use your
+            device's location to save delivery coordinates for that order.
+          </li>
+          <li>
+            This is entirely optional. You can skip GPS and type your delivery
+            address manually instead — GPS is never required to browse the
+            catalog or place an order.
+          </li>
+        </ul>
+        <p>
+          <strong>Technical information (collected automatically):</strong>
+        </p>
+        <ul>
+          <li>
+            IP address, device type, and app version — used for security, fraud
+            prevention, and keeping the app running correctly.
+          </li>
+        </ul>
+        <p>
+          <strong>Advertising and analytics information:</strong>
+        </p>
+        <ul>
+          <li>
+            We use <strong>Meta (Facebook) Pixel</strong> on our website, along
+            with <strong>Meta's Conversions API</strong>, to measure and improve
+            our ads.
+          </li>
+          <li>
+            This means that when you visit our site or complete an order, certain
+            event data (such as page views, and — in hashed, non-readable form —
+            your email address or phone number if you've provided one) may be
+            sent directly to Meta's servers to help us measure ad performance and
+            show relevant ads.
+          </li>
+          <li>
+            We do not send Meta your delivery address or order contents — only
+            the limited event and contact data needed for ad measurement.
+          </li>
+        </ul>
       </>
     ),
   },
   {
-    title: "How we use information",
+    title: "2. How We Use Information",
     body: (
       <ul>
         <li>Process and deliver cash-on-delivery orders.</li>
         <li>Save delivery details so future checkouts are faster.</li>
         <li>Provide order status updates and customer support.</li>
-        <li>Send delivery notifications and relevant customer offers when you enable notifications.</li>
-        <li>Maintain, secure, and improve the Yousuf Rice website and app.</li>
+        <li>
+          Send delivery notifications and offers, if you've enabled
+          notifications.
+        </li>
+        <li>
+          Measure and improve the performance of our advertising (via Meta
+          Pixel/Conversions API).
+        </li>
+        <li>
+          Maintain, secure, and improve the Yousuf Rice website and app.
+        </li>
       </ul>
     ),
   },
   {
-    title: "Payments and service providers",
+    title: "3. Payments",
+    body: (
+      <p>
+        Yousuf Rice currently accepts <strong>cash on delivery only</strong>. We
+        do not collect, process, or store credit/debit card numbers or online
+        payment credentials anywhere in the app or website.
+      </p>
+    ),
+  },
+  {
+    title: "4. Where Your Data Is Stored and How It's Protected",
     body: (
       <>
         <p>
-          Yousuf Rice currently accepts cash on delivery. We do not collect or
-          store credit-card numbers or online payment credentials in the app.
+          We run our own backend software (a self-hosted, open-source server
+          platform) on a private server that we manage ourselves. Because we
+          manage this software directly, no customer data is transmitted to any
+          third-party database or backend-as-a-service provider — it stays on
+          infrastructure under our own control.
         </p>
+        <p>We apply reasonable technical safeguards, including:</p>
+        <ul>
+          <li>
+            Encrypted connections (HTTPS) between your device and our servers
+          </li>
+          <li>Restricted administrative access to the server and database</li>
+          <li>Regular backups and routine security maintenance</li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    title: "5. Who We Share Information With",
+    body: (
+      <>
+        <p>We share information only where necessary:</p>
+        <ul>
+          <li>
+            <strong>Order fulfillment staff</strong> — to prepare, support, and
+            deliver your order.
+          </li>
+          <li>
+            <strong>Meta (Facebook)</strong> — receives limited event and hashed
+            contact data via Pixel/Conversions API, solely for ad measurement,
+            as described above.
+          </li>
+          <li>
+            <strong>Apple App Store / Google Play Store</strong> — as the
+            platforms distributing our app, subject to their own respective
+            privacy and diagnostic policies for app installs and updates.
+          </li>
+        </ul>
+        <p>We do not sell your personal information to anyone.</p>
         <p>
-          We use Appwrite to provide account, database, file-storage, and
-          notification services. These services process information only as
-          needed to operate the Yousuf Rice service.
+          Calls made to our business phone line (used for order confirmation and
+          customer support) may be recorded for quality and training purposes.
         </p>
       </>
     ),
   },
   {
-    title: "Sharing and retention",
+    title: "6. Data Retention",
     body: (
       <p>
-        We share order and delivery information with the people who need it to
-        prepare, support, and deliver your order. We do not sell your personal
-        information. We retain information for as long as needed to provide
-        the service, support customers, meet legal obligations, and resolve
-        disputes.
+        We keep your information for as long as needed to provide the service,
+        support you as a customer, meet any legal obligations, and resolve
+        disputes. You can ask us to delete your account information at any time
+        (see Section 8).
       </p>
     ),
   },
   {
-    title: "Your choices",
+    title: "7. Delivery Area",
+    body: (
+      <p>
+        Yousuf Rice currently delivers within <strong>Pakistan only</strong>.
+      </p>
+    ),
+  },
+  {
+    title: "8. Your Choices and Rights",
     body: (
       <ul>
-        <li>You can choose not to grant location access and enter an address manually.</li>
-        <li>You can disable notifications in your device settings.</li>
-        <li>You can contact us to request help with your account information.</li>
+        <li>
+          Skip GPS and enter your delivery address manually — no impact on your
+          ability to order.
+        </li>
+        <li>
+          Disable notifications any time in your device settings.
+        </li>
+        <li>
+          Limit ad tracking: you can manage how Meta uses your data for ads
+          through your{" "}
+          <a
+            href="https://www.facebook.com/adpreferences/ad_settings"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Meta Ad Preferences
+          </a>{" "}
+          or by using browser-level tracking protection.
+        </li>
+        <li>
+          Contact us for any questions related to your order or account.
+        </li>
       </ul>
     ),
   },
   {
-    title: "Contact us",
+    title: "9. Children's Privacy",
     body: (
       <p>
-        For privacy questions or requests, email{" "}
+        Yousuf Rice is intended for general audiences and is not directed at
+        children. We do not knowingly collect personal information from children.
+      </p>
+    ),
+  },
+  {
+    title: "10. Scope",
+    body: (
+      <p>
+        This Privacy Policy applies to the Yousuf Rice iOS app, Android app, and
+        website.
+      </p>
+    ),
+  },
+  {
+    title: "11. Changes to This Policy",
+    body: (
+      <p>
+        We may update this Privacy Policy from time to time. The "Last updated"
+        date at the top reflects the most recent revision. Continued use of the
+        app or website after changes means you accept the updated policy.
+      </p>
+    ),
+  },
+  {
+    title: "12. Contact Us",
+    body: (
+      <p>
+        For order-related questions or support, email{" "}
         <a
-          href="mailto:support@yousufrice.com"
+          href="mailto:support@ssricemills.com"
           className="font-semibold text-[#27247b] underline decoration-[#ffff03] decoration-2 underline-offset-4"
         >
-          support@yousufrice.com
+          support@ssricemills.com
         </a>{" "}
-        or call <a href="tel:+923332339557">+92 333 2339557</a>.
+        or call{" "}
+        <a href="tel:+923332339557">+92 333 2339557</a>.
       </p>
     ),
   },
@@ -105,23 +266,28 @@ export default function PrivacyPage() {
           </p>
           <h1 className="text-4xl font-bold sm:text-5xl">Privacy Policy</h1>
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-white/85">
-            We explain what information we use to deliver your rice orders and
-            how you control it.
+            We explain what information we collect, use, store, and share when
+            you use our website or mobile app.
           </p>
         </div>
       </section>
 
       <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-8 rounded-2xl border-2 border-[#ffff03]/60 bg-[#ffff03]/10 p-5 text-sm text-gray-700">
-          <strong className="text-[#27247b]">Last updated:</strong> July 10,
+          <strong className="text-[#27247b]">Last updated:</strong> July 11,
           2026
         </div>
 
         <div className="space-y-8 rounded-3xl border border-gray-200 bg-white p-6 shadow-xl sm:p-10">
           <p className="text-lg leading-relaxed text-gray-700">
-            This Privacy Policy describes how Yousuf Rice, a brand of SS
-            International, handles information when you use our website or
-            iOS and Android applications.
+            This Privacy Policy explains how Yousuf Rice, a brand of SS
+            International (Karachi, Pakistan), collects, uses, stores, and shares
+            information when you use our website, iOS app, or Android app.
+          </p>
+
+          <p className="text-sm leading-relaxed text-gray-500">
+            SS International is the data controller responsible for this
+            information. If you have questions, see the <strong>Contact Us</strong> section below.
           </p>
 
           {sections.map((section) => (
