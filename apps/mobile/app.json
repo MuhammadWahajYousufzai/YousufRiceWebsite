@@ -2,14 +2,14 @@
   "expo": {
     "name": "Yousuf Rice",
     "slug": "yousuf-rice-mobile",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "yousufrice",
     "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "com.yousufrice.mobile",
-      "buildNumber": "3",
+      "buildNumber": "4",
       "icon": "./assets/images/icon.png",
       "supportsTablet": false,
       "infoPlist": {

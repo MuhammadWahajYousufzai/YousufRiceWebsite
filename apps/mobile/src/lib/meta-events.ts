@@ -3,7 +3,8 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 
 const META_EVENTS_ENDPOINT =
-  process.env.EXPO_PUBLIC_META_EVENTS_URL || "https://yousufrice.com/api/meta-events";
+  process.env.EXPO_PUBLIC_META_EVENTS_URL ||
+  "https://yousufrice.com/api/meta-events";
 const APP_VERSION = Constants.expoConfig?.version || "1.0.0";
 
 type MetaContents = Array<{
@@ -36,11 +37,14 @@ function normalizePhone(phone: string | undefined): string | undefined {
   let digits = phone.replace(/\D/g, "");
   if (!digits) return undefined;
   if (digits.startsWith("00")) digits = digits.slice(2);
-  if (digits.startsWith("0") && digits.length === 11) digits = `92${digits.slice(1)}`;
+  if (digits.startsWith("0") && digits.length === 11)
+    digits = `92${digits.slice(1)}`;
   return digits;
 }
 
-async function hashPhone(phone: string | undefined): Promise<string | undefined> {
+async function hashPhone(
+  phone: string | undefined,
+): Promise<string | undefined> {
   const normalized = normalizePhone(phone);
   if (!normalized) return undefined;
 
@@ -83,7 +87,9 @@ export async function trackMobileMetaEvent(
     });
 
     if (!response.ok) {
-      console.warn(`[Meta App Events] ${eventName} failed with HTTP ${response.status}`);
+      console.warn(
+        `[Meta App Events] ${eventName} failed with HTTP ${response.status}`,
+      );
       return false;
     }
 
@@ -127,11 +133,13 @@ export function trackMobileAddToCart(data: {
       content_type: "product",
       value: data.value,
       currency: "PKR",
-      contents: [{
-        id: data.contentId,
-        quantity: data.quantity || 1,
-        item_price: data.value,
-      }],
+      contents: [
+        {
+          id: data.contentId,
+          quantity: data.quantity || 1,
+          item_price: data.value,
+        },
+      ],
     },
   });
 }

@@ -18,13 +18,24 @@ type BagSize = 3 | 5 | 10 | 25;
 type BagKey = keyof CartItem["bags"];
 
 interface CartContextValue {
-  addBag: (product: Product, bagSize: BagSize, isColdDrinkBundle?: boolean) => void;
+  addBag: (
+    product: Product,
+    bagSize: BagSize,
+    isColdDrinkBundle?: boolean,
+  ) => void;
   clearCart: () => void;
-  getItem: (productId: string, isColdDrinkBundle?: boolean) => CartItem | undefined;
+  getItem: (
+    productId: string,
+    isColdDrinkBundle?: boolean,
+  ) => CartItem | undefined;
   getTotalItems: () => number;
   getTotalPrice: () => number;
   items: CartItem[];
-  removeBag: (productId: string, bagSize: BagSize, isColdDrinkBundle?: boolean) => void;
+  removeBag: (
+    productId: string,
+    bagSize: BagSize,
+    isColdDrinkBundle?: boolean,
+  ) => void;
   removeItem: (productId: string, isColdDrinkBundle?: boolean) => void;
 }
 
@@ -40,8 +51,13 @@ const emptyBags = (): CartItem["bags"] => ({
 
 const bagKeyForSize = (bagSize: BagSize): BagKey => `kg${bagSize}` as BagKey;
 
-const sameLine = (item: CartItem, productId: string, isColdDrinkBundle = false) =>
-  item.product.$id === productId && Boolean(item.isColdDrinkBundle) === isColdDrinkBundle;
+const sameLine = (
+  item: CartItem,
+  productId: string,
+  isColdDrinkBundle = false,
+) =>
+  item.product.$id === productId &&
+  Boolean(item.isColdDrinkBundle) === isColdDrinkBundle;
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -74,7 +90,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       void selectionFeedback();
       setItems((current) => {
         const bagKey = bagKeyForSize(bagSize);
-        const existing = current.find((item) => sameLine(item, product.$id, isColdDrinkBundle));
+        const existing = current.find((item) =>
+          sameLine(item, product.$id, isColdDrinkBundle),
+        );
 
         if (!existing) {
           const bags = emptyBags();
@@ -138,9 +156,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const removeItem = useCallback((productId: string, isColdDrinkBundle = false) => {
-    setItems((current) => current.filter((item) => !sameLine(item, productId, isColdDrinkBundle)));
-  }, []);
+  const removeItem = useCallback(
+    (productId: string, isColdDrinkBundle = false) => {
+      setItems((current) =>
+        current.filter((item) => !sameLine(item, productId, isColdDrinkBundle)),
+      );
+    },
+    [],
+  );
 
   const clearCart = useCallback(() => {
     setItems([]);
@@ -166,7 +189,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     () =>
       items.reduce(
         (total, item) =>
-          total + Object.values(item.bags).reduce((bagTotal, count) => bagTotal + count, 0),
+          total +
+          Object.values(item.bags).reduce(
+            (bagTotal, count) => bagTotal + count,
+            0,
+          ),
         0,
       ),
     [items],
@@ -183,7 +210,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeBag,
       removeItem,
     }),
-    [addBag, clearCart, getItem, getTotalItems, getTotalPrice, items, removeBag, removeItem],
+    [
+      addBag,
+      clearCart,
+      getItem,
+      getTotalItems,
+      getTotalPrice,
+      items,
+      removeBag,
+      removeItem,
+    ],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

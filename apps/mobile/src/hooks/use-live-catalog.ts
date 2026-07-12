@@ -40,44 +40,52 @@ function catalogChannels() {
       ? Channel.tablesdb(DATABASE_ID).table(PRODUCT_IMAGES_TABLE_ID).row()
       : null,
     STORAGE_BUCKET_ID ? Channel.bucket(STORAGE_BUCKET_ID).file() : null,
-    BANNER_STORAGE_BUCKET_ID ? Channel.bucket(BANNER_STORAGE_BUCKET_ID).file() : null,
+    BANNER_STORAGE_BUCKET_ID
+      ? Channel.bucket(BANNER_STORAGE_BUCKET_ID).file()
+      : null,
   ];
 
-  return channels.filter(
-    (channel): channel is NonNullable<(typeof channels)[number]> => Boolean(channel),
-  ).map((channel) => channel.toString());
+  return channels
+    .filter((channel): channel is NonNullable<(typeof channels)[number]> =>
+      Boolean(channel),
+    )
+    .map((channel) => channel.toString());
 }
 
 export function useLiveCatalog() {
   const [state, setState] = useState<CatalogState>(initialState);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const refresh = useCallback(async (mode: "initial" | "manual" | "realtime" = "manual") => {
-    setState((current) => ({
-      ...current,
-      error: null,
-      loading: mode === "initial" ? true : current.loading,
-      refreshing: mode !== "initial",
-    }));
-
-    try {
-      const snapshot = await loadCatalogSnapshot();
-      setState({
-        ...snapshot,
-        error: null,
-        loading: false,
-        refreshing: false,
-        updatedAt: new Date().toISOString(),
-      });
-    } catch (error) {
+  const refresh = useCallback(
+    async (mode: "initial" | "manual" | "realtime" = "manual") => {
       setState((current) => ({
         ...current,
-        error: error instanceof Error ? error.message : "Could not load catalog.",
-        loading: false,
-        refreshing: false,
+        error: null,
+        loading: mode === "initial" ? true : current.loading,
+        refreshing: mode !== "initial",
       }));
-    }
-  }, []);
+
+      try {
+        const snapshot = await loadCatalogSnapshot();
+        setState({
+          ...snapshot,
+          error: null,
+          loading: false,
+          refreshing: false,
+          updatedAt: new Date().toISOString(),
+        });
+      } catch (error) {
+        setState((current) => ({
+          ...current,
+          error:
+            error instanceof Error ? error.message : "Could not load catalog.",
+          loading: false,
+          refreshing: false,
+        }));
+      }
+    },
+    [],
+  );
 
   const scheduleRealtimeRefresh = useCallback(() => {
     if (refreshTimer.current) {
@@ -128,7 +136,10 @@ export function useLiveCatalog() {
       }
     };
 
-    const subscription = AppState.addEventListener("change", handleAppStateChange);
+    const subscription = AppState.addEventListener(
+      "change",
+      handleAppStateChange,
+    );
     return () => subscription.remove();
   }, [refresh]);
 

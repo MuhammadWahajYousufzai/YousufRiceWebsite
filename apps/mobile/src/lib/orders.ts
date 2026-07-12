@@ -1,4 +1,10 @@
-import type { Address, CartItem, Customer, Order, OrderItem } from "@repo/types";
+import type {
+  Address,
+  CartItem,
+  Customer,
+  Order,
+  OrderItem,
+} from "@repo/types";
 import {
   calculateItemTotal,
   calculateTierPricing,
@@ -36,7 +42,10 @@ export interface PlaceOrderResult {
   totalPrice: number;
 }
 
-export interface OrderWithDetails extends Omit<Order, "address" | "customer" | "items"> {
+export interface OrderWithDetails extends Omit<
+  Order,
+  "address" | "customer" | "items"
+> {
   address: Address | null;
   customer: Customer | null;
   items: OrderItem[];
@@ -72,11 +81,15 @@ function assertOrderConfig() {
   ].filter(([, value]) => !value);
 
   if (missing.length > 0) {
-    throw new Error(`Missing mobile order env: ${missing.map(([key]) => key).join(", ")}`);
+    throw new Error(
+      `Missing mobile order env: ${missing.map(([key]) => key).join(", ")}`,
+    );
   }
 }
 
-export async function getOrderWithDetails(orderId: string): Promise<OrderWithDetails> {
+export async function getOrderWithDetails(
+  orderId: string,
+): Promise<OrderWithDetails> {
   assertOrderConfig();
 
   const order = (await tablesDB.getRow({
@@ -112,7 +125,12 @@ export async function getOrderWithDetails(orderId: string): Promise<OrderWithDet
             tableId: ADDRESSES_TABLE_ID,
             queries: [Query.equal("order_id", orderId), Query.limit(1)],
           })
-          .then((result) => rowsFromResponse<Address>(result as unknown as RowList<Address>)[0] ?? null)
+          .then(
+            (result) =>
+              rowsFromResponse<Address>(
+                result as unknown as RowList<Address>,
+              )[0] ?? null,
+          )
           .catch(() => null),
   ]);
 
@@ -120,7 +138,9 @@ export async function getOrderWithDetails(orderId: string): Promise<OrderWithDet
     ...order,
     address: addressResult as Address | null,
     customer: customerResult as Customer | null,
-    items: rowsFromResponse<OrderItem>(itemsResult as unknown as RowList<OrderItem>),
+    items: rowsFromResponse<OrderItem>(
+      itemsResult as unknown as RowList<OrderItem>,
+    ),
   };
 }
 
@@ -156,7 +176,9 @@ export async function findOrdersByPhone(phone: string) {
   };
 }
 
-export async function loadSavedCheckoutDetails(userId: string): Promise<SavedCheckoutDetails> {
+export async function loadSavedCheckoutDetails(
+  userId: string,
+): Promise<SavedCheckoutDetails> {
   assertOrderConfig();
   const customersResult = await tablesDB.listRows({
     databaseId: DATABASE_ID,
@@ -181,7 +203,9 @@ export async function loadSavedCheckoutDetails(userId: string): Promise<SavedChe
 
   return {
     address:
-      rowsFromResponse<Address>(addressesResult as unknown as RowList<Address>)[0] ?? null,
+      rowsFromResponse<Address>(
+        addressesResult as unknown as RowList<Address>,
+      )[0] ?? null,
     customer,
   };
 }
@@ -208,7 +232,9 @@ export async function placeCodOrder(
     throw new Error("Please fill in name, phone, city, and address.");
   }
 
-  const zeroPriceProducts = items.filter((item) => item.product.base_price_per_kg <= 0);
+  const zeroPriceProducts = items.filter(
+    (item) => item.product.base_price_per_kg <= 0,
+  );
   if (zeroPriceProducts.length > 0) {
     throw new Error(
       `Cannot place order: invalid pricing for ${zeroPriceProducts
@@ -273,10 +299,19 @@ export async function placeCodOrder(
 
   const processedItems = items.map((item) => {
     const tierPricing = calculateTierPricing(item.product, item.quantity);
-    const itemCalculation = calculateItemTotal(tierPricing.pricePerKg, item.quantity);
-    const tierDiscountAmount = item.isColdDrinkBundle ? 0 : tierPricing.discountAmount;
-    const totalItemDiscount = Math.round(tierDiscountAmount + itemCalculation.discountAmount);
-    const itemSubtotal = Math.round(item.product.base_price_per_kg * item.quantity);
+    const itemCalculation = calculateItemTotal(
+      tierPricing.pricePerKg,
+      item.quantity,
+    );
+    const tierDiscountAmount = item.isColdDrinkBundle
+      ? 0
+      : tierPricing.discountAmount;
+    const totalItemDiscount = Math.round(
+      tierDiscountAmount + itemCalculation.discountAmount,
+    );
+    const itemSubtotal = Math.round(
+      item.product.base_price_per_kg * item.quantity,
+    );
     const itemTotal = Math.round(itemCalculation.total);
 
     totalItemsCount += 1;
@@ -300,7 +335,8 @@ export async function placeCodOrder(
 
   try {
     for (const processed of processedItems) {
-      const { item, itemSubtotal, itemTotal, tierPricing, totalItemDiscount } = processed;
+      const { item, itemSubtotal, itemTotal, tierPricing, totalItemDiscount } =
+        processed;
       const itemId = ID.unique();
 
       await tablesDB.createRow({
@@ -316,7 +352,9 @@ export async function placeCodOrder(
           discount_amount: totalItemDiscount,
           discount_percentage:
             item.product.base_price_per_kg * item.quantity > 0
-              ? (totalItemDiscount / (item.product.base_price_per_kg * item.quantity)) * 100
+              ? (totalItemDiscount /
+                  (item.product.base_price_per_kg * item.quantity)) *
+                100
               : 0,
           notes:
             notes +

@@ -9,14 +9,12 @@ import {
   RefreshControl,
   ScrollView,
   Share,
-  StyleSheet,
   Text,
   TextInput,
   useWindowDimensions,
   View,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import type { Product } from "@repo/types";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   calculatePrice,
   formatCurrency,
@@ -28,73 +26,70 @@ import {
   shouldShowPremiumBadge,
 } from "@repo/utils";
 
-import { Button } from "@repo/ui";
+import { AppButton } from "@/components/app-button";
+import { AppScrollView } from "@/components/screen";
+import { useLiveCatalog } from "@/hooks/use-live-catalog";
 import type { ProductWithImage } from "@/lib/catalog";
 import { useCart } from "@/lib/cart";
-import { trackMobileAddToCart, trackMobileViewContent } from "@/lib/meta-events";
-import { useLiveCatalog } from "@/hooks/use-live-catalog";
+import {
+  trackMobileAddToCart,
+  trackMobileViewContent,
+} from "@/lib/meta-events";
 
 type BagSize = 3 | 5 | 10 | 25;
 
-const ramadanOfferEnabled = process.env.EXPO_PUBLIC_ENABLE_RAMADAN_OFFER === "true";
-const coldDrinkBundleEnabled = process.env.EXPO_PUBLIC_ENABLE_COLD_DRINK_BUNDLE === "true";
-
-const emptyBags = {
-  kg3: 0,
-  kg5: 0,
-  kg10: 0,
-  kg25: 0,
-};
+const ramadanOfferEnabled =
+  process.env.EXPO_PUBLIC_ENABLE_RAMADAN_OFFER === "true";
+const coldDrinkBundleEnabled =
+  process.env.EXPO_PUBLIC_ENABLE_COLD_DRINK_BUNDLE === "true";
+const emptyBags = { kg3: 0, kg5: 0, kg10: 0, kg25: 0 };
 
 export default function HomeScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  const bannerWidth = Math.max(320, width - 32);
   const scrollRef = useRef<ScrollView>(null);
   const { addBag, getItem, getTotalItems, removeBag } = useCart();
-  const { banners, error, loading, products, refresh, refreshing, updatedAt } = useLiveCatalog();
+  const { banners, error, loading, products, refresh, refreshing, updatedAt } =
+    useLiveCatalog();
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
-  const [selectedProduct, setSelectedProduct] = useState<ProductWithImage | null>(null);
+  const [selectedProduct, setSelectedProduct] =
+    useState<ProductWithImage | null>(null);
   const [selectedBundle, setSelectedBundle] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return products;
-    return products.filter((product) =>
-      `${product.name} ${product.description ?? ""}`.toLowerCase().includes(query),
-    );
+    return query
+      ? products.filter((product) =>
+          `${product.name} ${product.description ?? ""}`
+            .toLowerCase()
+            .includes(query),
+        )
+      : products;
   }, [products, searchQuery]);
-
   const groupedProducts = useMemo(
     () => groupProductsByCatalogCategory(filteredProducts),
     [filteredProducts],
   );
-
   const bundleProducts = useMemo(
     () => filteredProducts.filter(isColdDrinkBundleProduct),
     [filteredProducts],
   );
-
   const selectedCartItem = selectedProduct
     ? getItem(selectedProduct.$id, selectedBundle)
     : undefined;
   const bagCounts = selectedCartItem?.bags ?? emptyBags;
   const totalKg =
-    bagCounts.kg3 * 3 + bagCounts.kg5 * 5 + bagCounts.kg10 * 10 + bagCounts.kg25 * 25;
-  const pricePerKg = selectedProduct ? getPricePerKg(selectedProduct, totalKg || 1) : 0;
-  const totalPrice = selectedProduct ? calculatePrice(selectedProduct, totalKg || 0) : 0;
-
-  const announcementText = ramadanOfferEnabled
-    ? "HURRY! Offer Ends Soon: Get 1kg FREE Rice for every 15kg. Free Delivery across Karachi."
-    : "Yousuf Rice 2026 - Premium rice with Free Delivery across Karachi.";
-
-  const handleBannerScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const width = event.nativeEvent.layoutMeasurement.width || 1;
-    const index = Math.round(event.nativeEvent.contentOffset.x / width);
-    setActiveBannerIndex(index);
-  };
+    bagCounts.kg3 * 3 +
+    bagCounts.kg5 * 5 +
+    bagCounts.kg10 * 10 +
+    bagCounts.kg25 * 25;
+  const pricePerKg = selectedProduct
+    ? getPricePerKg(selectedProduct, totalKg || 1)
+    : 0;
+  const totalPrice = selectedProduct
+    ? calculatePrice(selectedProduct, totalKg)
+    : 0;
 
   const openProduct = (product: ProductWithImage, isBundle = false) => {
     setSelectedProduct(product);
@@ -105,14 +100,12 @@ export default function HomeScreen() {
       value: calculatePrice(product, isBundle ? 10 : 5),
     });
   };
-
   const closeProduct = () => {
     setSelectedProduct(null);
     setSelectedBundle(false);
   };
-
   const handleAddBag = (bagSize: BagSize) => {
-    if (!selectedProduct || !selectedProduct.available) return;
+    if (!selectedProduct?.available) return;
     addBag(selectedProduct, bagSize, selectedBundle);
     void trackMobileAddToCart({
       contentName: selectedProduct.name,
@@ -121,239 +114,279 @@ export default function HomeScreen() {
       quantity: 1,
     });
   };
-
   const handleRemoveBag = (bagSize: BagSize) => {
-    if (!selectedProduct) return;
-    removeBag(selectedProduct.$id, bagSize, selectedBundle);
+    if (selectedProduct)
+      removeBag(selectedProduct.$id, bagSize, selectedBundle);
   };
-
-  const handleBuyNow = () => {
-    if (!selectedProduct || totalKg === 0) return;
-    closeProduct();
-    router.push("/explore");
-  };
-
   const handleShareProduct = async () => {
     if (!selectedProduct) return;
     await Share.share({
-      message: `${selectedProduct.name} from Yousuf Rice — from ${formatCurrency(getPricePerKg(selectedProduct, 5))}/kg. Cash on Delivery across Karachi. https://yousufrice.com/products/${selectedProduct.$id}`,
+      message: `${selectedProduct.name} from Yousuf Rice — from ${formatCurrency(getPricePerKg(selectedProduct, 5))}/kg. Cash on Delivery across Karachi.`,
       title: selectedProduct.name,
     });
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
+    <>
+      <AppScrollView
         ref={scrollRef}
-        contentContainerStyle={[
-          styles.container,
-          { paddingBottom: 120 + insets.bottom + 24 },
-        ]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => refresh("manual")} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => refresh("manual")}
+          />
+        }
       >
-        <View style={styles.commerceHeader}>
-          <View style={styles.logoLockup}>
-            <Image
-              source={require("@/assets/images/splash-icon.png")}
-              style={styles.headerLogo}
-              contentFit="contain"
-            />
-            <View>
-              <Text style={styles.headerBrand}>Yousuf Rice</Text>
-              <Text style={styles.headerMeta}>Karachi delivery</Text>
+        <View className="gap-5 px-4 pb-6 pt-4">
+          <View className="flex-row items-center justify-between rounded-card border border-line bg-white px-3 py-3">
+            <View className="flex-row items-center gap-3">
+              <Image
+                source={require("@/assets/images/splash-icon.png")}
+                contentFit="contain"
+                className="h-10 w-[62px]"
+              />
+              <View>
+                <Text className="text-[15px] font-extrabold text-brand-800">
+                  Yousuf Rice
+                </Text>
+                <Text className="mt-0.5 text-[11px] font-semibold text-muted">
+                  Karachi delivery
+                </Text>
+              </View>
             </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${getTotalItems()} bags in cart`}
+              onPress={() => router.push("/explore")}
+              className="relative min-h-[42px] justify-center rounded-full bg-brand-800 px-5 active:bg-brand-900"
+            >
+              <Text className="text-[13px] font-extrabold text-white">Bag</Text>
+              {getTotalItems() > 0 && (
+                <View className="absolute -right-1.5 -top-2 min-w-5 items-center rounded-full bg-gold-400 px-1.5 py-1">
+                  <Text className="text-[11px] font-extrabold text-brand-800">
+                    {getTotalItems()}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`${getTotalItems()} bags in cart`}
-            onPress={() => router.push("/explore")}
-            style={styles.headerCartButton}
-          >
-            <Text style={styles.headerCartText}>Bag</Text>
-            {getTotalItems() > 0 && (
-              <View style={styles.headerCartBadge}>
-                <Text style={styles.headerCartBadgeText}>{getTotalItems()}</Text>
+
+          <View className="flex-row items-center gap-3 rounded-card border border-line bg-white px-3 py-3">
+            <Text className="flex-1 text-[12px] font-bold leading-[17px] text-ink">
+              {ramadanOfferEnabled
+                ? "Get 1kg free for every 15kg. Free Karachi delivery."
+                : "Premium rice, clear prices, and free Karachi delivery."}
+            </Text>
+            <Pressable
+              onPress={() =>
+                scrollRef.current?.scrollTo({ y: 360, animated: true })
+              }
+              className="rounded-full bg-brand-800 px-3 py-2"
+            >
+              <Text className="text-[12px] font-bold text-white">
+                Order now
+              </Text>
+            </Pressable>
+          </View>
+
+          <View className="gap-2">
+            <Text className="text-[30px] font-extrabold leading-[35px] text-brand-800">
+              Premium rice for Karachi homes
+            </Text>
+            <Text className="text-[15px] font-medium leading-[22px] text-body">
+              Aged basmati, honest per-kg pricing, and Cash on Delivery at your
+              doorstep.
+            </Text>
+          </View>
+
+          <View className="flex-row overflow-hidden rounded-card border border-line bg-white">
+            {[
+              ["Free", "Karachi delivery"],
+              ["COD", "Pay on arrival"],
+              ["Fresh", "Daily stock"],
+            ].map(([value, label], index) => (
+              <View
+                key={value}
+                className={`flex-1 px-2 py-3 ${index > 0 ? "border-l border-line" : ""}`}
+              >
+                <Text className="text-center text-[16px] font-extrabold text-brand-800">
+                  {value}
+                </Text>
+                <Text className="mt-1 text-center text-[10px] font-semibold text-muted">
+                  {label}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          <View className="overflow-hidden rounded-card bg-wash">
+            {banners.length > 0 ? (
+              <>
+                <ScrollView
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onMomentumScrollEnd={(
+                    event: NativeSyntheticEvent<NativeScrollEvent>,
+                  ) =>
+                    setActiveBannerIndex(
+                      Math.round(
+                        event.nativeEvent.contentOffset.x /
+                          (event.nativeEvent.layoutMeasurement.width || 1),
+                      ),
+                    )
+                  }
+                >
+                  {banners.map((banner) => (
+                    <Image
+                      key={banner.$id}
+                      source={{ uri: banner.url }}
+                      contentFit="contain"
+                      transition={180}
+                      className="aspect-[3/1] bg-wash"
+                      style={{ width: Math.max(320, width - 32) }}
+                    />
+                  ))}
+                </ScrollView>
+                <View className="absolute bottom-2 left-0 right-0 flex-row justify-center gap-1.5">
+                  {banners.map((banner, index) => (
+                    <View
+                      key={banner.$id}
+                      className={`h-1.5 rounded-full ${index === activeBannerIndex ? "w-[18px] bg-gold-400" : "w-1.5 bg-white/70"}`}
+                    />
+                  ))}
+                </View>
+              </>
+            ) : (
+              <View className="aspect-[3/1] items-center justify-center">
+                <Text className="text-[15px] font-bold text-body">
+                  Fresh stock, delivered daily
+                </Text>
+                <Text className="mt-1 text-[13px] text-muted">
+                  Pull down to refresh banners.
+                </Text>
               </View>
             )}
-          </Pressable>
-        </View>
-
-        <View style={styles.announcementBar}>
-          <Text style={styles.announcementText}>{announcementText}</Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => scrollRef.current?.scrollTo({ y: 360, animated: true })}
-            style={styles.announcementButton}
-          >
-            <Text style={styles.announcementButtonText}>Order now</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.brandHeader}>
-          <Text style={styles.brandName}>Premium rice for Karachi homes</Text>
-          <Text style={styles.brandSubtitle}>Aged basmati, clear prices, and cash on delivery at your doorstep.</Text>
-        </View>
-
-        <View style={styles.promiseGrid}>
-          <View style={styles.promiseItem}>
-            <Text style={styles.promiseValue}>Free</Text>
-            <Text style={styles.promiseLabel}>Karachi delivery</Text>
           </View>
-          <View style={styles.promiseItem}>
-            <Text style={styles.promiseValue}>COD</Text>
-            <Text style={styles.promiseLabel}>Pay on arrival</Text>
-          </View>
-          <View style={styles.promiseItem}>
-            <Text style={styles.promiseValue}>Fresh</Text>
-            <Text style={styles.promiseLabel}>Daily stock</Text>
-          </View>
-        </View>
 
-        <View style={styles.bannerShell}>
-          {banners.length > 0 ? (
-            <>
-              <ScrollView
-                horizontal
-                pagingEnabled
-                onMomentumScrollEnd={handleBannerScroll}
-                showsHorizontalScrollIndicator={false}
+          <View className="flex-row items-center justify-between rounded-card border border-line bg-white px-4 py-3">
+            <View>
+              <Text className="text-[11px] font-extrabold uppercase tracking-[1px] text-muted">
+                Available today
+              </Text>
+              <Text className="mt-1 text-[17px] font-extrabold text-brand-800">
+                {loading
+                  ? "Loading products"
+                  : `${products.length} available products`}
+              </Text>
+            </View>
+            <Text className="rounded-full bg-gold-100 px-3 py-2 text-[12px] font-extrabold text-gold-700">
+              Cash on delivery
+            </Text>
+          </View>
+
+          <View className="gap-2 rounded-card border border-line bg-white p-3">
+            <Text className="text-[12px] font-extrabold uppercase tracking-[1px] text-muted">
+              Search the catalog
+            </Text>
+            <TextInput
+              accessibilityLabel="Search rice products"
+              autoCorrect={false}
+              clearButtonMode="while-editing"
+              onChangeText={setSearchQuery}
+              placeholder="Basmati, sela, premium…"
+              placeholderTextColor="#A3A5B5"
+              returnKeyType="search"
+              value={searchQuery}
+              className="rounded-xl border border-line bg-canvas px-3 py-3 text-[15px] text-ink"
+            />
+            {!!searchQuery && (
+              <Text className="text-[12px] font-semibold text-muted">
+                {filteredProducts.length}{" "}
+                {filteredProducts.length === 1 ? "product" : "products"} found
+              </Text>
+            )}
+          </View>
+
+          {updatedAt && (
+            <Text className="text-[11px] font-semibold text-muted">
+              Updated{" "}
+              {new Date(updatedAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </Text>
+          )}
+          {error && (
+            <View className="gap-2 rounded-card border border-coral-100 bg-coral-50 p-4">
+              <Text className="text-[16px] font-extrabold text-coral-700">
+                Could not refresh catalog
+              </Text>
+              <Text className="text-[14px] leading-5 text-coral-700">
+                {error}
+              </Text>
+              <AppButton
+                size="sm"
+                variant="outline"
+                onPress={() => refresh("manual")}
               >
-                {banners.map((banner) => (
-                  <Image
-                    key={banner.$id}
-                    source={{ uri: banner.url }}
-                    style={[styles.bannerImage, { width: bannerWidth }]}
-                    contentFit="contain"
-                    transition={180}
-                  />
-                ))}
-              </ScrollView>
-              <View style={styles.bannerDots}>
-                {banners.map((banner, index) => (
-                  <View
-                    key={banner.$id}
-                    style={[
-                      styles.bannerDot,
-                      index === activeBannerIndex && styles.bannerDotActive,
-                    ]}
-                  />
-                ))}
-              </View>
-            </>
-          ) : (
-            <View style={styles.bannerEmpty}>
-              <Text style={styles.bannerEmptyTitle}>No banner images found</Text>
-              <Text style={styles.bannerEmptyText}>Pull down to refresh after uploading banners.</Text>
+                Try again
+              </AppButton>
+            </View>
+          )}
+
+          {coldDrinkBundleEnabled && bundleProducts.length > 0 && (
+            <ProductSection
+              title="Cold Drink Bundles"
+              products={bundleProducts}
+              horizontal
+              badgeLabel="Free cold drink"
+              onPress={(product) => openProduct(product, true)}
+            />
+          )}
+          {groupedProducts.map(({ category, products: categoryProducts }) => (
+            <ProductSection
+              key={category}
+              title={category}
+              products={categoryProducts}
+              onPress={openProduct}
+            />
+          ))}
+
+          {!loading && filteredProducts.length === 0 && !error && (
+            <View className="gap-2 rounded-card border border-line bg-white p-4">
+              <Text className="text-[17px] font-extrabold text-ink">
+                {searchQuery ? "No matching rice" : "No products available"}
+              </Text>
+              <Text className="text-[14px] leading-5 text-body">
+                {searchQuery
+                  ? "Try a shorter product name or clear the search."
+                  : "Check back soon for our premium rice selection."}
+              </Text>
+              {!!searchQuery && (
+                <AppButton
+                  size="sm"
+                  variant="outline"
+                  onPress={() => setSearchQuery("")}
+                >
+                  Clear search
+                </AppButton>
+              )}
             </View>
           )}
         </View>
-
-        <View style={styles.liveStrip}>
-          <View>
-            <Text style={styles.liveStripLabel}>Available today</Text>
-            <Text style={styles.liveStripText}>
-              {loading ? "Loading products" : `${products.length} available products`}
-            </Text>
-          </View>
-          <Text style={styles.liveStripMeta}>Cash on delivery</Text>
-        </View>
-
-        <View style={styles.searchShell}>
-          <Text style={styles.searchLabel}>Search the catalog</Text>
-          <TextInput
-            accessibilityLabel="Search rice products"
-            autoCorrect={false}
-            clearButtonMode="while-editing"
-            onChangeText={setSearchQuery}
-            placeholder="Basmati, sela, premium…"
-            placeholderTextColor="#A3A5B5"
-            returnKeyType="search"
-            style={styles.searchInput}
-            value={searchQuery}
-          />
-          {!!searchQuery && (
-            <Text style={styles.searchResultText}>
-              {filteredProducts.length} {filteredProducts.length === 1 ? "product" : "products"} found
-            </Text>
-          )}
-        </View>
-
-        {updatedAt && (
-          <Text style={styles.updatedAt}>
-            Updated {new Date(updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-          </Text>
-        )}
-
-        {error && (
-          <View style={styles.errorCard}>
-            <Text style={styles.errorTitle}>Could not refresh catalog</Text>
-            <Text style={styles.errorText}>{error}</Text>
-            <Button variant="outline" onPress={() => refresh("manual")}>
-              Try again
-            </Button>
-          </View>
-        )}
-
-        {coldDrinkBundleEnabled && bundleProducts.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionRule} />
-              <Text style={styles.bundleTitle}>Cold Drink Bundles</Text>
-              <View style={styles.sectionRule} />
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalCards}>
-              {bundleProducts.map((product) => (
-                <ProductCard
-                  key={`bundle-${product.$id}`}
-                  product={product}
-                  imageUrl={product.bundleImageUrl ?? product.imageUrl}
-                  badgeLabel="Free Cold Drink"
-                  onPress={() => openProduct(product, true)}
-                  compact
-                />
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {groupedProducts.map(({ category, products: categoryProducts }) => (
-          <View key={category} style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionRule} />
-              <Text style={styles.sectionTitle}>{category}</Text>
-              <View style={styles.sectionRule} />
-            </View>
-
-            <View style={styles.productGrid}>
-              {categoryProducts.map((product) => (
-                <ProductCard
-                  key={product.$id}
-                  product={product}
-                  imageUrl={product.imageUrl}
-                  badgeLabel={shouldShowColdDrinkBadge(product) ? "Free Cold Drink" : undefined}
-                  onPress={() => openProduct(product)}
-                />
-              ))}
-            </View>
-          </View>
-        ))}
-
-        {!loading && filteredProducts.length === 0 && !error && (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>{searchQuery ? "No matching rice" : "No Products Available"}</Text>
-            <Text style={styles.emptyText}>
-              {searchQuery ? "Try a shorter product name or clear the search." : "Check back soon for our premium rice selection."}
-            </Text>
-            {!!searchQuery && <Button variant="outline" onPress={() => setSearchQuery("")}>Clear Search</Button>}
-          </View>
-        )}
-      </ScrollView>
+      </AppScrollView>
 
       <ProductSelectionModal
         bagCounts={bagCounts}
         isBundle={selectedBundle}
         onAddBag={handleAddBag}
-        onBuyNow={handleBuyNow}
+        onBuyNow={() => {
+          if (totalKg > 0) {
+            closeProduct();
+            router.push("/explore");
+          }
+        }}
         onClose={closeProduct}
         onRemoveBag={handleRemoveBag}
         onShare={handleShareProduct}
@@ -363,7 +396,65 @@ export default function HomeScreen() {
         totalPrice={totalPrice}
         visible={Boolean(selectedProduct)}
       />
-    </SafeAreaView>
+    </>
+  );
+}
+
+function ProductSection({
+  badgeLabel,
+  horizontal,
+  onPress,
+  products,
+  title,
+}: {
+  badgeLabel?: string;
+  horizontal?: boolean;
+  onPress: (product: ProductWithImage, isBundle?: boolean) => void;
+  products: ProductWithImage[];
+  title: string;
+}) {
+  return (
+    <View className="gap-3">
+      <View className="flex-row items-center gap-3">
+        <View className="h-px flex-1 bg-line" />
+        <Text className="text-[18px] font-extrabold text-brand-800">
+          {title}
+        </Text>
+        <View className="h-px flex-1 bg-line" />
+      </View>
+      {horizontal ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerClassName="gap-3 pr-4"
+        >
+          {products.map((product) => (
+            <ProductCard
+              key={product.$id}
+              compact
+              product={product}
+              badgeLabel={badgeLabel}
+              onPress={() => onPress(product, true)}
+            />
+          ))}
+        </ScrollView>
+      ) : (
+        <View className="flex-row flex-wrap justify-between gap-y-4">
+          {products.map((product) => (
+            <ProductCard
+              key={product.$id}
+              product={product}
+              badgeLabel={
+                shouldShowColdDrinkBadge(product)
+                  ? "Free cold drink"
+                  : undefined
+              }
+              onPress={() => onPress(product)}
+            />
+          ))}
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -378,51 +469,75 @@ function ProductCard({
   compact?: boolean;
   imageUrl?: string;
   onPress: () => void;
-  product: Product;
+  product: ProductWithImage;
 }) {
+  const source = imageUrl ?? product.imageUrl;
   return (
     <Pressable
       accessibilityRole="button"
       disabled={!product.available}
       onPress={onPress}
-      style={[styles.productCard, compact && styles.compactProductCard]}
+      className={`${compact ? "w-[280px]" : "w-[48%]"} overflow-hidden rounded-card border border-line bg-white active:opacity-85`}
     >
-      <View style={styles.productImageShell}>
-        {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.productImage} contentFit="cover" transition={180} />
+      <View className="relative aspect-square bg-wash">
+        {source ? (
+          <Image
+            source={{ uri: source }}
+            contentFit="cover"
+            transition={180}
+            className="h-full w-full"
+          />
         ) : (
-          <View style={styles.imageFallback}>
-            <Text style={styles.imageFallbackText}>YR</Text>
+          <View className="h-full items-center justify-center bg-gold-50">
+            <Text className="text-[32px] font-extrabold text-brand-800">
+              YR
+            </Text>
           </View>
         )}
         {!product.available && (
-          <View style={styles.soldOutOverlay}>
-            <Text style={styles.soldOutText}>Out of Stock</Text>
-          </View>
-        )}
-        {ramadanOfferEnabled && product.available && (
-          <View style={styles.offerBadge}>
-            <Text style={styles.offerBadgeText}>Post-Eid Special</Text>
+          <View className="absolute inset-0 items-center justify-center bg-black/35">
+            <Text className="rounded-full bg-white px-3 py-2 text-[11px] font-extrabold text-muted">
+              Out of stock
+            </Text>
           </View>
         )}
         {badgeLabel && product.available && (
-          <View style={styles.cornerBadge}>
-            <Text style={styles.cornerBadgeText}>{badgeLabel}</Text>
-          </View>
+          <Text className="absolute left-2 top-2 rounded-md bg-coral-500 px-2 py-1 text-[10px] font-bold text-white">
+            {badgeLabel}
+          </Text>
         )}
       </View>
-
-      <View style={styles.productContent}>
-        <View style={styles.productTitleRow}>
-          <Text numberOfLines={2} style={styles.productName}>{product.name}</Text>
-          {shouldShowPremiumBadge(product) && <Text style={styles.premiumBadge}>Premium</Text>}
+      <View className="gap-1.5 p-3">
+        <View className="flex-row items-start gap-1">
+          <Text
+            numberOfLines={2}
+            className="flex-1 text-[13px] font-bold leading-[18px] text-ink"
+          >
+            {product.name}
+          </Text>
+          {shouldShowPremiumBadge(product) && (
+            <Text className="rounded-md bg-gold-100 px-1.5 py-1 text-[9px] font-extrabold text-gold-700">
+              Premium
+            </Text>
+          )}
         </View>
         {!!product.description && (
-          <Text numberOfLines={3} style={styles.productDescription}>{product.description}</Text>
+          <Text numberOfLines={2} className="text-[11px] leading-4 text-muted">
+            {product.description}
+          </Text>
         )}
-        <View style={styles.cardFooter}>
-          <Text style={styles.priceText}>{formatCurrency(getPricePerKg(product, 5))}/kg</Text>
-          <Text style={styles.orderNowText}>Order Now</Text>
+        <View className="mt-2 flex-row items-center justify-between border-t border-line pt-2">
+          <View>
+            <Text className="text-[10px] font-semibold uppercase tracking-[.7px] text-muted">
+              Per kg
+            </Text>
+            <Text className="mt-0.5 text-[16px] font-extrabold text-brand-800">
+              {formatCurrency(getPricePerKg(product, 5))}
+            </Text>
+          </View>
+          <Text className="rounded-full bg-brand-800 px-3 py-2 text-[11px] font-bold text-white">
+            Add
+          </Text>
         </View>
       </View>
     </Pressable>
@@ -457,861 +572,207 @@ function ProductSelectionModal({
   visible: boolean;
 }) {
   if (!product) return null;
-
-  const bagRows = ([
-    { label: "3kg Bag", size: 3, value: bagCounts.kg3 },
-    { label: "5kg Bag", popular: "Popular", size: 5, value: bagCounts.kg5 },
-    { label: "10kg Bag", popular: isBundle ? "+ 1L Cold Drink Free" : "Great Deal", size: 10, value: bagCounts.kg10 },
-    { label: "25kg Bag", popular: "Best Value", size: 25, value: bagCounts.kg25 },
-  ] satisfies Array<{ label: string; popular?: string; size: BagSize; value: number }>).filter((row) => {
-    if (isBundle) return row.size === 10;
-    if (row.size === 3) return !shouldHideThreeKgBag(product);
-    return true;
-  });
-
+  const bagRows = (
+    [
+      { label: "3kg bag", size: 3, value: bagCounts.kg3 },
+      { label: "5kg bag", tag: "Popular", size: 5, value: bagCounts.kg5 },
+      {
+        label: "10kg bag",
+        tag: isBundle ? "+ 1L cold drink free" : "Great deal",
+        size: 10,
+        value: bagCounts.kg10,
+      },
+      { label: "25kg bag", tag: "Best value", size: 25, value: bagCounts.kg25 },
+    ] satisfies Array<{
+      label: string;
+      size: BagSize;
+      tag?: string;
+      value: number;
+    }>
+  ).filter((row) =>
+    isBundle
+      ? row.size === 10
+      : row.size !== 3 || !shouldHideThreeKgBag(product),
+  );
   return (
-    <Modal animationType="slide" presentationStyle="pageSheet" visible={visible} onRequestClose={onClose}>
-      <SafeAreaView style={styles.modalSafeArea}>
-        <ScrollView contentContainerStyle={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Pressable accessibilityRole="button" onPress={onShare} style={styles.shareButton}>
-              <Text style={styles.shareButtonText}>Share</Text>
-            </Pressable>
-            <Pressable accessibilityRole="button" onPress={onClose} style={styles.closeButton}>
-              <Text style={styles.closeButtonText}>Close</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.detailImageShell}>
-            {product.imageUrl ? (
-              <Image
-                source={{ uri: isBundle ? product.bundleImageUrl ?? product.imageUrl : product.imageUrl }}
-                style={styles.detailImage}
-                contentFit="contain"
-              />
-            ) : (
-              <View style={styles.detailFallback}>
-                <Text style={styles.detailFallbackText}>Yousuf Rice</Text>
+    <Modal
+      animationType="slide"
+      presentationStyle="pageSheet"
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-canvas">
+        <ScrollView contentContainerClassName="pb-6" className="flex-1">
+          <View className="gap-4 p-4">
+            <View className="flex-row items-center justify-between">
+              <Pressable
+                onPress={onShare}
+                className="rounded-full border border-line bg-white px-4 py-2.5"
+              >
+                <Text className="text-[14px] font-bold text-brand-700">
+                  Share
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={onClose}
+                className="rounded-full bg-brand-100 px-4 py-2.5"
+              >
+                <Text className="text-[14px] font-bold text-brand-800">
+                  Close
+                </Text>
+              </Pressable>
+            </View>
+            <View className="aspect-square overflow-hidden rounded-card bg-wash">
+              {product.imageUrl ? (
+                <Image
+                  source={{
+                    uri: isBundle
+                      ? (product.bundleImageUrl ?? product.imageUrl)
+                      : product.imageUrl,
+                  }}
+                  contentFit="contain"
+                  className="h-full w-full"
+                />
+              ) : (
+                <View className="h-full items-center justify-center bg-gold-50">
+                  <Text className="text-[22px] font-extrabold text-brand-800">
+                    Yousuf Rice
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View className="gap-2 rounded-card border border-line bg-white p-4">
+              <View className="flex-row items-start gap-2">
+                <Text className="flex-1 text-[24px] font-extrabold leading-[29px] text-brand-800">
+                  {product.name}
+                </Text>
+                {shouldShowPremiumBadge(product) && (
+                  <Text className="rounded-md bg-gold-100 px-2 py-1 text-[10px] font-extrabold text-gold-700">
+                    Premium
+                  </Text>
+                )}
+              </View>
+              {isBundle && (
+                <Text className="rounded-xl border border-brand-200 bg-brand-50 p-3 text-[13px] font-bold leading-5 text-brand-800">
+                  Get one free 1L cold drink with every 10kg bag.
+                </Text>
+              )}
+              {!!product.description && (
+                <Text className="text-[14px] leading-[21px] text-body">
+                  {product.description}
+                </Text>
+              )}
+            </View>
+            {product.has_tier_pricing && (
+              <View className="flex-row flex-wrap gap-2">
+                {[
+                  product.tier_2_4kg_price
+                    ? `2–4kg: ${formatCurrency(product.tier_2_4kg_price)}/kg`
+                    : null,
+                  product.tier_5_9kg_price
+                    ? `5–9kg: ${formatCurrency(product.tier_5_9kg_price)}/kg`
+                    : null,
+                  product.tier_10kg_up_price
+                    ? `10+kg: ${formatCurrency(product.tier_10kg_up_price)}/kg`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .map((tier) => (
+                    <Text
+                      key={tier}
+                      className="rounded-full bg-brand-50 px-3 py-2 text-[11px] font-bold text-brand-700"
+                    >
+                      {tier}
+                    </Text>
+                  ))}
               </View>
             )}
-          </View>
-
-          <View style={styles.detailCard}>
-            <View style={styles.productTitleRow}>
-              <Text style={styles.detailTitle}>{product.name}</Text>
-              {shouldShowPremiumBadge(product) && <Text style={styles.premiumBadge}>Premium</Text>}
-            </View>
-            {isBundle && <Text style={styles.bundleNotice}>You get 1 free 1L cold drink for every 10kg bag.</Text>}
-            {!!product.description && <Text style={styles.detailDescription}>{product.description}</Text>}
-          </View>
-
-          {product.has_tier_pricing && (
-            <View style={styles.tierRow}>
-              {!!product.tier_2_4kg_price && (
-                <Text style={styles.tierPill}>2-4kg: {formatCurrency(product.tier_2_4kg_price)}/kg</Text>
-              )}
-              {!!product.tier_5_9kg_price && (
-                <Text style={styles.tierPill}>5-9kg: {formatCurrency(product.tier_5_9kg_price)}/kg</Text>
-              )}
-              {!!product.tier_10kg_up_price && (
-                <Text style={styles.tierPillStrong}>10+kg: {formatCurrency(product.tier_10kg_up_price)}/kg</Text>
-              )}
-            </View>
-          )}
-
-          <View style={styles.quantityCard}>
-            <Text style={styles.quantityTitle}>Choose Your Quantity</Text>
-            {bagRows.map((row) => (
-              <View key={row.size} style={styles.bagRow}>
-                <View style={styles.bagInfo}>
-                  <View style={styles.bagWeight}>
-                    <Text style={styles.bagWeightText}>{row.size}kg</Text>
+            <View className="gap-3 rounded-card border border-line bg-white p-3">
+              <Text className="text-[18px] font-extrabold text-brand-800">
+                Choose your quantity
+              </Text>
+              {bagRows.map((row) => (
+                <View
+                  key={row.size}
+                  className="flex-row items-center justify-between rounded-xl border border-line bg-canvas p-3"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <View className="h-11 w-11 items-center justify-center rounded-xl bg-brand-800">
+                      <Text className="text-[12px] font-extrabold text-white">
+                        {row.size}kg
+                      </Text>
+                    </View>
+                    <View>
+                      <Text className="text-[15px] font-extrabold text-ink">
+                        {row.label}
+                      </Text>
+                      <Text className="mt-0.5 text-[12px] font-semibold text-muted">
+                        {formatCurrency(getPricePerKg(product, row.size))}/kg
+                      </Text>
+                      {row.tag && (
+                        <Text className="mt-1 self-start rounded-full bg-gold-100 px-2 py-1 text-[10px] font-bold text-gold-700">
+                          {row.tag}
+                        </Text>
+                      )}
+                    </View>
                   </View>
-                  <View>
-                    <Text style={styles.bagLabel}>{row.label}</Text>
-                    <Text style={styles.bagPrice}>{formatCurrency(getPricePerKg(product, row.size))}/kg</Text>
-                    {!!row.popular && <Text style={styles.bagPill}>{row.popular}</Text>}
+                  <View className="flex-row items-center gap-2">
+                    <Pressable
+                      disabled={row.value === 0}
+                      onPress={() => onRemoveBag(row.size)}
+                      className={`h-9 w-9 items-center justify-center rounded-full border border-line bg-white ${row.value === 0 ? "opacity-35" : "active:bg-brand-50"}`}
+                    >
+                      <Text className="text-[18px] font-bold text-brand-800">
+                        −
+                      </Text>
+                    </Pressable>
+                    <Text className="min-w-5 text-center text-[15px] font-extrabold text-ink">
+                      {row.value}
+                    </Text>
+                    <Pressable
+                      onPress={() => onAddBag(row.size)}
+                      className="h-9 w-9 items-center justify-center rounded-full bg-brand-800 active:bg-brand-900"
+                    >
+                      <Text className="text-[18px] font-bold text-white">
+                        +
+                      </Text>
+                    </Pressable>
                   </View>
                 </View>
-
-                <View style={styles.stepper}>
-                  <Pressable
-                    accessibilityRole="button"
-                    disabled={row.value === 0}
-                    onPress={() => onRemoveBag(row.size)}
-                    style={[styles.stepperButton, row.value === 0 && styles.stepperDisabled]}
-                  >
-                    <Text style={styles.stepperMinus}>-</Text>
-                  </Pressable>
-                  <Text style={styles.stepperValue}>{row.value}</Text>
-                  <Pressable
-                    accessibilityRole="button"
-                    disabled={!product.available}
-                    onPress={() => onAddBag(row.size)}
-                    style={styles.stepperButtonAdd}
-                  >
-                    <Text style={styles.stepperPlus}>+</Text>
-                  </Pressable>
+              ))}
+            </View>
+            {totalKg > 0 && (
+              <View className="flex-row items-center justify-between rounded-card bg-brand-800 p-4">
+                <View>
+                  <Text className="text-[11px] font-bold uppercase tracking-[.8px] text-brand-200">
+                    Total amount
+                  </Text>
+                  <Text className="mt-1 text-[24px] font-extrabold text-white">
+                    {formatCurrency(totalPrice)}
+                  </Text>
+                </View>
+                <View className="items-end">
+                  <Text className="text-[12px] font-semibold text-brand-200">
+                    {totalKg}kg selected
+                  </Text>
+                  <Text className="mt-1 text-[14px] font-bold text-white">
+                    {formatCurrency(pricePerKg)}/kg
+                  </Text>
                 </View>
               </View>
-            ))}
+            )}
+            <AppButton
+              disabled={!product.available || totalKg === 0}
+              size="lg"
+              onPress={onBuyNow}
+            >
+              {totalKg > 0
+                ? `Buy now · ${formatCurrency(totalPrice)}`
+                : "Select bags to continue"}
+            </AppButton>
           </View>
-
-          {totalKg > 0 && (
-            <View style={styles.totalPanel}>
-              <View>
-                <Text style={styles.totalPanelLabel}>Total Amount</Text>
-                <Text style={styles.totalPanelValue}>{formatCurrency(totalPrice)}</Text>
-              </View>
-              <View style={styles.totalPanelRight}>
-                <Text style={styles.totalPanelLabel}>{totalKg}kg selected</Text>
-                <Text style={styles.totalPanelPrice}>{formatCurrency(pricePerKg)}/kg</Text>
-              </View>
-            </View>
-          )}
-
-          <Button disabled={!product.available || totalKg === 0} size="lg" onPress={onBuyNow}>
-            {totalKg > 0 ? `Buy Now - ${formatCurrency(totalPrice)}` : "Select bags to continue"}
-          </Button>
         </ScrollView>
       </SafeAreaView>
     </Modal>
   );
 }
-
-const brandBlue = "#27247b";
-const brandYellow = "#D4AD54";
-
-const styles = StyleSheet.create({
-  announcementBar: {
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#E6E6ED",
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: "row",
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  announcementButton: {
-    backgroundColor: brandBlue,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  announcementButtonText: {
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  announcementText: {
-    color: "#1D1E28",
-    flex: 1,
-    fontSize: 12,
-    fontWeight: "700",
-    lineHeight: 17,
-  },
-  bagInfo: {
-    alignItems: "center",
-    flex: 1,
-    flexDirection: "row",
-    gap: 10,
-  },
-  bagLabel: {
-    color: brandBlue,
-    fontSize: 15,
-    fontWeight: "900",
-  },
-  bagPill: {
-    alignSelf: "flex-start",
-    backgroundColor: "#F6EDD7",
-    borderRadius: 999,
-    color: "#735A23",
-    fontSize: 11,
-    fontWeight: "800",
-    marginTop: 4,
-    overflow: "hidden",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  bagPrice: {
-    color: "#64748b",
-    fontSize: 12,
-    fontWeight: "700",
-    marginTop: 2,
-  },
-  bagRow: {
-    alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderColor: "#e5e7eb",
-    borderRadius: 8,
-    borderWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 12,
-  },
-  bagWeight: {
-    alignItems: "center",
-    backgroundColor: brandBlue,
-    borderRadius: 8,
-    height: 46,
-    justifyContent: "center",
-    width: 46,
-  },
-  bagWeightText: {
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  bannerDot: {
-    backgroundColor: "rgba(255,255,255,0.65)",
-    borderRadius: 999,
-    height: 7,
-    width: 7,
-  },
-  bannerDotActive: {
-    backgroundColor: brandYellow,
-    width: 18,
-  },
-  bannerDots: {
-    bottom: 10,
-    flexDirection: "row",
-    gap: 6,
-    left: 0,
-    justifyContent: "center",
-    position: "absolute",
-    right: 0,
-  },
-  bannerEmpty: {
-    alignItems: "center",
-    aspectRatio: 3 / 1,
-    backgroundColor: "#f1f5f9",
-    justifyContent: "center",
-    width: "100%",
-  },
-  bannerEmptyText: {
-    color: "#64748b",
-    fontSize: 13,
-    marginTop: 4,
-  },
-  bannerEmptyTitle: {
-    color: "#334155",
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  bannerImage: {
-    aspectRatio: 3 / 1,
-    backgroundColor: "#e2e8f0",
-  },
-  bannerShell: {
-    backgroundColor: "#e2e8f0",
-    borderRadius: 14,
-    overflow: "hidden",
-  },
-  brandHeader: {
-    gap: 5,
-  },
-  brandName: {
-    color: brandBlue,
-    fontSize: 30,
-    fontWeight: "800",
-    lineHeight: 35,
-  },
-  brandSubtitle: {
-    color: "#565869",
-    fontSize: 15,
-    fontWeight: "600",
-    lineHeight: 21,
-  },
-  bundleNotice: {
-    backgroundColor: "#dbeafe",
-    borderColor: "#38bdf8",
-    borderRadius: 8,
-    borderWidth: 1,
-    color: "#1e3a8a",
-    fontSize: 13,
-    fontWeight: "800",
-    lineHeight: 19,
-    marginTop: 12,
-    padding: 10,
-  },
-  bundleTitle: {
-    color: "#2563eb",
-    flexShrink: 1,
-    fontSize: 18,
-    fontWeight: "900",
-    lineHeight: 23,
-    textAlign: "center",
-  },
-  cardFooter: {
-    alignItems: "center",
-    borderTopColor: "#e5e7eb",
-    borderTopWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 12,
-    paddingTop: 12,
-  },
-  commerceHeader: {
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#E6E6ED",
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  headerBrand: {
-    color: brandBlue,
-    fontSize: 15,
-    fontWeight: "900",
-    lineHeight: 18,
-  },
-  headerCartBadge: {
-    alignItems: "center",
-    backgroundColor: brandYellow,
-    borderRadius: 999,
-    height: 20,
-    justifyContent: "center",
-    minWidth: 20,
-    paddingHorizontal: 6,
-    position: "absolute",
-    right: -6,
-    top: -7,
-  },
-  headerCartBadgeText: {
-    color: brandBlue,
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  headerCartButton: {
-    alignItems: "center",
-    backgroundColor: brandBlue,
-    borderRadius: 999,
-    justifyContent: "center",
-    minHeight: 42,
-    paddingHorizontal: 18,
-  },
-  headerCartText: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  headerLogo: {
-    height: 42,
-    width: 70,
-  },
-  headerMeta: {
-    color: "#7B7D8F",
-    fontSize: 11,
-    fontWeight: "700",
-    lineHeight: 14,
-  },
-  logoLockup: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 10,
-  },
-  liveStripMeta: {
-    backgroundColor: "#F6EDD7",
-    borderRadius: 999,
-    color: "#735A23",
-    fontSize: 12,
-    fontWeight: "900",
-    overflow: "hidden",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  closeButton: {
-    alignItems: "center",
-    backgroundColor: "#eef2ff",
-    borderRadius: 999,
-    justifyContent: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-  },
-  closeButtonText: {
-    color: brandBlue,
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  compactProductCard: {
-    flexBasis: "auto",
-    flexGrow: 0,
-    width: 278,
-  },
-  container: {
-    gap: 18,
-    padding: 16,
-    paddingBottom: 120,
-  },
-  cornerBadge: {
-    backgroundColor: "#f59e0b",
-    borderBottomLeftRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    position: "absolute",
-    right: 0,
-    top: 0,
-  },
-  cornerBadgeText: {
-    color: "#ffffff",
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  detailCard: {
-    backgroundColor: "#ffffff",
-    borderColor: "#fef08a",
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 4,
-    padding: 14,
-  },
-  detailDescription: {
-    color: "#475569",
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 8,
-  },
-  detailFallback: {
-    alignItems: "center",
-    backgroundColor: "#fefce8",
-    flex: 1,
-    justifyContent: "center",
-  },
-  detailFallbackText: {
-    color: brandBlue,
-    fontSize: 22,
-    fontWeight: "900",
-  },
-  detailImage: {
-    height: "100%",
-    width: "100%",
-  },
-  detailImageShell: {
-    aspectRatio: 1,
-    backgroundColor: "#f8fafc",
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  detailTitle: {
-    color: brandBlue,
-    flex: 1,
-    fontSize: 24,
-    fontWeight: "900",
-    lineHeight: 29,
-  },
-  emptyCard: {
-    backgroundColor: "#ffffff",
-    borderColor: "#e2e8f0",
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 6,
-    padding: 16,
-  },
-  emptyText: {
-    color: "#64748b",
-    fontSize: 14,
-  },
-  emptyTitle: {
-    color: "#0f172a",
-    fontSize: 17,
-    fontWeight: "800",
-  },
-  errorCard: {
-    backgroundColor: "#fef2f2",
-    borderColor: "#fecaca",
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 10,
-    padding: 16,
-  },
-  errorText: {
-    color: "#7f1d1d",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  errorTitle: {
-    color: "#991b1b",
-    fontSize: 16,
-    fontWeight: "800",
-  },
-  horizontalCards: {
-    gap: 14,
-    paddingRight: 16,
-  },
-  imageFallback: {
-    alignItems: "center",
-    backgroundColor: "#fefce8",
-    height: "100%",
-    justifyContent: "center",
-    width: "100%",
-  },
-  imageFallbackText: {
-    color: brandBlue,
-    fontSize: 32,
-    fontWeight: "900",
-  },
-  liveStrip: {
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#E6E6ED",
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 14,
-  },
-  liveStripLabel: {
-    color: "#7B7D8F",
-    fontSize: 12,
-    fontWeight: "800",
-    textTransform: "uppercase",
-  },
-  liveStripText: {
-    color: brandBlue,
-    fontSize: 17,
-    fontWeight: "900",
-    marginTop: 2,
-  },
-  modalContainer: {
-    gap: 14,
-    padding: 16,
-    paddingBottom: 32,
-  },
-  modalHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  modalSafeArea: {
-    backgroundColor: "#f8fafc",
-    flex: 1,
-  },
-  offerBadge: {
-    backgroundColor: brandYellow,
-    borderRadius: 999,
-    left: 8,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    position: "absolute",
-    top: 8,
-  },
-  offerBadgeText: {
-    color: brandBlue,
-    fontSize: 10,
-    fontWeight: "900",
-  },
-  orderNowText: {
-    backgroundColor: brandBlue,
-    borderRadius: 999,
-    color: "#ffffff",
-    fontSize: 11,
-    fontWeight: "900",
-    overflow: "hidden",
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  premiumBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "#F6EDD7",
-    borderRadius: 999,
-    color: "#735A23",
-    fontSize: 11,
-    fontWeight: "900",
-    overflow: "hidden",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-  },
-  priceText: {
-    color: brandBlue,
-    flexShrink: 1,
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  productCard: {
-    backgroundColor: "#ffffff",
-    borderColor: "#E6E6ED",
-    borderRadius: 14,
-    borderWidth: 1,
-    flexBasis: "47.5%",
-    flexGrow: 1,
-    overflow: "hidden",
-  },
-  productContent: {
-    minHeight: 118,
-    padding: 11,
-  },
-  productDescription: {
-    color: "#565869",
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 6,
-  },
-  productGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  productImage: {
-    height: "100%",
-    width: "100%",
-  },
-  productImageShell: {
-    aspectRatio: 1,
-    backgroundColor: "#F7F7FC",
-    position: "relative",
-    width: "100%",
-  },
-  productName: {
-    color: brandBlue,
-    flex: 1,
-    fontSize: 13,
-    fontWeight: "900",
-    lineHeight: 17,
-  },
-  productTitleRow: {
-    alignItems: "flex-start",
-    flexDirection: "row",
-    gap: 8,
-  },
-  quantityCard: {
-    backgroundColor: "#ffffff",
-    borderColor: "#fef08a",
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 10,
-    padding: 12,
-  },
-  quantityTitle: {
-    color: brandBlue,
-    fontSize: 18,
-    fontWeight: "900",
-  },
-  safeArea: {
-    backgroundColor: "#f8fafc",
-    flex: 1,
-  },
-  searchInput: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#CFD0DA",
-    borderRadius: 12,
-    borderWidth: 1,
-    color: "#1D1E28",
-    fontSize: 16,
-    minHeight: 48,
-    paddingHorizontal: 14,
-  },
-  searchLabel: {
-    color: "#27247B",
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  searchResultText: {
-    color: "#7B7D8F",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  searchShell: {
-    backgroundColor: "#F7F7FC",
-    borderColor: "#DCDDF2",
-    borderRadius: 18,
-    borderWidth: 1,
-    gap: 7,
-    padding: 12,
-  },
-  section: {
-    gap: 14,
-  },
-  sectionHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 10,
-    justifyContent: "center",
-    marginTop: 8,
-  },
-  sectionRule: {
-    backgroundColor: brandYellow,
-    flex: 1,
-    height: 2,
-  },
-  sectionTitle: {
-    color: brandBlue,
-    flexShrink: 1,
-    fontSize: 21,
-    fontWeight: "900",
-    textAlign: "center",
-  },
-  shareButton: {
-    backgroundColor: "#FBF8F0",
-    borderColor: "#EDDBAE",
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 15,
-    paddingVertical: 9,
-  },
-  shareButtonText: {
-    color: "#735A23",
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  soldOutOverlay: {
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.62)",
-    bottom: 0,
-    justifyContent: "center",
-    left: 0,
-    position: "absolute",
-    right: 0,
-    top: 0,
-  },
-  soldOutText: {
-    backgroundColor: "#dc2626",
-    borderRadius: 999,
-    color: "#ffffff",
-    fontSize: 13,
-    fontWeight: "900",
-    overflow: "hidden",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  stepper: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 8,
-  },
-  stepperButton: {
-    alignItems: "center",
-    borderColor: "#d1d5db",
-    borderRadius: 8,
-    borderWidth: 1,
-    height: 34,
-    justifyContent: "center",
-    width: 34,
-  },
-  stepperButtonAdd: {
-    alignItems: "center",
-    backgroundColor: brandYellow,
-    borderColor: brandYellow,
-    borderRadius: 8,
-    borderWidth: 1,
-    height: 34,
-    justifyContent: "center",
-    width: 34,
-  },
-  stepperDisabled: {
-    opacity: 0.45,
-  },
-  stepperMinus: {
-    color: "#dc2626",
-    fontSize: 22,
-    fontWeight: "900",
-    lineHeight: 24,
-  },
-  stepperPlus: {
-    color: brandBlue,
-    fontSize: 20,
-    fontWeight: "900",
-    lineHeight: 23,
-  },
-  stepperValue: {
-    color: brandBlue,
-    fontSize: 16,
-    fontWeight: "900",
-    minWidth: 18,
-    textAlign: "center",
-  },
-  tierPill: {
-    backgroundColor: "#ffffff",
-    borderColor: "#e2e8f0",
-    borderRadius: 8,
-    borderWidth: 1,
-    color: brandBlue,
-    fontSize: 12,
-    fontWeight: "800",
-    overflow: "hidden",
-    paddingHorizontal: 9,
-    paddingVertical: 7,
-  },
-  tierPillStrong: {
-    backgroundColor: brandYellow,
-    borderColor: brandYellow,
-    borderRadius: 8,
-    borderWidth: 1,
-    color: brandBlue,
-    fontSize: 12,
-    fontWeight: "900",
-    overflow: "hidden",
-    paddingHorizontal: 9,
-    paddingVertical: 7,
-  },
-  tierRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  totalPanel: {
-    alignItems: "center",
-    backgroundColor: brandBlue,
-    borderColor: brandYellow,
-    borderRadius: 8,
-    borderWidth: 2,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 14,
-  },
-  totalPanelLabel: {
-    color: "#c7d2fe",
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  totalPanelPrice: {
-    color: "#ffffff",
-    fontSize: 17,
-    fontWeight: "900",
-    marginTop: 3,
-  },
-  totalPanelRight: {
-    alignItems: "flex-end",
-  },
-  totalPanelValue: {
-    color: brandYellow,
-    fontSize: 24,
-    fontWeight: "900",
-    marginTop: 3,
-  },
-  promiseGrid: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  promiseItem: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#E6E6ED",
-    borderRadius: 14,
-    borderWidth: 1,
-    flex: 1,
-    minHeight: 74,
-    paddingHorizontal: 10,
-    paddingVertical: 12,
-  },
-  promiseLabel: {
-    color: "#7B7D8F",
-    fontSize: 11,
-    fontWeight: "700",
-    lineHeight: 15,
-    marginTop: 4,
-  },
-  promiseValue: {
-    color: brandBlue,
-    fontSize: 16,
-    fontWeight: "900",
-  },
-  updatedAt: {
-    color: "#64748b",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-});

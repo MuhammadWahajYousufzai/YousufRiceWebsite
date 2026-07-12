@@ -21,7 +21,11 @@ interface AuthContextValue {
   loading: boolean;
   refreshUser: () => Promise<AppwriteUser | null>;
   requestPasswordReset: (email: string) => Promise<void>;
-  register: (data: { email: string; name: string; password: string }) => Promise<void>;
+  register: (data: {
+    email: string;
+    name: string;
+    password: string;
+  }) => Promise<void>;
   signIn: (data: { email: string; password: string }) => Promise<void>;
   signOut: () => Promise<void>;
   user: AppwriteUser | null;
@@ -30,7 +34,9 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Something went wrong. Please try again.";
+  return error instanceof Error
+    ? error.message
+    : "Something went wrong. Please try again.";
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -74,7 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const currentUser = await refreshUser();
         if (currentUser && !currentUser.email) {
-          await account.deleteSession({ sessionId: "current" }).catch(() => undefined);
+          await account
+            .deleteSession({ sessionId: "current" })
+            .catch(() => undefined);
         }
 
         await account.createEmailPasswordSession({
@@ -94,7 +102,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const register = useCallback(
-    async ({ email, name, password }: { email: string; name: string; password: string }) => {
+    async ({
+      email,
+      name,
+      password,
+    }: {
+      email: string;
+      name: string;
+      password: string;
+    }) => {
       setLoading(true);
       setError(null);
 
@@ -102,7 +118,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const normalizedEmail = email.trim().toLowerCase();
         const currentUser = await refreshUser();
         if (currentUser && !currentUser.email) {
-          await account.deleteSession({ sessionId: "current" }).catch(() => undefined);
+          await account
+            .deleteSession({ sessionId: "current" })
+            .catch(() => undefined);
         }
 
         await account.create({
@@ -180,7 +198,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       user,
     }),
-    [ensureGuestSession, error, isGuest, loading, refreshUser, register, requestPasswordReset, signIn, signOut, user],
+    [
+      ensureGuestSession,
+      error,
+      isGuest,
+      loading,
+      refreshUser,
+      register,
+      requestPasswordReset,
+      signIn,
+      signOut,
+      user,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -8,7 +8,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -21,11 +20,12 @@ import {
   getPricePerKg,
   validatePakistaniPhoneNumber,
 } from "@repo/utils";
-import { Button } from "@repo/ui";
-import { useAuth } from "@/lib/auth";
-import { useCart } from "@/lib/cart";
+
+import { AppButton } from "@/components/app-button";
 import { CheckoutSuccessModal } from "@/components/checkout-success-modal";
 import { OrderDetailsModal } from "@/components/order-details-modal";
+import { useAuth } from "@/lib/auth";
+import { useCart } from "@/lib/cart";
 import { successFeedback, warningFeedback } from "@/lib/native-feedback";
 import {
   trackMobileInitiateCheckout,
@@ -38,12 +38,19 @@ import {
 } from "@/lib/orders";
 
 type BagSize = 3 | 5 | 10 | 25;
-
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function CartScreen() {
   const router = useRouter();
-  const { clearCart, getTotalItems, getTotalPrice, items, removeBag, addBag, removeItem } = useCart();
+  const {
+    clearCart,
+    getTotalItems,
+    getTotalPrice,
+    items,
+    removeBag,
+    addBag,
+    removeItem,
+  } = useCart();
   const { user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
@@ -66,7 +73,6 @@ export default function CartScreen() {
     if (!user?.email) return;
     let cancelled = false;
     setLoadingSavedDetails(true);
-
     loadSavedCheckoutDetails(user.$id)
       .then(({ address, customer }) => {
         if (cancelled) return;
@@ -84,18 +90,18 @@ export default function CartScreen() {
         }));
       })
       .catch(() => {
-        if (cancelled) return;
-        setFormData((current) => ({
-          ...current,
-          email: current.email || user.email || "",
-          fullName: current.fullName || user.name || "",
-          phone: current.phone || formatPhoneNumberForDisplay(user.phone || ""),
-        }));
+        if (!cancelled)
+          setFormData((current) => ({
+            ...current,
+            email: current.email || user.email || "",
+            fullName: current.fullName || user.name || "",
+            phone:
+              current.phone || formatPhoneNumberForDisplay(user.phone || ""),
+          }));
       })
       .finally(() => {
         if (!cancelled) setLoadingSavedDetails(false);
       });
-
     return () => {
       cancelled = true;
     };
@@ -106,13 +112,14 @@ export default function CartScreen() {
       trackedCheckoutKey.current = null;
       return;
     }
-
     const checkoutKey = items
-      .map((item) => `${item.product.$id}:${item.quantity}:${item.isColdDrinkBundle ? "bundle" : "regular"}`)
+      .map(
+        (item) =>
+          `${item.product.$id}:${item.quantity}:${item.isColdDrinkBundle ? "bundle" : "regular"}`,
+      )
       .join("|");
     if (trackedCheckoutKey.current === checkoutKey) return;
     trackedCheckoutKey.current = checkoutKey;
-
     void trackMobileInitiateCheckout({
       value: getTotalPrice(),
       numItems: getTotalItems(),
@@ -120,36 +127,39 @@ export default function CartScreen() {
     });
   }, [getTotalItems, getTotalPrice, items]);
 
-  const setField = (field: keyof typeof formData, value: string | number) => {
+  const setField = (field: keyof typeof formData, value: string | number) =>
     setFormData((current) => ({ ...current, [field]: value }));
-  };
 
   const handleGetLocation = async () => {
     setGettingLocation(true);
-
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
       if (permission.status !== Location.PermissionStatus.GRANTED) {
-        Alert.alert("Location permission needed", "Please allow location access or continue with your manual address.");
+        Alert.alert(
+          "Location permission needed",
+          "Please allow location access or continue with your manual address.",
+        );
         return;
       }
-
       const position = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
-
       setFormData((current) => ({
         ...current,
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
       }));
-
-      Alert.alert("Location captured", `Accuracy: ${Math.round(position.coords.accuracy ?? 0)}m`);
+      Alert.alert(
+        "Location captured",
+        `Accuracy: ${Math.round(position.coords.accuracy ?? 0)}m`,
+      );
       await successFeedback();
     } catch (error) {
       Alert.alert(
         "Location unavailable",
-        error instanceof Error ? error.message : "Could not capture your current location.",
+        error instanceof Error
+          ? error.message
+          : "Could not capture your current location.",
       );
     } finally {
       setGettingLocation(false);
@@ -162,36 +172,38 @@ export default function CartScreen() {
     const addressLine = formData.addressLine.trim();
     const city = formData.city.trim();
     const email = formData.email.trim();
-
     if (items.length === 0) {
       void warningFeedback();
-      Alert.alert("Cart is empty", "Please add at least one rice bag before checkout.");
+      Alert.alert(
+        "Cart is empty",
+        "Please add at least one rice bag before checkout.",
+      );
       return;
     }
-
     if (!fullName || !phone || !addressLine || !city) {
-      Alert.alert("Missing details", "Please fill in name, phone, city, and address.");
+      Alert.alert(
+        "Missing details",
+        "Please fill in name, phone, city, and address.",
+      );
       return;
     }
-
     const phoneValidation = validatePakistaniPhoneNumber(phone);
     if (!phoneValidation.isValid) {
       Alert.alert("Invalid phone number", phoneValidation.error);
       return;
     }
-
     if (email && !EMAIL_PATTERN.test(email)) {
-      Alert.alert("Invalid email", "Please enter a valid email address or leave it blank.");
+      Alert.alert(
+        "Invalid email",
+        "Please enter a valid email address or leave it blank.",
+      );
       return;
     }
-
     if (getTotalPrice() <= 0) {
       Alert.alert("Invalid cart", "Cannot place an order with a zero total.");
       return;
     }
-
     setSubmitting(true);
-
     try {
       const result = await placeCodOrder(
         {
@@ -201,10 +213,8 @@ export default function CartScreen() {
         },
         items,
       );
-
       const purchasedItems = [...items];
       const purchasedItemCount = getTotalItems();
-
       clearCart();
       setFormData({
         addressLine: "",
@@ -216,7 +226,6 @@ export default function CartScreen() {
         notes: "",
         phone: "",
       });
-
       await successFeedback();
       void trackMobilePurchase({
         orderId: result.orderId,
@@ -243,7 +252,7 @@ export default function CartScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-canvas">
       <CheckoutSuccessModal
         onClose={() => {
           setPlacedOrder(null);
@@ -255,183 +264,261 @@ export default function CartScreen() {
         }}
         result={placedOrder}
       />
-      <OrderDetailsModal onClose={() => setSelectedOrderId(null)} orderId={selectedOrderId} />
+      <OrderDetailsModal
+        onClose={() => setSelectedOrderId(null)}
+        orderId={selectedOrderId}
+      />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.keyboardView}
+        className="flex-1"
       >
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <View style={styles.header}>
-            <Text style={styles.eyebrow}>Checkout</Text>
-            <Text style={styles.title}>Your rice bag</Text>
-            <Text style={styles.subtitle}>
-              {items.length > 0
-                ? `${getTotalItems()} bags selected for Cash on Delivery.`
-                : "Add products from Home to start your order."}
-            </Text>
-          </View>
-
-          {items.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>Your cart is empty</Text>
-              <Text style={styles.emptyText}>Select bag sizes from any product card and they will appear here immediately.</Text>
-              <Button variant="outline" onPress={() => router.push("/")}>Browse Rice</Button>
+        <ScrollView keyboardShouldPersistTaps="handled" className="flex-1">
+          <View className="gap-5 px-4 pb-6 pt-4">
+            <View className="gap-2">
+              <Text className="text-[11px] font-extrabold uppercase tracking-[1px] text-muted">
+                Checkout
+              </Text>
+              <Text className="text-[30px] font-extrabold leading-[35px] text-brand-800">
+                Your rice bag
+              </Text>
+              <Text className="text-[15px] leading-[22px] text-body">
+                {items.length > 0
+                  ? `${getTotalItems()} bags selected for Cash on Delivery.`
+                  : "Add products from Home to start your order."}
+              </Text>
             </View>
-          ) : (
-            <View style={styles.cartList}>
-              {items.map((item) => {
-                const imageUrl =
-                  "imageUrl" in item.product && typeof item.product.imageUrl === "string"
-                    ? item.product.imageUrl
-                    : undefined;
-                const itemTotal = calculatePrice(item.product, item.quantity);
-                const itemKey = `${item.product.$id}:${item.isColdDrinkBundle ? "bundle" : "regular"}`;
-
-                return (
-                  <View key={itemKey} style={styles.cartCard}>
-                    <View style={styles.cartTop}>
-                      {imageUrl ? (
-                        <Image source={{ uri: imageUrl }} style={styles.cartImage} contentFit="cover" />
-                      ) : (
-                        <View style={styles.cartFallback}>
-                          <Text style={styles.cartFallbackText}>YR</Text>
-                        </View>
-                      )}
-                      <View style={styles.cartInfo}>
-                        <Text style={styles.cartName}>{item.product.name}</Text>
-                        {!!item.isColdDrinkBundle && (
-                          <Text style={styles.bundleLine}>Free cold drink bundle</Text>
-                        )}
-                        <Text style={styles.cartMeta}>
-                          {item.quantity}kg at {formatCurrency(getPricePerKg(item.product, item.quantity))}/kg
-                        </Text>
-                        <Text style={styles.cartTotal}>{formatCurrency(itemTotal)}</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.bagControls}>
-                      {([
-                        [3, item.bags.kg3],
-                        [5, item.bags.kg5],
-                        [10, item.bags.kg10],
-                        [25, item.bags.kg25],
-                      ] as Array<[BagSize, number]>)
-                        .filter(([, count]) => count > 0)
-                        .map(([size, count]) => (
-                          <View key={size} style={styles.bagControl}>
-                            <Text style={styles.bagControlLabel}>{size}kg</Text>
-                            <View style={styles.stepper}>
-                              <Pressable
-                                accessibilityRole="button"
-                                onPress={() => removeBag(item.product.$id, size, item.isColdDrinkBundle)}
-                                style={styles.stepperButton}
-                              >
-                                <Text style={styles.stepperMinus}>-</Text>
-                              </Pressable>
-                              <Text style={styles.stepperValue}>{count}</Text>
-                              <Pressable
-                                accessibilityRole="button"
-                                onPress={() => addBag(item.product, size, item.isColdDrinkBundle)}
-                                style={styles.stepperButtonAdd}
-                              >
-                                <Text style={styles.stepperPlus}>+</Text>
-                              </Pressable>
-                            </View>
-                          </View>
-                        ))}
-                    </View>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onPress={() => removeItem(item.product.$id, item.isColdDrinkBundle)}
+            {items.length === 0 ? (
+              <View className="gap-3 rounded-card border border-line bg-white p-5">
+                <Text className="text-[21px] font-extrabold text-ink">
+                  Your cart is empty
+                </Text>
+                <Text className="text-[14px] leading-5 text-body">
+                  Select bag sizes from any product card and they will appear
+                  here immediately.
+                </Text>
+                <AppButton variant="outline" onPress={() => router.push("/")}>
+                  Browse rice
+                </AppButton>
+              </View>
+            ) : (
+              <View className="gap-3">
+                {items.map((item) => {
+                  const imageUrl =
+                    "imageUrl" in item.product &&
+                    typeof item.product.imageUrl === "string"
+                      ? item.product.imageUrl
+                      : undefined;
+                  const itemTotal = calculatePrice(item.product, item.quantity);
+                  const itemKey = `${item.product.$id}:${item.isColdDrinkBundle ? "bundle" : "regular"}`;
+                  return (
+                    <View
+                      key={itemKey}
+                      className="gap-3 rounded-card border border-line bg-white p-3"
                     >
-                      Remove item
-                    </Button>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-
-          <View style={styles.totalCard}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>{formatCurrency(getTotalPrice())}</Text>
-          </View>
-
-          <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Delivery Details</Text>
-            {loadingSavedDetails && (
-              <Text style={styles.savedDetailsText}>Loading your saved delivery details…</Text>
+                      <View className="flex-row gap-3">
+                        {imageUrl ? (
+                          <Image
+                            source={{ uri: imageUrl }}
+                            contentFit="cover"
+                            className="h-[88px] w-[88px] rounded-[14px] bg-wash"
+                          />
+                        ) : (
+                          <View className="h-[88px] w-[88px] items-center justify-center rounded-xl bg-gold-50">
+                            <Text className="text-[20px] font-extrabold text-brand-800">
+                              YR
+                            </Text>
+                          </View>
+                        )}
+                        <View className="flex-1 gap-1">
+                          <Text className="text-[17px] font-extrabold text-brand-800">
+                            {item.product.name}
+                          </Text>
+                          {item.isColdDrinkBundle && (
+                            <Text className="self-start rounded-full bg-brand-50 px-2 py-1 text-[11px] font-bold text-brand-700">
+                              Free cold drink bundle
+                            </Text>
+                          )}
+                          <Text className="text-[13px] font-semibold text-muted">
+                            {item.quantity}kg at{" "}
+                            {formatCurrency(
+                              getPricePerKg(item.product, item.quantity),
+                            )}
+                            /kg
+                          </Text>
+                          <Text className="mt-1 text-[20px] font-extrabold text-brand-800">
+                            {formatCurrency(itemTotal)}
+                          </Text>
+                        </View>
+                      </View>
+                      <View className="gap-2">
+                        {(
+                          [
+                            [3, item.bags.kg3],
+                            [5, item.bags.kg5],
+                            [10, item.bags.kg10],
+                            [25, item.bags.kg25],
+                          ] as Array<[BagSize, number]>
+                        )
+                          .filter(([, count]) => count > 0)
+                          .map(([size, count]) => (
+                            <View
+                              key={size}
+                              className="flex-row items-center justify-between rounded-xl border border-line bg-canvas p-2.5"
+                            >
+                              <Text className="text-[14px] font-extrabold text-brand-800">
+                                {size}kg bag
+                              </Text>
+                              <View className="flex-row items-center gap-2">
+                                <Pressable
+                                  onPress={() =>
+                                    removeBag(
+                                      item.product.$id,
+                                      size,
+                                      item.isColdDrinkBundle,
+                                    )
+                                  }
+                                  className="h-9 w-9 items-center justify-center rounded-full border border-line bg-white active:bg-brand-50"
+                                >
+                                  <Text className="text-[18px] font-bold text-brand-800">
+                                    −
+                                  </Text>
+                                </Pressable>
+                                <Text className="min-w-5 text-center text-[15px] font-extrabold text-ink">
+                                  {count}
+                                </Text>
+                                <Pressable
+                                  onPress={() =>
+                                    addBag(
+                                      item.product,
+                                      size,
+                                      item.isColdDrinkBundle,
+                                    )
+                                  }
+                                  className="h-9 w-9 items-center justify-center rounded-full bg-brand-800 active:bg-brand-900"
+                                >
+                                  <Text className="text-[18px] font-bold text-white">
+                                    +
+                                  </Text>
+                                </Pressable>
+                              </View>
+                            </View>
+                          ))}
+                      </View>
+                      <Pressable
+                        onPress={() =>
+                          removeItem(item.product.$id, item.isColdDrinkBundle)
+                        }
+                        className="self-start py-1"
+                      >
+                        <Text className="text-[12px] font-bold text-muted">
+                          Remove item
+                        </Text>
+                      </Pressable>
+                    </View>
+                  );
+                })}
+              </View>
             )}
-
-            <Field
-              autoCapitalize="words"
-              label="Full name"
-              onChangeText={(value) => setField("fullName", value)}
-              placeholder="Muhammad Wahaj"
-              value={formData.fullName}
-            />
-            <Field
-              keyboardType="phone-pad"
-              label="Phone"
-              onChangeText={(value) => setField("phone", value)}
-              placeholder="03001234567"
-              value={formData.phone}
-            />
-            <Field
-              autoCapitalize="none"
-              keyboardType="email-address"
-              label="Email optional"
-              onChangeText={(value) => setField("email", value)}
-              placeholder="you@example.com"
-              value={formData.email}
-            />
-            <Field
-              autoCapitalize="words"
-              label="City"
-              onChangeText={(value) => setField("city", value)}
-              placeholder="Karachi"
-              value={formData.city}
-            />
-            <Field
-              label="Address"
-              multiline
-              onChangeText={(value) => setField("addressLine", value)}
-              placeholder="House, street, area, nearest landmark"
-              value={formData.addressLine}
-            />
-            <Field
-              label="Order notes optional"
-              multiline
-              onChangeText={(value) => setField("notes", value)}
-              placeholder="Delivery timing or rider instructions"
-              value={formData.notes}
-            />
-
-            <View style={styles.locationCard}>
+            <View className="flex-row items-center justify-between rounded-card bg-brand-800 p-4">
+              <Text className="text-[15px] font-bold text-brand-100">
+                Order total
+              </Text>
+              <Text className="text-[25px] font-extrabold text-white">
+                {formatCurrency(getTotalPrice())}
+              </Text>
+            </View>
+            <View className="gap-4 rounded-card border border-line bg-white p-4">
               <View>
-                <Text style={styles.locationTitle}>Location</Text>
-                <Text style={styles.locationText}>
-                  {formData.latitude && formData.longitude
-                    ? `${formData.latitude.toFixed(5)}, ${formData.longitude.toFixed(5)}`
-                    : "Optional, but helps delivery accuracy."}
+                <Text className="text-[20px] font-extrabold text-brand-800">
+                  Delivery details
+                </Text>
+                <Text className="mt-1 text-[13px] leading-5 text-muted">
+                  We use this information to confirm your COD order and find
+                  your home.
                 </Text>
               </View>
-              <Button
-                disabled={gettingLocation}
-                size="sm"
-                variant="outline"
-                onPress={handleGetLocation}
+              {loadingSavedDetails && (
+                <Text className="text-[12px] font-semibold text-muted">
+                  Loading your saved details…
+                </Text>
+              )}
+              <Field
+                autoCapitalize="words"
+                label="Full name"
+                onChangeText={(value) => setField("fullName", value)}
+                placeholder="Muhammad Wahaj"
+                value={formData.fullName}
+              />
+              <Field
+                keyboardType="phone-pad"
+                label="Phone"
+                onChangeText={(value) => setField("phone", value)}
+                placeholder="03001234567"
+                value={formData.phone}
+              />
+              <Field
+                autoCapitalize="none"
+                keyboardType="email-address"
+                label="Email optional"
+                onChangeText={(value) => setField("email", value)}
+                placeholder="you@example.com"
+                value={formData.email}
+              />
+              <Field
+                autoCapitalize="words"
+                label="City"
+                onChangeText={(value) => setField("city", value)}
+                placeholder="Karachi"
+                value={formData.city}
+              />
+              <Field
+                label="Address"
+                multiline
+                onChangeText={(value) => setField("addressLine", value)}
+                placeholder="House, street, area, nearest landmark"
+                value={formData.addressLine}
+              />
+              <Field
+                label="Order notes optional"
+                multiline
+                onChangeText={(value) => setField("notes", value)}
+                placeholder="Delivery timing or rider instructions"
+                value={formData.notes}
+              />
+              <View className="flex-row items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50 p-3">
+                <View className="flex-1">
+                  <Text className="text-[15px] font-extrabold text-brand-800">
+                    Use your live location
+                  </Text>
+                  <Text className="mt-1 text-[12px] leading-4 text-brand-700">
+                    {formData.latitude && formData.longitude
+                      ? `${formData.latitude.toFixed(5)}, ${formData.longitude.toFixed(5)}`
+                      : "Optional, but it helps delivery accuracy."}
+                  </Text>
+                </View>
+                <AppButton
+                  disabled={gettingLocation}
+                  size="sm"
+                  variant="outline"
+                  onPress={handleGetLocation}
+                >
+                  {gettingLocation ? "Getting…" : "Use GPS"}
+                </AppButton>
+              </View>
+            </View>
+            <View className="gap-2">
+              <AppButton
+                disabled={items.length === 0 || submitting}
+                size="lg"
+                onPress={handleSubmit}
               >
-                {gettingLocation ? "Getting..." : "Use GPS"}
-              </Button>
+                {submitting ? "Placing order…" : "Place COD order"}
+              </AppButton>
+              <Text className="text-center text-[11px] leading-4 text-muted">
+                Secure checkout · Cash on Delivery · Free Karachi delivery
+              </Text>
             </View>
           </View>
-
-          <Button disabled={items.length === 0 || submitting} size="lg" onPress={handleSubmit}>
-            {submitting ? "Placing Order..." : "Place COD Order"}
-          </Button>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -451,282 +538,14 @@ function Field({
   value: string;
 }) {
   return (
-    <View style={styles.field}>
-      <Text style={styles.fieldLabel}>{label}</Text>
+    <View className="gap-1.5">
+      <Text className="text-[12px] font-bold text-body">{label}</Text>
       <TextInput
         {...props}
-        placeholderTextColor="#94a3b8"
-        style={[styles.input, props.multiline && styles.inputMultiline]}
+        autoCorrect={false}
+        placeholderTextColor="#A3A5B5"
+        className={`rounded-xl border border-line bg-canvas px-3.5 py-3 text-[15px] text-ink ${props.multiline ? "min-h-[84px]" : ""}`}
       />
     </View>
   );
 }
-
-const brandBlue = "#27247b";
-const brandYellow = "#ffff03";
-
-const styles = StyleSheet.create({
-  bagControl: {
-    alignItems: "center",
-    backgroundColor: "#f8fafc",
-    borderColor: "#e2e8f0",
-    borderRadius: 8,
-    borderWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 10,
-  },
-  bagControlLabel: {
-    color: brandBlue,
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  bagControls: {
-    gap: 8,
-  },
-  bundleLine: {
-    alignSelf: "flex-start",
-    backgroundColor: "#dbeafe",
-    borderRadius: 999,
-    color: "#1d4ed8",
-    fontSize: 11,
-    fontWeight: "900",
-    marginTop: 4,
-    overflow: "hidden",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  cartCard: {
-    backgroundColor: "#ffffff",
-    borderColor: "#e2e8f0",
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 12,
-    padding: 12,
-  },
-  cartFallback: {
-    alignItems: "center",
-    backgroundColor: "#fefce8",
-    borderRadius: 8,
-    height: 88,
-    justifyContent: "center",
-    width: 88,
-  },
-  cartFallbackText: {
-    color: brandBlue,
-    fontSize: 20,
-    fontWeight: "900",
-  },
-  cartImage: {
-    backgroundColor: "#e2e8f0",
-    borderRadius: 8,
-    height: 88,
-    width: 88,
-  },
-  cartInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  cartList: {
-    gap: 12,
-  },
-  cartMeta: {
-    color: "#64748b",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  cartName: {
-    color: brandBlue,
-    fontSize: 17,
-    fontWeight: "900",
-    lineHeight: 22,
-  },
-  cartTop: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  cartTotal: {
-    color: "#047857",
-    fontSize: 17,
-    fontWeight: "900",
-  },
-  container: {
-    gap: 18,
-    padding: 16,
-    paddingBottom: 120,
-  },
-  emptyCard: {
-    backgroundColor: "#ffffff",
-    borderColor: "#e2e8f0",
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 6,
-    padding: 16,
-  },
-  emptyText: {
-    color: "#64748b",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  emptyTitle: {
-    color: "#0f172a",
-    fontSize: 17,
-    fontWeight: "900",
-  },
-  eyebrow: {
-    color: "#047857",
-    fontSize: 13,
-    fontWeight: "900",
-    textTransform: "uppercase",
-  },
-  field: {
-    gap: 7,
-  },
-  fieldLabel: {
-    color: "#334155",
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  formCard: {
-    backgroundColor: "#ffffff",
-    borderColor: "#e2e8f0",
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 13,
-    padding: 14,
-  },
-  formTitle: {
-    color: brandBlue,
-    fontSize: 19,
-    fontWeight: "900",
-  },
-  header: {
-    gap: 6,
-    paddingTop: 12,
-  },
-  input: {
-    backgroundColor: "#f8fafc",
-    borderColor: "#cbd5e1",
-    borderRadius: 8,
-    borderWidth: 1,
-    color: "#0f172a",
-    fontSize: 15,
-    minHeight: 46,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  inputMultiline: {
-    minHeight: 92,
-    textAlignVertical: "top",
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  locationCard: {
-    alignItems: "center",
-    backgroundColor: "#f8fafc",
-    borderColor: "#e2e8f0",
-    borderRadius: 8,
-    borderWidth: 1,
-    flexDirection: "row",
-    gap: 12,
-    justifyContent: "space-between",
-    padding: 12,
-  },
-  locationText: {
-    color: "#64748b",
-    fontSize: 12,
-    fontWeight: "600",
-    marginTop: 3,
-    maxWidth: 185,
-  },
-  locationTitle: {
-    color: brandBlue,
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  safeArea: {
-    backgroundColor: "#f8fafc",
-    flex: 1,
-  },
-  savedDetailsText: {
-    color: "#7B7D8F",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  stepper: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 8,
-  },
-  stepperButton: {
-    alignItems: "center",
-    borderColor: "#d1d5db",
-    borderRadius: 8,
-    borderWidth: 1,
-    height: 32,
-    justifyContent: "center",
-    width: 32,
-  },
-  stepperButtonAdd: {
-    alignItems: "center",
-    backgroundColor: brandYellow,
-    borderColor: brandYellow,
-    borderRadius: 8,
-    borderWidth: 1,
-    height: 32,
-    justifyContent: "center",
-    width: 32,
-  },
-  stepperMinus: {
-    color: "#dc2626",
-    fontSize: 21,
-    fontWeight: "900",
-    lineHeight: 23,
-  },
-  stepperPlus: {
-    color: brandBlue,
-    fontSize: 19,
-    fontWeight: "900",
-    lineHeight: 22,
-  },
-  stepperValue: {
-    color: brandBlue,
-    fontSize: 15,
-    fontWeight: "900",
-    minWidth: 18,
-    textAlign: "center",
-  },
-  subtitle: {
-    color: "#475569",
-    fontSize: 15,
-    fontWeight: "600",
-    lineHeight: 21,
-  },
-  title: {
-    color: brandBlue,
-    fontSize: 34,
-    fontWeight: "900",
-    lineHeight: 39,
-  },
-  totalCard: {
-    alignItems: "center",
-    backgroundColor: brandBlue,
-    borderColor: brandYellow,
-    borderRadius: 8,
-    borderWidth: 2,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 16,
-  },
-  totalLabel: {
-    color: "#c7d2fe",
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  totalValue: {
-    color: brandYellow,
-    fontSize: 25,
-    fontWeight: "900",
-  },
-});

@@ -1,8 +1,5 @@
 import type { Product, ProductImage } from "@repo/types";
-import {
-  isRegularCatalogProduct,
-  sortProductsForCatalog,
-} from "@repo/utils";
+import { isRegularCatalogProduct, sortProductsForCatalog } from "@repo/utils";
 import {
   APPWRITE_ENDPOINT,
   APPWRITE_PROJECT_ID,
@@ -49,7 +46,9 @@ function assertCatalogConfig() {
   ].filter(([, value]) => !value);
 
   if (missing.length > 0) {
-    throw new Error(`Missing mobile Appwrite env: ${missing.map(([key]) => key).join(", ")}`);
+    throw new Error(
+      `Missing mobile Appwrite env: ${missing.map(([key]) => key).join(", ")}`,
+    );
   }
 }
 
@@ -82,16 +81,24 @@ export async function listProductImages() {
     queries: [Query.limit(200)],
   });
 
-  return rowsFromResponse<ProductImage>(response as unknown as RowList<ProductImage>);
+  return rowsFromResponse<ProductImage>(
+    response as unknown as RowList<ProductImage>,
+  );
 }
 
-export async function listProductsWithPrimaryImages(): Promise<ProductWithImage[]> {
-  const [products, images] = await Promise.all([listAvailableProducts(), listProductImages()]);
+export async function listProductsWithPrimaryImages(): Promise<
+  ProductWithImage[]
+> {
+  const [products, images] = await Promise.all([
+    listAvailableProducts(),
+    listProductImages(),
+  ]);
 
   return products.map((product) => {
     const primaryImage =
-      images.find((image) => image.product_id === product.$id && image.is_primary) ??
-      images.find((image) => image.product_id === product.$id);
+      images.find(
+        (image) => image.product_id === product.$id && image.is_primary,
+      ) ?? images.find((image) => image.product_id === product.$id);
     const bundleImage = images.find(
       (image) => image.product_id === product.$id && image.is_cold_drink_bundle,
     );
