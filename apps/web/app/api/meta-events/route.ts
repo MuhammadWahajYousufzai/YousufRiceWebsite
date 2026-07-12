@@ -41,9 +41,14 @@ export async function POST(request: NextRequest) {
       event_id,
       event_time,
       event_source_url,
+      action_source,
+      app_platform,
+      app_version,
       user_data,
       custom_data,
     } = body;
+
+    const resolvedActionSource = action_source === "app" ? "app" : "website";
 
     console.log("[Meta API] Received event", {
       eventName: event_name,
@@ -62,7 +67,11 @@ export async function POST(request: NextRequest) {
 
     // Get client IP and user agent from request headers
     const clientIp = getClientIp(request);
-    const userAgent = request.headers.get("user-agent") || undefined;
+    const userAgent =
+      request.headers.get("user-agent") ||
+      (resolvedActionSource === "app"
+        ? `YousufRice/${app_version || "unknown"} (${app_platform || "mobile"})`
+        : undefined);
 
     // Prepare user data with hashing
     const preparedUserData = prepareUserData({
@@ -76,7 +85,7 @@ export async function POST(request: NextRequest) {
       state: user_data?.state,
       zipCode: user_data?.zipCode,
       country: user_data?.country,
-      clientIp,
+      clientIp: resolvedActionSource === "website" ? clientIp : undefined,
       userAgent,
       fbp: user_data?.fbp,
       fbc: user_data?.fbc,
@@ -92,8 +101,10 @@ export async function POST(request: NextRequest) {
           : getCurrentTimestamp(),
       event_id,
       event_source_url:
-        event_source_url || getRequestSourceUrl(request),
-      action_source: "website",
+        resolvedActionSource === "website"
+          ? event_source_url || getRequestSourceUrl(request)
+          : undefined,
+      action_source: resolvedActionSource,
       user_data: preparedUserData,
       custom_data: custom_data as MetaCustomData,
     };

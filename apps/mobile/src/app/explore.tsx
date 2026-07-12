@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -28,6 +28,10 @@ import { CheckoutSuccessModal } from "@/components/checkout-success-modal";
 import { OrderDetailsModal } from "@/components/order-details-modal";
 import { successFeedback, warningFeedback } from "@/lib/native-feedback";
 import {
+  trackMobileInitiateCheckout,
+  trackMobilePurchase,
+} from "@/lib/meta-events";
+import {
   loadSavedCheckoutDetails,
   placeCodOrder,
   type PlaceOrderResult,
@@ -46,6 +50,7 @@ export default function CartScreen() {
   const [loadingSavedDetails, setLoadingSavedDetails] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<PlaceOrderResult | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const trackedCheckoutKey = useRef<string | null>(null);
   const [formData, setFormData] = useState({
     addressLine: "",
     city: "Karachi",
@@ -95,6 +100,25 @@ export default function CartScreen() {
       cancelled = true;
     };
   }, [user]);
+
+  useEffect(() => {
+    if (items.length === 0) {
+      trackedCheckoutKey.current = null;
+      return;
+    }
+
+    const checkoutKey = items
+      .map((item) => `${item.product.$id}:${item.quantity}:${item.isColdDrinkBundle ? "bundle" : "regular"}`)
+      .join("|");
+    if (trackedCheckoutKey.current === checkoutKey) return;
+    trackedCheckoutKey.current = checkoutKey;
+
+    void trackMobileInitiateCheckout({
+      value: getTotalPrice(),
+      numItems: getTotalItems(),
+      contentIds: items.map((item) => item.product.$id),
+    });
+  }, [getTotalItems, getTotalPrice, items]);
 
   const setField = (field: keyof typeof formData, value: string | number) => {
     setFormData((current) => ({ ...current, [field]: value }));
@@ -178,6 +202,9 @@ export default function CartScreen() {
         items,
       );
 
+      const purchasedItems = [...items];
+      const purchasedItemCount = getTotalItems();
+
       clearCart();
       setFormData({
         addressLine: "",
@@ -191,6 +218,18 @@ export default function CartScreen() {
       });
 
       await successFeedback();
+      void trackMobilePurchase({
+        orderId: result.orderId,
+        value: result.totalPrice,
+        numItems: purchasedItemCount,
+        contentIds: purchasedItems.map((item) => item.product.$id),
+        contents: purchasedItems.map((item) => ({
+          id: item.product.$id,
+          quantity: item.quantity,
+          item_price: calculatePrice(item.product, item.quantity),
+        })),
+        phone,
+      });
       setPlacedOrder(result);
     } catch (error) {
       void warningFeedback();

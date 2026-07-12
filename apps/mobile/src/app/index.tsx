@@ -31,6 +31,7 @@ import {
 import { Button } from "@repo/ui";
 import type { ProductWithImage } from "@/lib/catalog";
 import { useCart } from "@/lib/cart";
+import { trackMobileAddToCart, trackMobileViewContent } from "@/lib/meta-events";
 import { useLiveCatalog } from "@/hooks/use-live-catalog";
 
 type BagSize = 3 | 5 | 10 | 25;
@@ -98,6 +99,11 @@ export default function HomeScreen() {
   const openProduct = (product: ProductWithImage, isBundle = false) => {
     setSelectedProduct(product);
     setSelectedBundle(isBundle);
+    void trackMobileViewContent({
+      contentName: product.name,
+      contentId: product.$id,
+      value: calculatePrice(product, isBundle ? 10 : 5),
+    });
   };
 
   const closeProduct = () => {
@@ -108,6 +114,12 @@ export default function HomeScreen() {
   const handleAddBag = (bagSize: BagSize) => {
     if (!selectedProduct || !selectedProduct.available) return;
     addBag(selectedProduct, bagSize, selectedBundle);
+    void trackMobileAddToCart({
+      contentName: selectedProduct.name,
+      contentId: selectedProduct.$id,
+      value: calculatePrice(selectedProduct, bagSize),
+      quantity: 1,
+    });
   };
 
   const handleRemoveBag = (bagSize: BagSize) => {

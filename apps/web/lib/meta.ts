@@ -48,7 +48,7 @@ export interface MetaEvent {
   event_time: number;
   event_id: string;
   event_source_url?: string;
-  action_source: 'website';
+  action_source: 'website' | 'app';
   user_data: MetaUserData;
   custom_data?: MetaCustomData;
 }
