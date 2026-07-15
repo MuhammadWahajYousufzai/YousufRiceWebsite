@@ -72,10 +72,6 @@ const sections = [
             sent directly to Meta's servers to help us measure ad performance and
             show relevant ads.
           </li>
-          <li>
-            We do not send Meta your delivery address or order contents — only
-            the limited event and contact data needed for ad measurement.
-          </li>
         </ul>
       </>
     ),
