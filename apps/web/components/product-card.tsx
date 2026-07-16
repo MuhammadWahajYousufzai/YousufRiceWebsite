@@ -15,16 +15,17 @@ export function ProductCard({ product, imageFileId, badgeLabel }: ProductCardSim
   const imageUrl = imageFileId
     ? `${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${STORAGE_BUCKET_ID}/files/${imageFileId}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID}`
     : null;
-  const tenKgTierPrice =
+  const tenKgDiscountPrice =
     product.has_tier_pricing &&
     product.tier_10kg_up_price &&
     product.tier_10kg_up_price > 0
       ? product.tier_10kg_up_price
       : null;
   const hasTenKgDiscount =
-    tenKgTierPrice !== null && tenKgTierPrice < product.base_price_per_kg;
+    tenKgDiscountPrice !== null &&
+    tenKgDiscountPrice < product.base_price_per_kg;
   const tenKgSavings = hasTenKgDiscount
-    ? (product.base_price_per_kg - tenKgTierPrice) * 10
+    ? (product.base_price_per_kg - tenKgDiscountPrice) * 10
     : 0;
 
   return (
@@ -89,37 +90,33 @@ export function ProductCard({ product, imageFileId, badgeLabel }: ProductCardSim
               </p>
             )}
 
-            {tenKgTierPrice && (
+            {tenKgDiscountPrice && (
               <div className="mt-4 rounded-[8px] border border-[#ffff03]/70 bg-linear-to-br from-[#ffff03]/35 via-white to-[#27247b]/10 p-3 shadow-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#27247b]/75">
-                      10kg discounted tier
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                      <span className="text-xl font-black leading-none text-[#27247b]">
-                        {formatCurrency(tenKgTierPrice)}
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#27247b]/75">
+                    10kg discounted price
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <span className="text-xl font-black leading-none text-[#27247b]">
+                      {formatCurrency(tenKgDiscountPrice)}
+                    </span>
+                    <span className="text-xs font-bold text-[#27247b]/70">
+                      /kg
+                    </span>
+                    {hasTenKgDiscount && (
+                      <span className="text-xs font-semibold text-gray-500 line-through">
+                        {formatCurrency(product.base_price_per_kg)}/kg
                       </span>
-                      <span className="text-xs font-bold text-[#27247b]/70">
-                        /kg
-                      </span>
-                      {hasTenKgDiscount && (
-                        <span className="text-xs font-semibold text-gray-500 line-through">
-                          {formatCurrency(product.base_price_per_kg)}/kg
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </div>
-                  {hasTenKgDiscount && (
-                    <div className="rounded-full bg-[#27247b] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-[#ffff03] shadow-sm">
-                      Bulk save
-                    </div>
-                  )}
                 </div>
                 {hasTenKgDiscount && (
-                  <p className="mt-2 text-xs font-bold text-[#27247b]">
-                    Save {formatCurrency(tenKgSavings)} on every 10kg order
-                  </p>
+                  <div className="mt-2 border-t border-[#27247b]/10 pt-2">
+                    <p className="text-xs font-bold text-[#27247b]">
+                      Same quality rice, save {formatCurrency(tenKgSavings)} on
+                      every 10kg order
+                    </p>
+                  </div>
                 )}
               </div>
             )}
