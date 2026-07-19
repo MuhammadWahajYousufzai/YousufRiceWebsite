@@ -56,6 +56,7 @@ function orderStatusLabel(status: Order["status"]) {
 
 export default function AccountScreen() {
   const {
+    deleteAccount,
     error,
     isAuthenticated,
     loading,
@@ -74,6 +75,7 @@ export default function AccountScreen() {
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [pushStatus, setPushStatus] = useState<string | null>(null);
   const [registeringPush, setRegisteringPush] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [trackPhone, setTrackPhone] = useState("");
   const [trackedCustomer, setTrackedCustomer] = useState<Customer | null>(null);
@@ -233,6 +235,46 @@ export default function AccountScreen() {
       Alert.alert("Notifications unavailable", message);
     } finally {
       setRegisteringPush(false);
+    }
+  };
+  const confirmAccountDeletion = () => {
+    void warningFeedback();
+    Alert.alert(
+      "Delete your account?",
+      "Your login and notification targets will be permanently deleted. Existing order and delivery records may be retained where needed to fulfill orders and meet recordkeeping obligations. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete account",
+          style: "destructive",
+          onPress: () => {
+            void handleDeleteAccount();
+          },
+        },
+      ],
+    );
+  };
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      await deleteAccount();
+      setCustomer(null);
+      setOrders([]);
+      setPushStatus(null);
+      await successFeedback();
+      Alert.alert(
+        "Account deleted",
+        "Your Yousuf Rice account has been permanently deleted.",
+      );
+    } catch (caughtError) {
+      Alert.alert(
+        "Could not delete account",
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Please try again.",
+      );
+    } finally {
+      setDeletingAccount(false);
     }
   };
 
@@ -486,6 +528,30 @@ export default function AccountScreen() {
               order={order}
             />
           ))}
+          <View className="gap-3 rounded-card border border-coral-100 bg-coral-50 p-4">
+            <Text className="text-[11px] font-extrabold uppercase tracking-[1px] text-coral-700">
+              Account controls
+            </Text>
+            <Text className="text-[18px] font-extrabold text-coral-700">
+              Delete your account
+            </Text>
+            <Text className="text-[13px] leading-5 text-coral-700">
+              Permanently remove your login and disconnect your customer
+              profile. Existing order records may be retained for fulfillment
+              and recordkeeping.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Delete account permanently"
+              disabled={deletingAccount}
+              onPress={confirmAccountDeletion}
+              className={`min-h-12 items-center justify-center rounded-xl border border-coral-700 px-4 ${deletingAccount ? "opacity-50" : "active:bg-coral-100"}`}
+            >
+              <Text className="text-[14px] font-extrabold text-coral-700">
+                {deletingAccount ? "Deleting account…" : "Delete account"}
+              </Text>
+            </Pressable>
+          </View>
           <SupportCard />
         </View>
       </ScrollView>

@@ -31,7 +31,7 @@ const sections = [
         </ul>
         <p>
           <strong>When you create an account</strong>, we store your login details
-          so you don't have to re-enter your information on future orders.
+          so you don’t have to re-enter your information on future orders.
         </p>
         <p>
           <strong>Location information (optional):</strong>
@@ -39,7 +39,7 @@ const sections = [
         <ul>
           <li>
             If you choose <strong>Use GPS</strong> at checkout, we use your
-            device's location to save delivery coordinates for that order.
+            device’s location to save delivery coordinates for that order.
           </li>
           <li>
             This is entirely optional. You can skip GPS and type your delivery
@@ -62,15 +62,26 @@ const sections = [
         <ul>
           <li>
             We use <strong>Meta (Facebook) Pixel</strong> on our website, along
-            with <strong>Meta's Conversions API</strong>, to measure and improve
+            with <strong>Meta’s Conversions API</strong>, to measure and improve
             our ads.
           </li>
           <li>
             This means that when you visit our site or complete an order, certain
             event data (such as page views, and — in hashed, non-readable form —
-            your email address or phone number if you've provided one) may be
-            sent directly to Meta's servers to help us measure ad performance and
+            your email address or phone number if you’ve provided one) may be
+            sent directly to Meta’s servers to help us measure ad performance and
             show relevant ads.
+          </li>
+          <li>
+            In the iOS app, we ask for permission through Apple’s App Tracking
+            Transparency prompt before sending app activity or hashed contact
+            data to Meta. If you decline, the iOS app does not send those events
+            to Meta.
+          </li>
+          <li>
+            We do not send Meta your delivery address. We send only the limited
+            shopping event, product, purchase, and hashed contact data needed
+            for ad measurement.
           </li>
         </ul>
       </>
@@ -84,7 +95,7 @@ const sections = [
         <li>Save delivery details so future checkouts are faster.</li>
         <li>Provide order status updates and customer support.</li>
         <li>
-          Send delivery notifications and offers, if you've enabled
+          Send delivery notifications and offers, if you’ve enabled
           notifications.
         </li>
         <li>
@@ -189,6 +200,14 @@ const sections = [
           Disable notifications any time in your device settings.
         </li>
         <li>
+          Delete your account directly in the mobile app from{" "}
+          <strong>Account → Delete account</strong>. This permanently removes
+          your Appwrite login and notification targets and disconnects your
+          customer profile. Existing order and delivery records may be retained
+          where needed to fulfill orders, prevent fraud, resolve disputes, and
+          meet recordkeeping obligations.
+        </li>
+        <li>
           Limit ad tracking: you can manage how Meta uses your data for ads
           through your{" "}
           <a
@@ -228,7 +247,7 @@ const sections = [
     title: "11. Changes to This Policy",
     body: (
       <p>
-        We may update this Privacy Policy from time to time. The "Last updated"
+        We may update this Privacy Policy from time to time. The “Last updated”
         date at the top reflects the most recent revision. Continued use of the
         app or website after changes means you accept the updated policy.
       </p>
@@ -270,7 +289,7 @@ export default function PrivacyPage() {
 
       <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-8 rounded-2xl border-2 border-[#ffff03]/60 bg-[#ffff03]/10 p-5 text-sm text-gray-700">
-          <strong className="text-[#27247b]">Last updated:</strong> July 11,
+          <strong className="text-[#27247b]">Last updated:</strong> July 19,
           2026
         </div>
 

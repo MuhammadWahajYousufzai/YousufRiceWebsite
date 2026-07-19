@@ -87,6 +87,9 @@ PLIST
 
 cd "$REPO_ROOT"
 
+echo "Synchronizing the native iOS project with Expo configuration..."
+"$MOBILE_DIR/node_modules/.bin/expo" prebuild --platform ios
+
 echo "Archiving $SCHEME for App Store Connect..."
 xcodebuild archive \
   -workspace "$WORKSPACE" \

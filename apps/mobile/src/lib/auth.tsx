@@ -14,6 +14,7 @@ import { account, ID } from "@/lib/appwrite";
 type AppwriteUser = Models.User<Models.Preferences>;
 
 interface AuthContextValue {
+  deleteAccount: () => Promise<void>;
   error: string | null;
   ensureGuestSession: () => Promise<AppwriteUser>;
   isAuthenticated: boolean;
@@ -32,6 +33,9 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const ACCOUNT_DELETION_ENDPOINT =
+  process.env.EXPO_PUBLIC_ACCOUNT_DELETION_URL ||
+  "https://yousufrice.com/api/account";
 
 function errorMessage(error: unknown) {
   return error instanceof Error
@@ -184,8 +188,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { jwt } = await account.createJWT();
+      const response = await fetch(ACCOUNT_DELETION_ENDPOINT, {
+        method: "DELETE",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+      });
+      const result = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            "Your account could not be deleted. Please try again.",
+        );
+      }
+
+      setUser(null);
+    } catch (caughtError) {
+      const message = errorMessage(caughtError);
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const value = useMemo(
     () => ({
+      deleteAccount,
       error,
       ensureGuestSession,
       isAuthenticated: Boolean(user?.email),
@@ -199,6 +238,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
     }),
     [
+      deleteAccount,
       ensureGuestSession,
       error,
       isGuest,

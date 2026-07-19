@@ -1,11 +1,17 @@
 import * as Crypto from "expo-crypto";
 import Constants from "expo-constants";
+import {
+  getTrackingPermissionsAsync,
+  isAvailable as isTrackingTransparencyAvailable,
+  requestTrackingPermissionsAsync,
+} from "expo-tracking-transparency";
 import { Platform } from "react-native";
 
 const META_EVENTS_ENDPOINT =
   process.env.EXPO_PUBLIC_META_EVENTS_URL ||
   "https://yousufrice.com/api/meta-events";
 const APP_VERSION = Constants.expoConfig?.version || "1.0.0";
+let trackingAuthorizationPromise: Promise<boolean> | null = null;
 
 type MetaContents = Array<{
   id: string;
@@ -59,11 +65,38 @@ function eventIdFor(eventName: string): string {
   return `${eventName.toLowerCase()}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+async function requestMetaTrackingAuthorization(): Promise<boolean> {
+  if (Platform.OS !== "ios") return true;
+  if (!isTrackingTransparencyAvailable()) return false;
+
+  const currentPermission = await getTrackingPermissionsAsync();
+  if (currentPermission.granted) return true;
+  if (!currentPermission.canAskAgain) return false;
+
+  const requestedPermission = await requestTrackingPermissionsAsync();
+  return requestedPermission.granted;
+}
+
+async function isMetaTrackingAuthorized(): Promise<boolean> {
+  trackingAuthorizationPromise ??= requestMetaTrackingAuthorization().catch(
+    (error) => {
+      console.warn("[Meta App Events] ATT permission check failed", error);
+      return false;
+    },
+  );
+
+  return trackingAuthorizationPromise;
+}
+
 export async function trackMobileMetaEvent(
   eventName: string,
   options: MobileMetaEventOptions = {},
 ): Promise<boolean> {
   try {
+    // Meta app events are advertising tracking. On iOS, do not collect or
+    // transmit any event or contact data until ATT authorization is granted.
+    if (!(await isMetaTrackingAuthorized())) return false;
+
     const phoneHash = await hashPhone(options.phone);
     const response = await fetch(META_EVENTS_ENDPOINT, {
       method: "POST",

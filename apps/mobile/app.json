@@ -69,7 +69,13 @@
         }
       ],
       "expo-font",
-      "expo-image"
+      "expo-image",
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "Your permission allows Yousuf Rice to share shopping activity and hashed contact details with Meta to measure ads and show more relevant offers across apps and websites."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
