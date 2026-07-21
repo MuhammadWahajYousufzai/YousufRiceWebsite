@@ -2,10 +2,12 @@ packages:
   - "apps/*"
   - "packages/*"
 overrides:
-  "@expo/metro-runtime": 57.0.3
-  expo-constants: 57.0.3
-  expo-file-system: 57.0.0
+  "@expo/metro-runtime": 57.0.6
+  expo-constants: 57.0.6
+  expo-file-system: 57.0.1
   react-native: 0.86.0
+patchedDependencies:
+  expo-modules-jsi@57.0.3: patches/expo-modules-jsi@57.0.3.patch
 onlyBuiltDependencies:
   - msgpackr-extract
   - sharp

@@ -1,6 +1,7 @@
-import { Image } from "expo-image";
 import Animated, { Easing, Keyframe } from "react-native-reanimated";
 import { View } from "react-native";
+
+import { Image } from "@/components/app-image";
 
 const DURATION = 300;
 export function AnimatedSplashOverlay() {

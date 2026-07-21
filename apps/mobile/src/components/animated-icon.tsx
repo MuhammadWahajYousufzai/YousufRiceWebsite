@@ -1,8 +1,9 @@
-import { Image } from "expo-image";
 import { Dimensions, View } from "react-native";
 import { useState } from "react";
 import Animated, { Easing, Keyframe } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
+
+import { Image } from "@/components/app-image";
 
 const INITIAL_SCALE_FACTOR = Dimensions.get("screen").height / 90;
 const DURATION = 600;

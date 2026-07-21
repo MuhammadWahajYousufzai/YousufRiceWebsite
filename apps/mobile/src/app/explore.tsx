@@ -1,4 +1,3 @@
-import { Image } from "expo-image";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -22,12 +21,14 @@ import {
 } from "@repo/utils";
 
 import { AppButton } from "@/components/app-button";
+import { Image } from "@/components/app-image";
 import { CheckoutSuccessModal } from "@/components/checkout-success-modal";
 import { OrderDetailsModal } from "@/components/order-details-modal";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { successFeedback, warningFeedback } from "@/lib/native-feedback";
 import {
+  requestMobileAdTrackingPermission,
   trackMobileInitiateCheckout,
   trackMobilePurchase,
 } from "@/lib/meta-events";
@@ -203,6 +204,11 @@ export default function CartScreen() {
       Alert.alert("Invalid cart", "Cannot place an order with a zero total.");
       return;
     }
+
+    // The order is never blocked by this choice. If the user declines ATT,
+    // checkout continues and no Meta tracking or hashed phone is transmitted.
+    await requestMobileAdTrackingPermission();
+
     setSubmitting(true);
     try {
       const result = await placeCodOrder(

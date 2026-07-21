@@ -2,7 +2,7 @@
   "expo": {
     "name": "Yousuf Rice",
     "slug": "yousuf-rice-mobile",
-    "version": "1.2.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "yousufrice",
@@ -14,7 +14,10 @@
       "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSLocationWhenInUseUsageDescription": "Yousuf Rice uses your location only when you choose Use GPS, so riders can find your delivery address accurately."
+        "NSLocationWhenInUseUsageDescription": "Yousuf Rice uses your location only when you choose Use GPS, so riders can find your delivery address accurately.",
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
@@ -75,7 +78,9 @@
         {
           "userTrackingPermission": "Your permission allows Yousuf Rice to share shopping activity and hashed contact details with Meta to measure ads and show more relevant offers across apps and websites."
         }
-      ]
+      ],
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

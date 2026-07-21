@@ -11,10 +11,15 @@ import {
 const APPWRITE_ENDPOINT = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || "";
 const APPWRITE_PROJECT_ID = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || "";
 const APPWRITE_API_KEY = process.env.APPWRITE_API_KEY || "";
-const EXPECTED_IOS_PUSH_PROVIDER_ID =
-  process.env.EXPO_PUBLIC_APPWRITE_IOS_PUSH_PROVIDER_ID ||
-  process.env.EXPO_PUBLIC_APPWRITE_APNS_PROVIDER_ID ||
-  "";
+const EXPECTED_IOS_PUSH_PROVIDER_IDS = [
+  process.env.EXPO_PUBLIC_APPWRITE_IOS_PUSH_PROVIDER_ID,
+  process.env.EXPO_PUBLIC_APPWRITE_APNS_PROVIDER_ID,
+  process.env.EXPO_PUBLIC_APPWRITE_IOS_SANDBOX_PUSH_PROVIDER_ID,
+  "ios_apns",
+  "ios_apns_sandbox",
+].filter((providerId, index, providers): providerId is string =>
+  Boolean(providerId) && providers.indexOf(providerId) === index,
+);
 const EXPECTED_ANDROID_PUSH_PROVIDER_ID =
   process.env.EXPO_PUBLIC_APPWRITE_ANDROID_PUSH_PROVIDER_ID ||
   process.env.EXPO_PUBLIC_APPWRITE_FCM_PROVIDER_ID ||
@@ -81,11 +86,11 @@ function targetSkipReason(target: Models.Target) {
   const platform = targetPlatform(target);
 
   if (platform === "ios") {
-    if (!EXPECTED_IOS_PUSH_PROVIDER_ID) {
-      return "iOS APNs provider is not configured for server sends.";
-    }
-    if (target.providerId !== EXPECTED_IOS_PUSH_PROVIDER_ID) {
-      return `iOS target is registered with ${target.providerId || "no provider"} instead of ${EXPECTED_IOS_PUSH_PROVIDER_ID}.`;
+    if (
+      !target.providerId ||
+      !EXPECTED_IOS_PUSH_PROVIDER_IDS.includes(target.providerId)
+    ) {
+      return `iOS target is registered with ${target.providerId || "no provider"} instead of an enabled APNs provider.`;
     }
   }
 

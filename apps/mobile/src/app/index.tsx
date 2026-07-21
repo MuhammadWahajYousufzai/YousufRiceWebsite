@@ -1,4 +1,3 @@
-import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useMemo, useRef, useState } from "react";
 import {
@@ -27,6 +26,7 @@ import {
 } from "@repo/utils";
 
 import { AppButton } from "@/components/app-button";
+import { Image } from "@/components/app-image";
 import { AppScrollView } from "@/components/screen";
 import { useLiveCatalog } from "@/hooks/use-live-catalog";
 import type { ProductWithImage } from "@/lib/catalog";
@@ -203,7 +203,7 @@ export default function HomeScreen() {
             {[
               ["Free", "Karachi delivery"],
               ["COD", "Pay on arrival"],
-              ["Fresh", "Daily stock"],
+              ["Aged", "Best rice"],
             ].map(([value, label], index) => (
               <View
                 key={value}

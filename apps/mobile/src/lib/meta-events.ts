@@ -5,13 +5,12 @@ import {
   isAvailable as isTrackingTransparencyAvailable,
   requestTrackingPermissionsAsync,
 } from "expo-tracking-transparency";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 
 const META_EVENTS_ENDPOINT =
   process.env.EXPO_PUBLIC_META_EVENTS_URL ||
   "https://yousufrice.com/api/meta-events";
 const APP_VERSION = Constants.expoConfig?.version || "1.0.0";
-let trackingAuthorizationPromise: Promise<boolean> | null = null;
 
 type MetaContents = Array<{
   id: string;
@@ -37,6 +36,24 @@ interface MobileMetaEventOptions {
   phone?: string;
   customData?: MobileMetaCustomData;
 }
+
+export type MobileAdTrackingStatus =
+  | "granted"
+  | "denied"
+  | "undetermined"
+  | "unavailable";
+
+export interface MobileAdTrackingPermission {
+  canAskAgain: boolean;
+  granted: boolean;
+  status: MobileAdTrackingStatus;
+}
+
+const unavailableTrackingPermission: MobileAdTrackingPermission = {
+  canAskAgain: false,
+  granted: false,
+  status: "unavailable",
+};
 
 function normalizePhone(phone: string | undefined): string | undefined {
   if (!phone) return undefined;
@@ -65,27 +82,92 @@ function eventIdFor(eventName: string): string {
   return `${eventName.toLowerCase()}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-async function requestMetaTrackingAuthorization(): Promise<boolean> {
-  if (Platform.OS !== "ios") return true;
-  if (!isTrackingTransparencyAvailable()) return false;
+function normalizeTrackingPermission(permission: {
+  canAskAgain: boolean;
+  granted: boolean;
+  status: string;
+}): MobileAdTrackingPermission {
+  const status: MobileAdTrackingStatus = permission.granted
+    ? "granted"
+    : permission.status === "undetermined"
+      ? "undetermined"
+      : "denied";
 
-  const currentPermission = await getTrackingPermissionsAsync();
-  if (currentPermission.granted) return true;
-  if (!currentPermission.canAskAgain) return false;
+  return {
+    canAskAgain: permission.canAskAgain,
+    granted: permission.granted,
+    status,
+  };
+}
 
-  const requestedPermission = await requestTrackingPermissionsAsync();
-  return requestedPermission.granted;
+function waitForActiveApp(timeoutMs = 5000): Promise<boolean> {
+  if (AppState.currentState === "active") return Promise.resolve(true);
+
+  return new Promise((resolve) => {
+    let finished = false;
+    const finish = (active: boolean) => {
+      if (finished) return;
+      finished = true;
+      subscription.remove();
+      clearTimeout(timeout);
+      resolve(active);
+    };
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") finish(true);
+    });
+    const timeout = setTimeout(() => finish(false), timeoutMs);
+  });
+}
+
+const waitForPermissionDialogWindow = () =>
+  new Promise<void>((resolve) => setTimeout(resolve, 450));
+
+export async function getMobileAdTrackingPermission(): Promise<MobileAdTrackingPermission> {
+  if (Platform.OS !== "ios") {
+    return { canAskAgain: false, granted: true, status: "granted" };
+  }
+  if (!isTrackingTransparencyAvailable()) return unavailableTrackingPermission;
+
+  try {
+    return normalizeTrackingPermission(await getTrackingPermissionsAsync());
+  } catch (error) {
+    console.warn("[Meta App Events] ATT permission check failed", error);
+    return unavailableTrackingPermission;
+  }
+}
+
+export async function requestMobileAdTrackingPermission(): Promise<MobileAdTrackingPermission> {
+  const currentPermission = await getMobileAdTrackingPermission();
+  if (
+    Platform.OS !== "ios" ||
+    currentPermission.granted ||
+    currentPermission.status !== "undetermined"
+  ) {
+    return currentPermission;
+  }
+
+  try {
+    // Apple only displays ATT while the app is fully active and no other
+    // permission sheet is being dismissed. Waiting here also avoids requesting
+    // during a navigation transition into Checkout or Account.
+    if (!(await waitForActiveApp())) return currentPermission;
+    await waitForPermissionDialogWindow();
+
+    // Re-check after the delay because the user may have changed the setting
+    // while the app was inactive. Only `notDetermined` can show the native ATT
+    // sheet; denied/restricted choices must be changed in iPhone Settings.
+    const readyPermission = await getMobileAdTrackingPermission();
+    if (readyPermission.status !== "undetermined") return readyPermission;
+
+    return normalizeTrackingPermission(await requestTrackingPermissionsAsync());
+  } catch (error) {
+    console.warn("[Meta App Events] ATT permission request failed", error);
+    return getMobileAdTrackingPermission();
+  }
 }
 
 async function isMetaTrackingAuthorized(): Promise<boolean> {
-  trackingAuthorizationPromise ??= requestMetaTrackingAuthorization().catch(
-    (error) => {
-      console.warn("[Meta App Events] ATT permission check failed", error);
-      return false;
-    },
-  );
-
-  return trackingAuthorizationPromise;
+  return (await getMobileAdTrackingPermission()).granted;
 }
 
 export async function trackMobileMetaEvent(
