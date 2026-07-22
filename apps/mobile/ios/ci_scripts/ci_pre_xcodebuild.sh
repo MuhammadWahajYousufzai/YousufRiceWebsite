@@ -3,6 +3,7 @@
 set -eu
 
 SCRIPT_DIRECTORY=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+PROJECT_DIRECTORY=$(CDPATH= cd -- "$SCRIPT_DIRECTORY/.." && pwd)
 INFO_PLIST="$SCRIPT_DIRECTORY/../YousufRice/Info.plist"
 
 # Version 1.0.0 build 3 was reviewed by Apple. Offset Xcode Cloud's sequential
@@ -14,5 +15,7 @@ case "$cloud_build_number" in
   *) app_build_number=$((cloud_build_number + 4)) ;;
 esac
 
+cd "$PROJECT_DIRECTORY"
+/usr/bin/xcrun agvtool new-version -all "$app_build_number"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $app_build_number" "$INFO_PLIST"
 echo "Using TestFlight build number $app_build_number"
