@@ -38,6 +38,6 @@ yarn-error.*
 
 example
 
-# generated native folders
-/ios
+# Android remains generated locally. The iOS workspace is committed because
+# Xcode Cloud must clone it before it can archive the app.
 /android

@@ -1,0 +1,18 @@
+#!/bin/sh
+
+set -eu
+
+SCRIPT_DIRECTORY=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+INFO_PLIST="$SCRIPT_DIRECTORY/../YousufRice/Info.plist"
+
+# Version 1.0.0 build 3 was reviewed by Apple. Offset Xcode Cloud's sequential
+# build number so the first cloud archive is build 5 and every later run stays
+# unique for TestFlight.
+cloud_build_number=${CI_BUILD_NUMBER:-1}
+case "$cloud_build_number" in
+  *[!0-9]*|'') app_build_number=5 ;;
+  *) app_build_number=$((cloud_build_number + 4)) ;;
+esac
+
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $app_build_number" "$INFO_PLIST"
+echo "Using TestFlight build number $app_build_number"
