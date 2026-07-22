@@ -34,6 +34,24 @@ if [ -n "$missing_public_variables" ]; then
   exit 1
 fi
 
+if ! command -v corepack >/dev/null 2>&1 &&
+   ! command -v pnpm >/dev/null 2>&1 &&
+   ! command -v npx >/dev/null 2>&1; then
+  if ! command -v brew >/dev/null 2>&1; then
+    echo "error: Xcode Cloud does not provide Homebrew, which is required to install Node.js."
+    exit 1
+  fi
+  brew install node
+fi
+
+if ! command -v pod >/dev/null 2>&1; then
+  if ! command -v brew >/dev/null 2>&1; then
+    echo "error: Xcode Cloud does not provide Homebrew, which is required to install CocoaPods."
+    exit 1
+  fi
+  brew install cocoapods
+fi
+
 cd "$REPOSITORY_DIRECTORY"
 PNPM_VERSION="11.6.0"
 if command -v corepack >/dev/null 2>&1; then
