@@ -35,7 +35,17 @@ if [ -n "$missing_public_variables" ]; then
 fi
 
 cd "$REPOSITORY_DIRECTORY"
-corepack pnpm install --frozen-lockfile
+PNPM_VERSION="11.6.0"
+if command -v corepack >/dev/null 2>&1; then
+  corepack pnpm install --frozen-lockfile
+elif command -v pnpm >/dev/null 2>&1; then
+  pnpm install --frozen-lockfile
+elif command -v npx >/dev/null 2>&1; then
+  npx --yes "pnpm@$PNPM_VERSION" install --frozen-lockfile
+else
+  echo "error: Xcode Cloud does not provide corepack, pnpm, or npx on PATH."
+  exit 1
+fi
 
 cd "$MOBILE_DIRECTORY/ios"
 pod install
