@@ -1,0 +1,22 @@
+# Yousuf Rice MCP Server Configuration for Hermes
+
+mcp_servers:
+  yousuf_rice:
+    # Streamable HTTP transport (recommended for production)
+    transport: http
+    url: "http://localhost:3100/mcp"
+    headers:
+      Authorization: "Bearer ${YOUSUF_RICE_MCP_TOKEN}"
+
+    # Only expose Yousuf Rice customer-service tools
+    allowed_tools:
+      - list_products
+      - search_products
+      - get_product_details
+      - quote_order
+      - confirm_order
+      - track_order
+      - request_human_support
+
+    # Optional: Disable Hermes system tools for WhatsApp customers
+    # block_default_tools: true

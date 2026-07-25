@@ -1,0 +1,24 @@
+export * as appwrite from "./appwrite/client";
+export * as errors from "./errors";
+export * as products from "./products";
+export * as pricing from "./pricing";
+export * as customers from "./customers";
+export * as addresses from "./addresses";
+export * as orders from "./orders";
+export * as policies from "./policies";
+
+export { initAppwrite, loadConfigFromEnv, getTablesDB, getConfig } from "./appwrite/client";
+export type { AppwriteConfig } from "./appwrite/client";
+export { DomainError, NotFoundError, ValidationError, UnavailableError, QuoteExpiredError, QuoteConsumedError, PriceChangedError, DuplicateOrderError, UnauthorizedError, RateLimitError } from "./errors";
+export { listProducts, getProductById, getProductRecord } from "./products";
+export type { ProductResult, ProductRecord } from "./products";
+export { calculatePrice, getPricePerKg, buildPriceTiers, calculateBagsFromQuantity } from "./pricing";
+export type { PriceTier, PriceCalculation, ProductPricing } from "./pricing";
+export { findCustomerByPhone, findOrCreateCustomer, formatPhoneNumber, validatePhoneNumber } from "./customers";
+export type { CustomerResult, CustomerRecord } from "./customers";
+export { createAddress, generateMapsUrl } from "./addresses";
+export type { AddressInput, AddressRecord } from "./addresses";
+export { createQuote, getQuote, confirmOrder, trackOrder } from "./orders";
+export type { Quote, QuoteItem, OrderConfirmationInput, OrderResult, OrderTrackingResult } from "./orders";
+export { DEFAULT_DELIVERY_POLICY, DEFAULT_PAYMENT_POLICY, DEFAULT_CONTACT_INFO, CUSTOMER_SERVICE_INSTRUCTIONS } from "./policies";
+export type { DeliveryPolicy, PaymentPolicy, ContactInfo } from "./policies";
