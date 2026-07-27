@@ -39,5 +39,5 @@
     "**/*.mts",
     "types/**/*.d.ts"
 , "scripts/setup-push-tables.js"  ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "../../packages/yousuf-rice-domain"]
 }
