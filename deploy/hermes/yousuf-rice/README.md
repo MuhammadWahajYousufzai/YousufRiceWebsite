@@ -14,7 +14,16 @@ This package configures Hermes Agent to act as a Yousuf Rice customer-service an
 
 ### 1. Deploy the MCP Server
 
-Deploy the Yousuf Rice MCP server (see `apps/mcp-server/README.md`).
+The MCP server runs as a Next.js API route at `https://yousufrice.com/api/mcp`.
+No separate deployment is needed — it's part of the main Yousuf Rice website.
+
+In Appwrite Sites, add the following environment variable:
+
+| Variable | Description |
+|----------|-------------|
+| `MCP_AUTH_TOKEN` | Bearer token for MCP auth (generate with `openssl rand -hex 32`) |
+
+All Appwrite variables (`APPWRITE_API_KEY`, `NEXT_PUBLIC_APPWRITE_*`) are already shared with the main app.
 
 ### 2. Add MCP Server to Hermes
 
@@ -25,7 +34,7 @@ Copy `mcp-config.example.yaml` and add it to your Hermes configuration:
 mcp_servers:
   yousuf_rice:
     transport: http
-    url: "${YOUSUF_RICE_MCP_URL}"
+    url: "https://yousufrice.com/api/mcp"
     headers:
       Authorization: "Bearer ${YOUSUF_RICE_MCP_TOKEN}"
     allowed_tools:

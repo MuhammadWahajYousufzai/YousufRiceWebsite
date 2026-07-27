@@ -4,7 +4,7 @@ mcp_servers:
   yousuf_rice:
     # Streamable HTTP transport (recommended for production)
     transport: http
-    url: "http://localhost:3100/mcp"
+    url: "https://yousufrice.com/api/mcp"
     headers:
       Authorization: "Bearer ${YOUSUF_RICE_MCP_TOKEN}"
 
