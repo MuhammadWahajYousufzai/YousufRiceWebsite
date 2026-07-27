@@ -15,8 +15,7 @@
       "@repo/ui": ["./packages/ui/src/index.ts"],
       "@repo/types": ["./packages/types/src/index.ts"],
       "@repo/utils": ["./packages/utils/src/index.ts"],
-      "@repo/appwrite": ["./packages/appwrite/src/index.ts"],
-      "@yousuf-rice/domain": ["./packages/yousuf-rice-domain/src/index.ts"]
+      "@repo/appwrite": ["./packages/appwrite/src/index.ts"]
     }
   }
 }

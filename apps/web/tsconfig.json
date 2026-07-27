@@ -25,8 +25,7 @@
       "@repo/types": ["../../packages/types/src/index.ts"],
       "@repo/ui": ["../../packages/ui/src/index.ts"],
       "@repo/ui/*": ["../../packages/ui/src/*"],
-      "@repo/utils": ["../../packages/utils/src/index.ts"],
-      "@yousuf-rice/domain": ["../../packages/yousuf-rice-domain/src/index.ts"]
+      "@repo/utils": ["../../packages/utils/src/index.ts"]
     }
   },
   "include": [
@@ -40,5 +39,5 @@
     "**/*.mts",
     "types/**/*.d.ts"
 , "scripts/setup-push-tables.js"  ],
-  "exclude": ["node_modules", "../../packages/yousuf-rice-domain"]
+  "exclude": ["node_modules"]
 }
