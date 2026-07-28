@@ -127,7 +127,10 @@ const mcpPrompts = [
 
 export async function GET(request: NextRequest) {
   if (!authenticate(request)) {
-    return new NextResponse("Unauthorized", { status: 401 });
+    return NextResponse.json(
+      { jsonrpc: "2.0", error: { code: -32001, message: "Unauthorized" }, id: null },
+      { status: 401 }
+    );
   }
 
   const sessionId = crypto.randomUUID();
