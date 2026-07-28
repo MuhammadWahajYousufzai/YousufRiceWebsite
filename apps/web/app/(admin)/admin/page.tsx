@@ -39,6 +39,10 @@ const ADMIN_DASHBOARD_QUERY = `
         totalOrders
         monthlyRevenue
         lifetimeRevenue
+        websiteMonthlyRevenue
+        websiteLifetimeRevenue
+        agentMonthlyRevenue
+        agentLifetimeRevenue
         totalProducts
         totalCustomers
         availableProducts
@@ -67,6 +71,10 @@ type AdminDashboardResponse = {
       totalOrders: number;
       monthlyRevenue: number;
       lifetimeRevenue: number;
+      websiteMonthlyRevenue: number;
+      websiteLifetimeRevenue: number;
+      agentMonthlyRevenue: number;
+      agentLifetimeRevenue: number;
       totalProducts: number;
       totalCustomers: number;
       availableProducts: number;
@@ -119,6 +127,10 @@ const EMPTY_DASHBOARD_STATS: DashboardStats = {
   totalOrders: 0,
   monthlyRevenue: 0,
   lifetimeRevenue: 0,
+  websiteMonthlyRevenue: 0,
+  websiteLifetimeRevenue: 0,
+  agentMonthlyRevenue: 0,
+  agentLifetimeRevenue: 0,
   totalProducts: 0,
   totalCustomers: 0,
   availableProducts: 0,
@@ -175,6 +187,10 @@ async function fetchLegacyDashboardStats(): Promise<DashboardStats | null> {
       payload.stats.monthlyRevenue ?? payload.stats.totalRevenue ?? 0,
     lifetimeRevenue:
       payload.stats.lifetimeRevenue ?? payload.stats.totalRevenue ?? 0,
+    websiteMonthlyRevenue: 0,
+    websiteLifetimeRevenue: 0,
+    agentMonthlyRevenue: 0,
+    agentLifetimeRevenue: 0,
     totalProducts: payload.stats.totalProducts ?? 0,
     totalCustomers: payload.stats.totalCustomers ?? 0,
     availableProducts: payload.stats.availableProducts ?? 0,
@@ -377,6 +393,52 @@ export default function AdminDashboard() {
                   </>
                 )}
                 <span className="text-gray-500 ml-2">vs last month (MTD)</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Website Revenue</p>
+                  <StatDisplay
+                    className="text-2xl font-bold text-emerald-600"
+                    loading={statsLoading}
+                    unavailable={statsUnavailable}
+                  >
+                    {formatCurrency(currentStats.websiteMonthlyRevenue)}
+                  </StatDisplay>
+                </div>
+                <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                  <DollarSign className="w-6 h-6 text-emerald-600" />
+                </div>
+              </div>
+              <div className="flex items-center text-sm">
+                <span className="text-gray-500">Direct & website purchases</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Agent Revenue</p>
+                  <StatDisplay
+                    className="text-2xl font-bold text-amber-600"
+                    loading={statsLoading}
+                    unavailable={statsUnavailable}
+                  >
+                    {formatCurrency(currentStats.agentMonthlyRevenue)}
+                  </StatDisplay>
+                </div>
+                <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+                  <DollarSign className="w-6 h-6 text-amber-600" />
+                </div>
+              </div>
+              <div className="flex items-center text-sm">
+                <span className="text-gray-500">S/K Agent reorders</span>
               </div>
             </CardContent>
           </Card>

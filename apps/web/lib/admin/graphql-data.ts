@@ -22,6 +22,10 @@ export type DashboardStats = {
   totalOrders: number;
   monthlyRevenue: number;
   lifetimeRevenue: number;
+  websiteMonthlyRevenue: number;
+  websiteLifetimeRevenue: number;
+  agentMonthlyRevenue: number;
+  agentLifetimeRevenue: number;
   totalProducts: number;
   totalCustomers: number;
   pendingOrders: number;
@@ -507,13 +511,13 @@ export async function getDashboardOverview() {
     const [
       ordersResult,
       productsResult,
-      customersCount,
+      customersResult,
       recentOrdersPage,
       orderItemsResult,
     ] = await Promise.all([
       fetchDashboardOrderSummaries(),
       fetchProductSummaries(),
-      countRows(customersTableId()),
+      fetchCustomerSummaries(),
       listRowsPage<OrderSummaryRow>(ordersTable, [
         Query.orderDesc("$createdAt"),
         Query.limit(5),
@@ -524,6 +528,9 @@ export async function getDashboardOverview() {
 
     const orders = ordersResult.rows;
     const products = productsResult.rows;
+    const customerNameMap = new Map(
+      customersResult.rows.map((c) => [c.$id, c.full_name || ""])
+    );
     const { thisMonthStart, nextMonthStart, lastMonthStart, lastMonthEnd } =
       buildMonthWindows(now);
 
@@ -547,6 +554,28 @@ export async function getDashboardOverview() {
             lastMonthOrdersMTD.length) *
           100
         : 0;
+
+    function splitRevenue(orderList: OrderSummaryRow[]) {
+      let website = 0;
+      let agent = 0;
+      for (const order of orderList) {
+        if (order.status === "returned") continue;
+        const name = order.customer_id
+          ? customerNameMap.get(order.customer_id) || ""
+          : "";
+        const agentType = getAgentType(name);
+        const revenue = toNumber(order.total_price);
+        if (agentType === "direct") {
+          website += revenue;
+        } else {
+          agent += revenue;
+        }
+      }
+      return { website, agent };
+    }
+
+    const thisMonthSplit = splitRevenue(thisMonthOrders);
+    const lifetimeSplit = splitRevenue(orders);
 
     const productLookup = new Map(
       products.map((product) => [product.$id, product.name || `Product ${product.$id.slice(0, 8)}`])
@@ -597,8 +626,12 @@ export async function getDashboardOverview() {
         totalOrders: ordersResult.total,
         monthlyRevenue,
         lifetimeRevenue: activeRevenue(orders),
+        websiteMonthlyRevenue: thisMonthSplit.website,
+        websiteLifetimeRevenue: lifetimeSplit.website,
+        agentMonthlyRevenue: thisMonthSplit.agent,
+        agentLifetimeRevenue: lifetimeSplit.agent,
         totalProducts: productsResult.total,
-        totalCustomers: customersCount,
+        totalCustomers: customersResult.total,
         pendingOrders: 0,
         acceptedOrders: 0,
         outForDeliveryOrders: 0,
@@ -693,9 +726,11 @@ export async function getAdminCustomers() {
 }
 
 function getAgentType(name = ""): "sAgent" | "kAgent" | "direct" {
+  const mPattern = /\s*\(\s*[mM]\s*\)\s*/;
   const sPattern = /\s*-\s*[sS]\s*|\s*\(\s*[sS]\s*\)\s*|\b[sS]\b/;
   const kPattern = /\s*-\s*[kK]\s*|\s*\(\s*[kK]\s*\)\s*|\b[kK]\b/;
 
+  if (mPattern.test(name)) return "direct";
   if (sPattern.test(name)) return "sAgent";
   if (kPattern.test(name)) return "kAgent";
   return "direct";
