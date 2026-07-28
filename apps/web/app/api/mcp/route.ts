@@ -2,17 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { listProducts, getProductById, createQuote, confirmOrder, trackOrder } from "@/lib/mcp/handler";
 
 const MCP_AUTH_TOKEN = process.env.MCP_AUTH_TOKEN;
-const sseConnections = new Map<string, ReadableStreamDefaultController>();
 
 function authenticate(request: NextRequest): boolean {
   if (!MCP_AUTH_TOKEN) return true;
   const auth = request.headers.get("authorization");
   if (!auth || !auth.startsWith("Bearer ")) return false;
   return auth.slice(7) === MCP_AUTH_TOKEN;
-}
-
-function sendSSE(controller: ReadableStreamDefaultController, event: string, data: string) {
-  controller.enqueue(new TextEncoder().encode(`event: ${event}\ndata: ${data}\n\n`));
 }
 
 const mcpTools = [
@@ -125,6 +120,7 @@ const mcpPrompts = [
   { name: "yousuf_rice_customer_service", description: "Operational instructions for a Yousuf Rice customer-support and order-taking agent" },
 ];
 
+// GET returns server info for transport negotiation (Streamable HTTP)
 export async function GET(request: NextRequest) {
   if (!authenticate(request)) {
     return NextResponse.json(
@@ -132,55 +128,18 @@ export async function GET(request: NextRequest) {
       { status: 401 }
     );
   }
-
-  const sessionId = crypto.randomUUID();
-  const baseUrl = `${request.nextUrl.protocol}//${request.nextUrl.host}`;
-  const endpointUrl = `${baseUrl}/api/mcp?sessionId=${sessionId}`;
-
-  const stream = new ReadableStream({
-    start(controller) {
-      sseConnections.set(sessionId, controller);
-      sendSSE(controller, "endpoint", endpointUrl);
-      sendSSE(controller, "session", sessionId);
-
-      const keepAlive = setInterval(() => {
-        try {
-          controller.enqueue(new TextEncoder().encode(": keepalive\n\n"));
-        } catch {
-          clearInterval(keepAlive);
-        }
-      }, 15000);
-
-      request.signal.addEventListener("abort", () => {
-        clearInterval(keepAlive);
-        sseConnections.delete(sessionId);
-        controller.close();
-      });
+  return NextResponse.json({
+    jsonrpc: "2.0",
+    result: {
+      protocolVersion: "2025-06-18",
+      capabilities: { tools: {}, resources: {}, prompts: {} },
+      serverInfo: { name: "yousuf-rice-mcp", version: "0.1.0" },
     },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-      "X-SSE-Session-Id": sessionId,
-    },
+    id: null,
   });
 }
 
-function sendJsonRpcResponse(sessionId: string | null, response: any) {
-  if (sessionId && sseConnections.has(sessionId)) {
-    const controller = sseConnections.get(sessionId)!;
-    try {
-      sendSSE(controller, "message", JSON.stringify(response));
-    } catch {
-      sseConnections.delete(sessionId);
-    }
-  }
-}
-
-async function handleJsonRpc(body: any, sessionId: string | null): Promise<any> {
+async function handleJsonRpc(body: any): Promise<any> {
   const { method, params, id } = body;
 
   switch (method) {
@@ -273,17 +232,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(err, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const sessionId = searchParams.get("sessionId");
-
     const body = await request.json();
-    const response = await handleJsonRpc(body, sessionId);
-
-    if (sessionId && sseConnections.has(sessionId)) {
-      sendJsonRpcResponse(sessionId, response);
-      return new NextResponse(null, { status: 202 });
-    }
-
+    const response = await handleJsonRpc(body);
     return NextResponse.json(response);
   } catch (error: any) {
     console.error("[MCP Error]", error);

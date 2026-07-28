@@ -170,3 +170,7 @@ addresses.customer_id — for rider lookups
 products.name — for search bar
 
 product_images.product_id — for efficient image lookups
+
+🔐 Env Files
+
+Always read apps/web/.env.example for context and env variable names. Never read apps/web/.env — it contains secrets.
