@@ -16,7 +16,6 @@ mcp_servers:
       - quote_order
       - confirm_order
       - track_order
-      - request_human_support
 
     # Optional: Disable Hermes system tools for WhatsApp customers
     # block_default_tools: true

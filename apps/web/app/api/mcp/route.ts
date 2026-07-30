@@ -22,7 +22,7 @@ const customerServiceInstructions = `# Yousuf Rice Customer Service Guidelines
 - Delivery is available only in Karachi.
 - Payment is Cash on Delivery only.
 - Delivery normally takes 2-3 business days.
-- Escalate unresolved, sensitive, or angry-customer cases with request_human_support.`;
+- For unresolved, sensitive, or angry-customer cases, provide the official support phone number.`;
 
 const deliveryPolicy = {
   deliveryAreas: ["Karachi"],
@@ -196,32 +196,6 @@ function createServer(): McpServer {
         success: true,
         order: await trackOrder(orderId, phoneNumber),
       }),
-  );
-
-  server.registerTool(
-    "request_human_support",
-    {
-      description:
-        "Escalate to human support when the AI cannot resolve an issue.",
-      inputSchema: z.object({
-        customerName: z.string().trim().min(1),
-        phoneNumber: z.string().trim().min(10),
-        reason: z.string().trim().min(1),
-        severity: z.enum(["low", "medium", "high", "urgent"]),
-        conversationSummary: z.string().trim().min(1),
-        orderId: z.string().trim().optional(),
-      }),
-      annotations: { readOnlyHint: false, destructiveHint: false },
-    },
-    async (request) => {
-      console.error("[SUPPORT ESCALATION]", JSON.stringify(request));
-      return textResult({
-        success: true,
-        message:
-          "Your request has been forwarded to our support team. A representative will contact you shortly.",
-        ticketId: `ESC-${Date.now().toString(36).toUpperCase()}`,
-      });
-    },
   );
 
   server.registerResource(

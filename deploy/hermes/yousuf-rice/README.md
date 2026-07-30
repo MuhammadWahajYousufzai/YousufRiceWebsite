@@ -44,7 +44,6 @@ mcp_servers:
       - quote_order
       - confirm_order
       - track_order
-      - request_human_support
 ```
 
 ### 3. Set SOUL.md
@@ -82,7 +81,6 @@ Start a conversation with the Hermes agent and ask:
 | `quote_order` | Create a price quote for an order |
 | `confirm_order` | Confirm and create an order from a quote |
 | `track_order` | Track order status |
-| `request_human_support` | Escalate to human support |
 
 ## Important Notes
 
