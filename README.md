@@ -442,7 +442,10 @@ cp apps/web/env.example apps/web/.env.local
 | `APPWRITE_API_KEY` | ✅ | Appwrite server API key |
 | `NEXT_PUBLIC_PRIMARY_DOMAIN` | ✅ | Main domain (e.g. `https://yousufrice.com`) |
 | `NEXT_PUBLIC_DOMAIN_3` | ✅ | Secondary domain (e.g. `https://ssricemills.com`) |
-| `SMTP_PASSWORD` | ❌ | Gmail SMTP app password for transactional emails |
+| `SMTP_HOST` | ❌ | SMTP server host (defaults to `smtp.hostinger.com`) |
+| `SMTP_PORT` | ❌ | SMTP server port (defaults to `465`) |
+| `SMTP_USERNAME` | ❌ | Full business mailbox address used for authentication and sending |
+| `SMTP_PASSWORD` | ❌ | Business mailbox password for transactional emails |
 | `NEXT_PUBLIC_ENABLE_LOYALTY_DISCOUNT` | ❌ | Toggle loyalty system (`true`/`false`) |
 | `NEXT_PUBLIC_ENABLE_RAMADAN_OFFER` | ❌ | Toggle Ramadan offer |
 | `NEXT_PUBLIC_ENABLE_COLD_DRINK_BUNDLE` | ❌ | Toggle cold drink bundle |

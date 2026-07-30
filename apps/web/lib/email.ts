@@ -1,15 +1,16 @@
 import nodemailer from 'nodemailer';
 
-const smtpUsername = 'foodsyousuf@gmail.com';
+const smtpHost = process.env.SMTP_HOST || 'smtp.hostinger.com';
+const smtpPort = Number(process.env.SMTP_PORT || '465');
+const smtpUsername = process.env.SMTP_USERNAME || 'support@ssricemills.com';
 const smtpPassword = process.env.SMTP_PASSWORD || process.env._APP_SMTP_PASSWORD || '';
 const smtpFrom = `"Yousuf Rice" <${smtpUsername}>`;
 
-// Create reusable transporter using Gmail SMTP.
+// Create a reusable transporter using the configured business mailbox.
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  requireTLS: true,
+  host: smtpHost,
+  port: smtpPort,
+  secure: smtpPort === 465,
   auth: {
     user: smtpUsername,
     pass: smtpPassword,
