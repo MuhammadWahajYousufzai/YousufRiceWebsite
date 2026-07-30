@@ -96,7 +96,7 @@ export async function findOrCreateCustomer(params: {
       rowId: existing.$id,
       data: {
         full_name: params.name.trim(),
-        user_id: params.userId || existing.user_id || "guest",
+        user_id: params.userId || existing.user_id || formattedPhone,
         email: validatedEmail || existing.email || "",
       },
     });
@@ -113,7 +113,7 @@ export async function findOrCreateCustomer(params: {
     tableId: config.customersTableId,
     rowId: ID.unique(),
     data: {
-      user_id: params.userId || "guest",
+      user_id: params.userId || formattedPhone,
       full_name: params.name.trim(),
       phone: formattedPhone,
       email: validatedEmail,

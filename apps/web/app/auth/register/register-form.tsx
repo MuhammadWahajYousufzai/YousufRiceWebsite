@@ -77,8 +77,13 @@ export default function RegisterForm() {
 
       if (existingCustomer.rows.length > 0) {
         const customer = existingCustomer.rows[0];
-        // If customer exists and has a real user_id (not guest), then it's a duplicate
-        if (customer.user_id && customer.user_id !== "guest") {
+        // A phone-backed customer can order without an account and claim the same
+        // customer record later during optional registration.
+        if (
+          customer.user_id &&
+          customer.user_id !== "guest" &&
+          customer.user_id !== customer.phone
+        ) {
           toast.error("An account with this phone number already exists");
           setLoading(false);
           return;
@@ -92,8 +97,11 @@ export default function RegisterForm() {
 
       if (existingEmail.rows.length > 0) {
         const customer = existingEmail.rows[0];
-        // If customer exists and has a real user_id (not guest), then it's a duplicate
-        if (customer.user_id && customer.user_id !== "guest") {
+        if (
+          customer.user_id &&
+          customer.user_id !== "guest" &&
+          customer.user_id !== customer.phone
+        ) {
           toast.error("An account with this email already exists");
           setLoading(false);
           return;

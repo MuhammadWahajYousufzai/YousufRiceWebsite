@@ -46,17 +46,14 @@ import {
 } from "@/lib/services/loyalty-service";
 import { processLoyaltyReward } from "@/app/actions/loyalty-actions";
 import Image from "next/image";
+import {
+  calculateDeliveryFee,
+  DELIVERY_CITIES,
+  requireDeliveryCity,
+} from "@/lib/delivery-policy";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const BAHRIA_TOWN = "Bahria Town";
-const BAHRIA_DELIVERY_FEE_PER_10_KG = 500;
-
-function calculateDeliveryFee(city: string, totalWeightKg: number): number {
-  if (city !== BAHRIA_TOWN || totalWeightKg <= 0) return 0;
-  return (
-    Math.ceil(totalWeightKg / 10) * BAHRIA_DELIVERY_FEE_PER_10_KG
-  );
-}
+const BAHRIA_TOWN = "Bahria Town Karachi";
 
 function CheckoutContent() {
   const router = useRouter();
@@ -337,10 +334,13 @@ function CheckoutContent() {
       return;
     }
 
-    const finalCity = selectedCity;
-
-    if (!finalCity) {
-      toast.error("Please provide your city");
+    let finalCity;
+    try {
+      finalCity = requireDeliveryCity(selectedCity);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Unsupported delivery city",
+      );
       return;
     }
 
@@ -402,18 +402,18 @@ function CheckoutContent() {
         const existingCustomer = existingCustomerByPhone.rows[0];
         customerId = existingCustomer.$id;
 
-        // Determine correct user_id to save
-        // If user is logged in, they claim this record (or update it)
-        // If user is guest, we MUST preserve the existing user_id if it's a real ID
-        let userIdToSave = "guest";
+        // Keep phone as the customer identity unless an optional account is attached.
+        let userIdToSave = formattedPhone;
         if (user?.$id) {
           userIdToSave = user.$id;
         } else {
-          // Guest checkout: keep existing ID if it's not "guest"
+          // Preserve an attached account ID; otherwise the phone is the customer identity.
           userIdToSave =
-            existingCustomer.user_id && existingCustomer.user_id !== "guest"
+            existingCustomer.user_id &&
+            existingCustomer.user_id !== "guest" &&
+            existingCustomer.user_id !== existingCustomer.phone
               ? existingCustomer.user_id
-              : "guest";
+              : formattedPhone;
         }
 
         // Update customer info
@@ -436,7 +436,7 @@ function CheckoutContent() {
           tableId: CUSTOMERS_TABLE_ID,
           rowId: customerId,
           data: {
-            user_id: user?.$id || "guest",
+            user_id: user?.$id || formattedPhone,
             full_name: fullName,
             phone: formattedPhone,
             email: emailForOrder || null,
@@ -909,15 +909,17 @@ function CheckoutContent() {
                             <SelectValue placeholder="Select City" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Karachi">Karachi</SelectItem>
-                            <SelectItem value={BAHRIA_TOWN}>
-                              Bahria Town
-                            </SelectItem>
+                            {DELIVERY_CITIES.map((city) => (
+                              <SelectItem key={city} value={city}>
+                                {city}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <p className="mt-2 text-xs font-medium text-gray-600">
-                          Karachi delivery is FREE. Bahria Town delivery is Rs.
-                          500 per 10 kg.
+                          Karachi delivery is FREE. Bahria Town Karachi costs
+                          Rs. 500 up to 10 kg and Rs. 1,000 above 10 kg up to
+                          20 kg.
                         </p>
                       </div>
 
@@ -1309,7 +1311,7 @@ function CheckoutContent() {
                           {formatCurrency(deliveryFee)}
                         </span>
                         <p className="text-xs text-gray-500">
-                          Rs. 500 per 10 kg
+                          Rs. 500 up to 10 kg; Rs. 1,000 up to 20 kg
                         </p>
                       </div>
                     ) : (

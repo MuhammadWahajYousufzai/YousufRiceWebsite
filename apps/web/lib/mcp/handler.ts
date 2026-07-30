@@ -1,4 +1,9 @@
 import { Client, TablesDB, Query, ID } from "node-appwrite";
+import {
+  calculateDeliveryFee,
+  requireDeliveryCity,
+} from "@/lib/delivery-policy";
+import type { DeliveryCity } from "@/lib/delivery-policy";
 
 function getTablesDB(): TablesDB {
   const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
@@ -68,6 +73,17 @@ export function calculatePrice(product: ProductRecord, quantity: number) {
   return { pricePerKg, tierApplied, basePricePerKg: product.base_price_per_kg, quantity, subtotal, discountAmount, savingsPercent };
 }
 
+function formatPhoneNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("0") && digits.length === 11) {
+    return `+92${digits.slice(1)}`;
+  }
+  if (digits.startsWith("92")) {
+    return `+${digits}`;
+  }
+  return `+92${digits}`;
+}
+
 export async function listProducts(opts: { searchQuery?: string; inStockOnly?: boolean; forHotelsRestaurants?: boolean | null; limit?: number }): Promise<ProductRecord[]> {
   const db = getTablesDB();
   const queries: string[] = [];
@@ -92,12 +108,13 @@ const QUOTE_TTL_MS = 30 * 60 * 1000;
 const quotes = new Map<string, any>();
 const idempotencyMap = new Map<string, string>();
 
-export async function createQuote(items: Array<{ productId: string; quantity: number }>) {
+export async function createQuote(items: Array<{ productId: string; quantity: number }>, requestedCity: DeliveryCity) {
   if (!items || items.length === 0) throw new Error("At least one item is required");
   if (items.length > 20) throw new Error("Maximum 20 items allowed");
   const db = getTablesDB();
   const quoteItems: any[] = [];
   let subtotal = 0;
+  let totalWeightKg = 0;
   for (const item of items) {
     if (!item.productId) throw new Error("Each item must have a productId");
     if (!Number.isFinite(item.quantity) || item.quantity <= 0) throw new Error("Quantity must be greater than 0");
@@ -107,23 +124,31 @@ export async function createQuote(items: Array<{ productId: string; quantity: nu
     const calc = calculatePrice(product, item.quantity);
     quoteItems.push({ productId: product.$id, productName: product.name, quantity: item.quantity, pricePerKg: calc.pricePerKg, tierApplied: calc.tierApplied, subtotal: calc.subtotal, discountAmount: calc.discountAmount, savingsPercent: calc.savingsPercent });
     subtotal += calc.subtotal;
+    totalWeightKg += item.quantity;
   }
+  const city = requireDeliveryCity(requestedCity);
+  const deliveryFee = calculateDeliveryFee(city, totalWeightKg);
   const now = Date.now();
-  const quote = { id: ID.unique(), items: quoteItems, subtotal, deliveryFee: 0, grandTotal: subtotal, createdAt: new Date(now).toISOString(), expiresAt: new Date(now + QUOTE_TTL_MS).toISOString(), status: "active" };
+  const quote = { id: ID.unique(), city, items: quoteItems, subtotal, deliveryFee, grandTotal: subtotal + deliveryFee, totalWeightKg, createdAt: new Date(now).toISOString(), expiresAt: new Date(now + QUOTE_TTL_MS).toISOString(), status: "active" };
   quotes.set(quote.id, quote);
   return quote;
 }
 
-export async function confirmOrder(input: { quoteId: string; customerName: string; phoneNumber: string; email?: string | null; deliveryAddress: string; city: string; latitude?: number | null; longitude?: number | null; idempotencyKey: string }) {
+export async function confirmOrder(input: { quoteId: string; customerName: string; phoneNumber: string; email?: string | null; deliveryAddress: string; city: string; idempotencyKey: string }) {
   const db = getTablesDB();
   if (idempotencyMap.has(input.idempotencyKey)) throw new Error(`Order already exists for idempotency key: ${input.idempotencyKey}`);
   const quote = quotes.get(input.quoteId);
   if (!quote) throw new Error(`Quote ${input.quoteId} not found`);
   if (quote.status === "consumed") throw new Error(`Quote ${input.quoteId} has already been used`);
   if (new Date(quote.expiresAt) < new Date()) throw new Error(`Quote ${input.quoteId} has expired`);
+  const city = requireDeliveryCity(input.city);
+  if (city !== quote.city) {
+    throw new Error("The delivery city does not match the accepted quote. Create a new quote for this city.");
+  }
 
-  const phone = input.phoneNumber.replace(/\D/g, "");
-  if (phone.length < 10) throw new Error("Invalid phone number");
+  const phone = formatPhoneNumber(input.phoneNumber);
+  const phoneDigits = phone.replace(/\D/g, "");
+  if (phoneDigits.length < 11 || phoneDigits.length > 13) throw new Error("Invalid phone number");
 
   const customerId = ID.unique();
   const customersResult = await db.listRows({ databaseId: databaseId(), tableId: customersTableId(), queries: [Query.equal("phone", phone)] });
@@ -131,8 +156,8 @@ export async function confirmOrder(input: { quoteId: string; customerName: strin
   if (customersResult.rows.length > 0) {
     customer = customersResult.rows[0];
   } else {
-    customer = { $id: customerId, full_name: input.customerName, phone, email: input.email || "", created_at: new Date().toISOString() };
-    await db.createRow({ databaseId: databaseId(), tableId: customersTableId(), rowId: customerId, data: { full_name: input.customerName, phone, email: input.email || "" } });
+    customer = { $id: customerId, user_id: phone, full_name: input.customerName, phone, email: input.email || "", created_at: new Date().toISOString() };
+    await db.createRow({ databaseId: databaseId(), tableId: customersTableId(), rowId: customerId, data: { user_id: phone, full_name: input.customerName, phone, email: input.email || "" } });
     customer.$id = customerId;
   }
 
@@ -159,15 +184,17 @@ export async function confirmOrder(input: { quoteId: string; customerName: strin
   }
 
   const addressId = ID.unique();
-  const lat = input.latitude ?? 24.8607;
-  const lng = input.longitude ?? 67.0011;
-  await db.createRow({ databaseId: databaseId(), tableId: addressesTableId(), rowId: addressId, data: { customer_id: customer.$id, order_id: orderId, address_line: input.deliveryAddress, city: input.city || "Karachi", latitude: lat, longitude: lng, maps_url: `https://www.google.com/maps?q=${lat},${lng}` } });
+  // The MCP never requests device location. These neutral Karachi coordinates
+  // satisfy the existing required address-table columns for manually entered addresses.
+  const lat = 24.8607;
+  const lng = 67.0011;
+  await db.createRow({ databaseId: databaseId(), tableId: addressesTableId(), rowId: addressId, data: { customer_id: customer.$id, order_id: orderId, address_line: input.deliveryAddress, city, latitude: lat, longitude: lng, maps_url: `https://www.google.com/maps?q=${lat},${lng}` } });
   await db.updateRow({ databaseId: databaseId(), tableId: ordersTableId(), rowId: orderId, data: { address_id: addressId } });
 
   quote.status = "consumed";
   idempotencyMap.set(input.idempotencyKey, orderId);
 
-  return { orderId, customer, totalAmount: quote.grandTotal, status: "pending", items: enrichedItems.map((i: any) => ({ productId: i.productId, productName: i.productName, quantity: i.quantity, pricePerKg: i.pricePerKg, totalAfterDiscount: i.subtotal })), deliveryAddress: input.deliveryAddress, city: input.city };
+  return { orderId, customer, subtotal: quote.subtotal, deliveryFee: quote.deliveryFee, totalAmount: quote.grandTotal, status: "pending", items: enrichedItems.map((i: any) => ({ productId: i.productId, productName: i.productName, quantity: i.quantity, pricePerKg: i.pricePerKg, totalAfterDiscount: i.subtotal })), deliveryAddress: input.deliveryAddress, city };
 }
 
 export async function trackOrder(orderId: string, verifiedPhone?: string) {

@@ -8,6 +8,7 @@ import {
   listProducts,
   trackOrder,
 } from "@/lib/mcp/handler";
+import { DELIVERY_CITIES } from "@/lib/delivery-policy";
 
 const SERVER_INFO = { name: "yousuf-rice-mcp", version: "1.0.0" };
 
@@ -18,15 +19,24 @@ const customerServiceInstructions = `# Yousuf Rice Customer Service Guidelines
 - Never invent product, price, stock, or order information.
 - Always call quote_order before confirm_order and show the complete quote first.
 - Never call confirm_order until the customer explicitly agrees.
+- Delivery is available only in Karachi and Bahria Town Karachi (the Bahria Town near Karachi, not Lahore or Islamabad).
+- Ask for the city before quoting. For delivery details, ask only for the written address and city. Never ask for coordinates, GPS, or live location.
+- Karachi delivery is free. Bahria Town Karachi delivery is Rs. 500 up to 10 kg and Rs. 1,000 above 10 kg up to 20 kg.
 - Use track_order only with sufficient customer verification.
-- Delivery is available only in Karachi.
 - Payment is Cash on Delivery only.
 - Delivery normally takes 2-3 business days.
 - For unresolved, sensitive, or angry-customer cases, provide the official support phone number.`;
 
 const deliveryPolicy = {
-  deliveryAreas: ["Karachi"],
-  deliveryFee: 0,
+  deliveryAreas: [...DELIVERY_CITIES],
+  deliveryFees: {
+    Karachi: 0,
+    "Bahria Town Karachi": {
+      upTo10Kg: 500,
+      above10KgUpTo20Kg: 1000,
+      additionalStarted10Kg: 500,
+    },
+  },
   deliveryTimeline: "2-3 business days after order is placed",
   sameDayAvailable: false,
 };
@@ -116,6 +126,7 @@ function createServer(): McpServer {
       description:
         "Create a price quote. Always call this before confirm_order.",
       inputSchema: z.object({
+        city: z.enum(DELIVERY_CITIES),
         items: z
           .array(
             z.object({
@@ -128,8 +139,8 @@ function createServer(): McpServer {
       }),
       annotations: { readOnlyHint: true },
     },
-    async ({ items }) =>
-      textResult({ success: true, quote: await createQuote(items) }),
+    async ({ city, items }) =>
+      textResult({ success: true, quote: await createQuote(items, city) }),
   );
 
   server.registerTool(
@@ -142,10 +153,8 @@ function createServer(): McpServer {
         customerName: z.string().trim().min(1),
         phoneNumber: z.string().trim().min(10),
         deliveryAddress: z.string().trim().min(1),
-        city: z.string().trim().min(1),
+        city: z.enum(DELIVERY_CITIES),
         customerEmail: z.string().email().optional(),
-        latitude: z.number().min(-90).max(90).optional(),
-        longitude: z.number().min(-180).max(180).optional(),
         idempotencyKey: z.string().trim().min(1),
       }),
       annotations: {
@@ -161,8 +170,6 @@ function createServer(): McpServer {
       deliveryAddress,
       city,
       customerEmail,
-      latitude,
-      longitude,
       idempotencyKey,
     }) =>
       textResult({
@@ -174,8 +181,6 @@ function createServer(): McpServer {
           email: customerEmail ?? null,
           deliveryAddress,
           city,
-          latitude: latitude ?? null,
-          longitude: longitude ?? null,
           idempotencyKey,
         }),
       }),

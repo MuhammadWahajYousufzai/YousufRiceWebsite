@@ -23,6 +23,10 @@ import {
   calculateItemTotal,
   generateMapsUrl,
 } from "../utils";
+import {
+  calculateDeliveryFee,
+  requireDeliveryCity,
+} from "../delivery-policy";
 
 export class OrderService {
   /**
@@ -35,14 +39,10 @@ export class OrderService {
       // Create the main order first
       const orderId = ID.unique();
       const addressLine = orderRequest.address.address_line.trim();
-      const city = orderRequest.address.city.trim();
+      const city = requireDeliveryCity(orderRequest.address.city);
 
       if (!addressLine) {
         throw new Error("Address line is required.");
-      }
-
-      if (!city) {
-        throw new Error("City is required.");
       }
 
       // Calculate totals from items
@@ -113,7 +113,9 @@ export class OrderService {
         );
       }
 
-      const totalPrice = subtotalBeforeDiscount - totalDiscountAmount;
+      const deliveryFee = calculateDeliveryFee(city, totalWeightKg);
+      const totalPrice =
+        subtotalBeforeDiscount - totalDiscountAmount + deliveryFee;
 
       if (totalPrice <= 0) {
         throw new Error("Cannot create order with 0 or negative total price.");
