@@ -46,6 +46,7 @@ interface OrderConfirmationData {
   mapsUrl: string;
   items: OrderItem[];
   totalPrice: number;
+  deliveryFee?: number;
   totalSavings?: number;
   totalOriginalPrice?: number;
   loyaltyCode?: string;
@@ -73,6 +74,7 @@ export async function sendOrderConfirmation(data: OrderConfirmationData) {
     mapsUrl,
     items,
     totalPrice,
+    deliveryFee = 0,
     totalSavings = 0,
     totalOriginalPrice = 0,
     loyaltyCode,
@@ -209,23 +211,17 @@ export async function sendOrderConfirmation(data: OrderConfirmationData) {
                 <tbody>
                   <tr style="background-color: #f9fafb;">
                     <td style="padding: 12px; font-weight: 600; color: #27247b; font-size: 15px;">Subtotal</td>
-                    <td style="padding: 12px; text-align: right; font-weight: bold; color: #27247b; font-size: 15px;">Rs. ${totalPrice.toLocaleString()}</td>
+                    <td style="padding: 12px; text-align: right; font-weight: bold; color: #27247b; font-size: 15px;">Rs. ${(totalPrice - deliveryFee).toLocaleString()}</td>
                   </tr>
                   <tr style="background-color: #ffffff;">
                     <td style="padding: 12px; font-weight: 600; color: #27247b; font-size: 15px;">Delivery</td>
                     <td style="padding: 12px; text-align: right;">
-                      <span style="background-color: #27247b; color: #ffff03; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">FREE</span>
+                      <span style="background-color: #27247b; color: #ffff03; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">${deliveryFee > 0 ? `Rs. ${deliveryFee.toLocaleString()} (Rs. 500 per 10 kg)` : 'FREE in Karachi'}</span>
                     </td>
                   </tr>
-                  ${loyaltyPercent && loyaltyPercent > 0 ? `
-                  <tr style="background-color: #f0fdf4; border-top: 2px solid #ffff03;">
-                    <td style="padding: 12px; font-weight: 600; color: #15803d; font-size: 14px;">Loyalty Discount (${loyaltyPercent}%)</td>
-                    <td style="padding: 12px; text-align: right; font-weight: bold; color: #15803d; font-size: 14px;">-Rs. ${((totalPrice * loyaltyPercent) / 100).toLocaleString()}</td>
-                  </tr>
-                  ` : ''}
                   <tr style="background-color: #ffff03;">
                     <td style="padding: 15px; font-weight: bold; color: #27247b; font-size: 18px;">Total</td>
-                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #27247b; font-size: 20px;">Rs. ${loyaltyPercent && loyaltyPercent > 0 ? (totalPrice - (totalPrice * loyaltyPercent) / 100).toLocaleString() : totalPrice.toLocaleString()}</td>
+                    <td style="padding: 15px; text-align: right; font-weight: bold; color: #27247b; font-size: 20px;">Rs. ${totalPrice.toLocaleString()}</td>
                   </tr>
                 </tbody>
               </table>

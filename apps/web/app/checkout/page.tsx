@@ -48,6 +48,15 @@ import { processLoyaltyReward } from "@/app/actions/loyalty-actions";
 import Image from "next/image";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const BAHRIA_TOWN = "Bahria Town";
+const BAHRIA_DELIVERY_FEE_PER_10_KG = 500;
+
+function calculateDeliveryFee(city: string, totalWeightKg: number): number {
+  if (city !== BAHRIA_TOWN || totalWeightKg <= 0) return 0;
+  return (
+    Math.ceil(totalWeightKg / 10) * BAHRIA_DELIVERY_FEE_PER_10_KG
+  );
+}
 
 function CheckoutContent() {
   const router = useRouter();
@@ -63,7 +72,6 @@ function CheckoutContent() {
     email: "",
     addressLine: "",
     city: "",
-    otherCity: "",
     notes: "",
     latitude: 0,
     longitude: 0,
@@ -318,8 +326,6 @@ function CheckoutContent() {
     const addressLine = formData.addressLine.trim();
     const notes = formData.notes.trim();
     const selectedCity = formData.city.trim();
-    const otherCity = formData.otherCity.trim();
-    const isOtherCity = selectedCity === "Other City/Town";
 
     if (!fullName || !phone || !addressLine) {
       toast.error("Please fill in all required fields");
@@ -331,12 +337,7 @@ function CheckoutContent() {
       return;
     }
 
-    if (isOtherCity && !otherCity) {
-      toast.error("Please enter your city or town");
-      return;
-    }
-
-    const finalCity = isOtherCity ? otherCity : selectedCity;
+    const finalCity = selectedCity;
 
     if (!finalCity) {
       toast.error("Please provide your city");
@@ -516,6 +517,8 @@ function CheckoutContent() {
           roundedSubtotal,
         };
       });
+      const orderDeliveryFee = calculateDeliveryFee(finalCity, totalWeightKg);
+      finalTotalPrice += orderDeliveryFee;
 
       // KEY FIX: Create Order Items FIRST to prevent "Zero Price" orders
       // If this fails, no order is created. If order creation fails later, we have orphan items (better than ghost orders).
@@ -659,7 +662,7 @@ function CheckoutContent() {
       const cleanedName = sanitizeCustomerNameForMeta(fullName) || fullName;
 
       await trackPurchase({
-        value: getTotalPrice(),
+        value: finalTotalPrice,
         currency: "PKR",
         orderId,
         numItems: items.reduce((sum, item) => sum + item.quantity, 0),
@@ -702,7 +705,7 @@ function CheckoutContent() {
         loyaltyData = await processLoyaltyReward(
           customerId,
           fullName,
-          getTotalPrice(),
+          finalTotalPrice,
           productNames,
           orderId,
         );
@@ -742,7 +745,8 @@ function CheckoutContent() {
                   isColdDrinkBundle: item.isColdDrinkBundle,
                 };
               }),
-              totalPrice: getTotalPrice(),
+              totalPrice: finalTotalPrice,
+              deliveryFee: orderDeliveryFee,
               totalSavings,
               totalOriginalPrice,
               totalWeight: items.reduce((acc, item) => acc + item.quantity, 0),
@@ -782,6 +786,11 @@ function CheckoutContent() {
   };
 
   const totalPrice = getTotalPrice();
+  const totalWeightKg = items.reduce(
+    (total, item) => total + item.quantity,
+    0,
+  );
+  const deliveryFee = calculateDeliveryFee(formData.city, totalWeightKg);
 
   // Calculate total savings across all items
   const totalSavings = items.reduce((total, item) => {
@@ -793,6 +802,19 @@ function CheckoutContent() {
     const savingsInfo = calculateSavings(item.product, item.quantity);
     return total + savingsInfo.originalPrice;
   }, 0);
+
+  const loyaltyDiscountAmount = appliedDiscount
+    ? items.reduce((acc, item) => {
+        if (item.isColdDrinkBundle) return acc;
+        return (
+          acc +
+          (calculatePrice(item.product, item.quantity) *
+            appliedDiscount.extra_discount_percentage) /
+            100
+        );
+      }, 0)
+    : 0;
+  const checkoutTotal = totalPrice - loyaltyDiscountAmount + deliveryFee;
 
   return (
     <div className="min-h-screen bg-linear-to-b from-gray-50 to-white">
@@ -879,56 +901,27 @@ function CheckoutContent() {
                         </label>
                         <Select
                           value={formData.city}
-                          onValueChange={(val) => {
-                            setFormData({
-                              ...formData,
-                              city: val,
-                              otherCity:
-                                val !== "Other City/Town"
-                                  ? ""
-                                  : formData.otherCity,
-                            });
-                          }}
+                          onValueChange={(city) =>
+                            setFormData({ ...formData, city })
+                          }
                         >
                           <SelectTrigger className="w-full border-2 border-gray-300 focus:border-[#ffff03] focus:ring-2 focus:ring-[#ffff03]/20 rounded-lg p-3 text-base bg-gray-50 cursor-pointer">
                             <SelectValue placeholder="Select City" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Karachi">Karachi</SelectItem>
-                            <SelectItem value="Other City/Town">
-                              Other City (
-                              <span className="font-semibold text-red-500">
-                                Separate Courier Delivery Charges
-                              </span>
-                              )
+                            <SelectItem value={BAHRIA_TOWN}>
+                              Bahria Town
                             </SelectItem>
                           </SelectContent>
                         </Select>
+                        <p className="mt-2 text-xs font-medium text-gray-600">
+                          Karachi delivery is FREE. Bahria Town delivery is Rs.
+                          500 per 10 kg.
+                        </p>
                       </div>
 
-                      {formData.city === "Other City/Town" && (
-                        <div className="col-span-1">
-                          <label className="block text-sm font-bold text-[#27247b] mb-2">
-                            Enter Your City/Town *
-                          </label>
-                          <Input
-                            value={formData.otherCity}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                otherCity: e.target.value,
-                              })
-                            }
-                            required
-                            className="border-2 border-gray-300 focus:border-[#ffff03] focus:ring-2 focus:ring-[#ffff03]/20 rounded-lg p-3 text-base"
-                            placeholder="e.g. Lahore, Islamabad"
-                          />
-                        </div>
-                      )}
-
-                      <div
-                        className={`col-span-1 ${formData.city === "Other City/Town" ? "md:col-span-2" : "md:col-span-1"}`}
-                      >
+                      <div className="col-span-1">
                         <label className="block text-sm font-bold text-[#27247b] mb-2">
                           Delivery Address *
                         </label>
@@ -1310,9 +1303,20 @@ function CheckoutContent() {
                     <span className="font-semibold text-[#27247b]">
                       Delivery
                     </span>
-                    <span className="text-[#ffff03] font-bold bg-[#27247b] px-3 py-1 rounded-full text-sm">
-                      FREE
-                    </span>
+                    {formData.city === BAHRIA_TOWN ? (
+                      <div className="text-right">
+                        <span className="font-bold text-[#27247b]">
+                          {formatCurrency(deliveryFee)}
+                        </span>
+                        <p className="text-xs text-gray-500">
+                          Rs. 500 per 10 kg
+                        </p>
+                      </div>
+                    ) : (
+                      <span className="text-[#ffff03] font-bold bg-[#27247b] px-3 py-1 rounded-full text-sm">
+                        FREE in Karachi
+                      </span>
+                    )}
                   </div>
                   <div className="border-t-2 border-[#ffff03] pt-4 bg-[#ffff03]/10 -mx-6 px-6 py-4">
                     {appliedDiscount && (
@@ -1324,15 +1328,7 @@ function CheckoutContent() {
                         <span className="font-bold">
                           -
                           {formatCurrency(
-                            items.reduce((acc, item) => {
-                              if (item.isColdDrinkBundle) return acc;
-                              return (
-                                acc +
-                                (calculatePrice(item.product, item.quantity) *
-                                  appliedDiscount.extra_discount_percentage) /
-                                  100
-                              );
-                            }, 0),
+                            loyaltyDiscountAmount,
                           )}
                         </span>
                       </div>
@@ -1342,23 +1338,7 @@ function CheckoutContent() {
                         Total
                       </span>
                       <span className="text-3xl font-bold text-[#27247b]">
-                        {formatCurrency(
-                          appliedDiscount
-                            ? totalPrice -
-                                items.reduce((acc, item) => {
-                                  if (item.isColdDrinkBundle) return acc;
-                                  return (
-                                    acc +
-                                    (calculatePrice(
-                                      item.product,
-                                      item.quantity,
-                                    ) *
-                                      appliedDiscount.extra_discount_percentage) /
-                                      100
-                                  );
-                                }, 0)
-                            : totalPrice,
-                        )}
+                        {formatCurrency(checkoutTotal)}
                       </span>
                     </div>
                   </div>
