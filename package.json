@@ -1,7 +1,7 @@
 {
   "name": "yousuf-rice-monorepo",
   "private": true,
-  "packageManager": "pnpm@11.6.0",
+  "packageManager": "pnpm@11.18.0",
   "scripts": {
     "dev": "turbo run dev",
     "dev:web": "turbo run dev --filter=@yousuf-rice/web",

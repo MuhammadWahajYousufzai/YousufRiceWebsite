@@ -17,16 +17,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Verify transporter configuration (non-blocking)
-transporter.verify()
-  .then(() => {
-    console.log('✅ SMTP server is ready to send emails');
-  })
-  .catch((error) => {
-    console.error('❌ SMTP connection error: ', error);
-    console.error('Email functionality may not work. Please check SMTP settings in .env.local');
-  });
-
 interface OrderItem {
   productName: string;
   quantity: number;
