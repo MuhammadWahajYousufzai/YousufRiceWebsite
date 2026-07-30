@@ -1,243 +1,338 @@
-import { NextRequest, NextResponse } from "next/server";
-import { listProducts, getProductById, createQuote, confirmOrder, trackOrder } from "@/lib/mcp/handler";
+import { timingSafeEqual } from "node:crypto";
+import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
+import { z } from "zod";
+import {
+  confirmOrder,
+  createQuote,
+  getProductById,
+  listProducts,
+  trackOrder,
+} from "@/lib/mcp/handler";
 
-const MCP_AUTH_TOKEN = process.env.MCP_AUTH_TOKEN;
+const SERVER_INFO = { name: "yousuf-rice-mcp", version: "1.0.0" };
 
-function authenticate(request: NextRequest): boolean {
-  if (!MCP_AUTH_TOKEN) return true;
-  const auth = request.headers.get("authorization");
-  if (!auth || !auth.startsWith("Bearer ")) return false;
-  return auth.slice(7) === MCP_AUTH_TOKEN;
+const customerServiceInstructions = `# Yousuf Rice Customer Service Guidelines
+
+- Match the customer's language and remain warm, respectful, concise, and professional.
+- Always use list_products or search_products before making product claims.
+- Never invent product, price, stock, or order information.
+- Always call quote_order before confirm_order and show the complete quote first.
+- Never call confirm_order until the customer explicitly agrees.
+- Use track_order only with sufficient customer verification.
+- Delivery is available only in Karachi.
+- Payment is Cash on Delivery only.
+- Delivery normally takes 2-3 business days.
+- Escalate unresolved, sensitive, or angry-customer cases with request_human_support.`;
+
+const deliveryPolicy = {
+  deliveryAreas: ["Karachi"],
+  deliveryFee: 0,
+  deliveryTimeline: "2-3 business days after order is placed",
+  sameDayAvailable: false,
+};
+
+const paymentPolicy = {
+  methods: ["Cash on Delivery (COD)"],
+  codAvailable: true,
+};
+
+const contactInformation = {
+  companyName: "Yousuf Rice",
+  supportEmail: "support@yousufrice.com",
+  supportPhone: "03041117423",
+  businessHours: "Monday-Saturday, 9 AM - 6 PM (PKT)",
+  website: "https://yousufrice.com",
+};
+
+function textResult(value: unknown) {
+  return {
+    content: [{ type: "text" as const, text: JSON.stringify(value) }],
+  };
 }
 
-const mcpTools = [
-  {
-    name: "list_products",
-    description: "List all available products with pricing tiers",
-    inputSchema: {
-      type: "object",
-      properties: {
-        inStockOnly: { type: "boolean", description: "Only show available products" },
-        forHotelsRestaurants: { type: "boolean", description: "True for hotel/restaurant, false for retail, null for all" },
-        limit: { type: "number", description: "Maximum products to return" },
+function createServer(): McpServer {
+  const server = new McpServer(SERVER_INFO, {
+    capabilities: {
+      tools: {},
+      resources: {},
+      prompts: {},
+    },
+    instructions:
+      "Yousuf Rice product discovery, quoting, COD ordering, tracking, and customer-support server.",
+  });
+
+  server.registerTool(
+    "list_products",
+    {
+      description: "List available rice products with their pricing tiers.",
+      inputSchema: z.object({
+        inStockOnly: z.boolean().optional().default(false),
+        forHotelsRestaurants: z.boolean().nullable().optional().default(null),
+        limit: z.number().int().min(1).max(100).optional().default(50),
+      }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ inStockOnly, forHotelsRestaurants, limit }) =>
+      textResult(
+        await listProducts({ inStockOnly, forHotelsRestaurants, limit }),
+      ),
+  );
+
+  server.registerTool(
+    "search_products",
+    {
+      description: "Search available products by name or description.",
+      inputSchema: z.object({
+        searchQuery: z.string().trim().min(1),
+        inStockOnly: z.boolean().optional().default(false),
+        forHotelsRestaurants: z.boolean().nullable().optional().default(null),
+      }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ searchQuery, inStockOnly, forHotelsRestaurants }) =>
+      textResult(
+        await listProducts({
+          searchQuery,
+          inStockOnly,
+          forHotelsRestaurants,
+        }),
+      ),
+  );
+
+  server.registerTool(
+    "get_product_details",
+    {
+      description:
+        "Get detailed product information, including all pricing tiers.",
+      inputSchema: z.object({ productId: z.string().trim().min(1) }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ productId }) => textResult(await getProductById(productId)),
+  );
+
+  server.registerTool(
+    "quote_order",
+    {
+      description:
+        "Create a price quote. Always call this before confirm_order.",
+      inputSchema: z.object({
+        items: z
+          .array(
+            z.object({
+              productId: z.string().trim().min(1),
+              quantity: z.number().positive().max(1000),
+            }),
+          )
+          .min(1)
+          .max(20),
+      }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ items }) =>
+      textResult({ success: true, quote: await createQuote(items) }),
+  );
+
+  server.registerTool(
+    "confirm_order",
+    {
+      description:
+        "Create an order from a previously accepted quote. Call quote_order first.",
+      inputSchema: z.object({
+        quoteId: z.string().trim().min(1),
+        customerName: z.string().trim().min(1),
+        phoneNumber: z.string().trim().min(10),
+        deliveryAddress: z.string().trim().min(1),
+        city: z.string().trim().min(1),
+        customerEmail: z.string().email().optional(),
+        latitude: z.number().min(-90).max(90).optional(),
+        longitude: z.number().min(-180).max(180).optional(),
+        idempotencyKey: z.string().trim().min(1),
+      }),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
       },
     },
-  },
-  {
-    name: "search_products",
-    description: "Search products by name or description",
-    inputSchema: {
-      type: "object",
-      properties: {
-        searchQuery: { type: "string", description: "Search keywords" },
-        inStockOnly: { type: "boolean" },
-        forHotelsRestaurants: { type: "boolean" },
-      },
-      required: ["searchQuery"],
+    async ({
+      quoteId,
+      customerName,
+      phoneNumber,
+      deliveryAddress,
+      city,
+      customerEmail,
+      latitude,
+      longitude,
+      idempotencyKey,
+    }) =>
+      textResult({
+        success: true,
+        order: await confirmOrder({
+          quoteId,
+          customerName,
+          phoneNumber,
+          email: customerEmail ?? null,
+          deliveryAddress,
+          city,
+          latitude: latitude ?? null,
+          longitude: longitude ?? null,
+          idempotencyKey,
+        }),
+      }),
+  );
+
+  server.registerTool(
+    "track_order",
+    {
+      description: "Track an order by order ID with optional phone verification.",
+      inputSchema: z.object({
+        orderId: z.string().trim().min(1),
+        phoneNumber: z.string().trim().optional(),
+      }),
+      annotations: { readOnlyHint: true },
     },
-  },
-  {
-    name: "get_product_details",
-    description: "Get detailed product info including all pricing tiers",
-    inputSchema: {
-      type: "object",
-      properties: { productId: { type: "string" } },
-      required: ["productId"],
+    async ({ orderId, phoneNumber }) =>
+      textResult({
+        success: true,
+        order: await trackOrder(orderId, phoneNumber),
+      }),
+  );
+
+  server.registerTool(
+    "request_human_support",
+    {
+      description:
+        "Escalate to human support when the AI cannot resolve an issue.",
+      inputSchema: z.object({
+        customerName: z.string().trim().min(1),
+        phoneNumber: z.string().trim().min(10),
+        reason: z.string().trim().min(1),
+        severity: z.enum(["low", "medium", "high", "urgent"]),
+        conversationSummary: z.string().trim().min(1),
+        orderId: z.string().trim().optional(),
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false },
     },
-  },
-  {
-    name: "quote_order",
-    description: "Create a price quote. Always call this before confirm_order.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        items: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: { productId: { type: "string" }, quantity: { type: "number", description: "Quantity in kg" } },
-            required: ["productId", "quantity"],
+    async (request) => {
+      console.error("[SUPPORT ESCALATION]", JSON.stringify(request));
+      return textResult({
+        success: true,
+        message:
+          "Your request has been forwarded to our support team. A representative will contact you shortly.",
+        ticketId: `ESC-${Date.now().toString(36).toUpperCase()}`,
+      });
+    },
+  );
+
+  server.registerResource(
+    "customer-service-guidelines",
+    "yousuf-rice://policies/customer-service",
+    { title: "Customer Service Guidelines", mimeType: "text/markdown" },
+    async (uri) => ({
+      contents: [
+        { uri: uri.href, mimeType: "text/markdown", text: customerServiceInstructions },
+      ],
+    }),
+  );
+
+  const jsonResources = [
+    {
+      name: "delivery-policy",
+      uri: "yousuf-rice://policies/delivery",
+      title: "Delivery Policy",
+      value: deliveryPolicy,
+    },
+    {
+      name: "payment-policy",
+      uri: "yousuf-rice://policies/payment",
+      title: "Payment Policy",
+      value: paymentPolicy,
+    },
+    {
+      name: "contact-information",
+      uri: "yousuf-rice://company/contact-information",
+      title: "Contact Information",
+      value: contactInformation,
+    },
+  ] as const;
+
+  for (const resource of jsonResources) {
+    server.registerResource(
+      resource.name,
+      resource.uri,
+      { title: resource.title, mimeType: "application/json" },
+      async (uri) => ({
+        contents: [
+          {
+            uri: uri.href,
+            mimeType: "application/json",
+            text: JSON.stringify(resource.value),
           },
-        },
-      },
-      required: ["items"],
-    },
-  },
-  {
-    name: "confirm_order",
-    description: "Confirm and create an order from a quote. Call quote_order first.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        quoteId: { type: "string" },
-        customerName: { type: "string" },
-        phoneNumber: { type: "string" },
-        deliveryAddress: { type: "string" },
-        city: { type: "string" },
-        customerEmail: { type: "string" },
-        latitude: { type: "number" },
-        longitude: { type: "number" },
-        idempotencyKey: { type: "string" },
-      },
-      required: ["quoteId", "customerName", "phoneNumber", "deliveryAddress", "city", "idempotencyKey"],
-    },
-  },
-  {
-    name: "track_order",
-    description: "Track order status by order ID",
-    inputSchema: {
-      type: "object",
-      properties: { orderId: { type: "string" }, phoneNumber: { type: "string", description: "For verification (optional)" } },
-      required: ["orderId"],
-    },
-  },
-  {
-    name: "request_human_support",
-    description: "Escalate to human support when the AI cannot resolve the issue",
-    inputSchema: {
-      type: "object",
-      properties: {
-        customerName: { type: "string" },
-        phoneNumber: { type: "string" },
-        reason: { type: "string" },
-        severity: { type: "string", enum: ["low", "medium", "high", "urgent"] },
-        conversationSummary: { type: "string" },
-        orderId: { type: "string" },
-      },
-      required: ["customerName", "phoneNumber", "reason", "severity", "conversationSummary"],
-    },
-  },
-];
-
-const mcpResources = [
-  { uri: "yousuf-rice://policies/customer-service", name: "Customer Service Guidelines", mimeType: "text/markdown" },
-  { uri: "yousuf-rice://policies/delivery", name: "Delivery Policy", mimeType: "application/json" },
-  { uri: "yousuf-rice://policies/payment", name: "Payment Policy", mimeType: "application/json" },
-  { uri: "yousuf-rice://company/contact-information", name: "Contact Information", mimeType: "application/json" },
-];
-
-const mcpPrompts = [
-  { name: "yousuf_rice_customer_service", description: "Operational instructions for a Yousuf Rice customer-support and order-taking agent" },
-];
-
-// GET returns server info for transport negotiation (Streamable HTTP)
-export async function GET(request: NextRequest) {
-  if (!authenticate(request)) {
-    return NextResponse.json(
-      { jsonrpc: "2.0", error: { code: -32001, message: "Unauthorized" }, id: null },
-      { status: 401 }
+        ],
+      }),
     );
   }
-  return NextResponse.json({
-    jsonrpc: "2.0",
-    result: {
-      protocolVersion: "2025-06-18",
-      capabilities: { tools: {}, resources: {}, prompts: {} },
-      serverInfo: { name: "yousuf-rice-mcp", version: "0.1.0" },
+
+  server.registerPrompt(
+    "yousuf_rice_customer_service",
+    {
+      description:
+        "Operational instructions for a Yousuf Rice customer-service and order-taking agent.",
+      argsSchema: z.object({}),
     },
-    id: null,
-  });
+    async () => ({
+      messages: [
+        {
+          role: "user",
+          content: { type: "text", text: customerServiceInstructions },
+        },
+      ],
+    }),
+  );
+
+  return server;
 }
 
-async function handleJsonRpc(body: any): Promise<any> {
-  const { method, params, id } = body;
+const mcpHandler = createMcpHandler(createServer, {
+  legacy: "stateless",
+  responseMode: "auto",
+  onerror: (error) => console.error("[MCP Error]", error),
+});
 
-  switch (method) {
-    case "initialize":
-      return {
+function isAuthorized(request: Request): boolean {
+  const expected = process.env.MCP_AUTH_TOKEN;
+  if (!expected) return true;
+
+  const authorization = request.headers.get("authorization");
+  if (!authorization?.startsWith("Bearer ")) return false;
+
+  const actual = authorization.slice(7);
+  const actualBuffer = Buffer.from(actual);
+  const expectedBuffer = Buffer.from(expected);
+  return (
+    actualBuffer.length === expectedBuffer.length &&
+    timingSafeEqual(actualBuffer, expectedBuffer)
+  );
+}
+
+async function handleMcpRequest(request: Request): Promise<Response> {
+  if (!isAuthorized(request)) {
+    return Response.json(
+      {
         jsonrpc: "2.0",
-        result: { protocolVersion: "2025-06-18", capabilities: { tools: {}, resources: {}, prompts: {} }, serverInfo: { name: "yousuf-rice-mcp", version: "0.1.0" } },
-        id: id || "1",
-      };
-
-    case "tools/list":
-      return { jsonrpc: "2.0", result: { tools: mcpTools }, id: id || "1" };
-
-    case "tools/call": {
-      const toolName = params?.name;
-      const toolArgs = params?.arguments || {};
-      let result;
-
-      try {
-        switch (toolName) {
-          case "list_products": {
-            const r = await listProducts({ inStockOnly: toolArgs.inStockOnly || false, forHotelsRestaurants: toolArgs.forHotelsRestaurants ?? null, limit: toolArgs.limit || 50 });
-            result = { content: [{ type: "text", text: JSON.stringify(r) }] };
-            break;
-          }
-          case "search_products": {
-            const r = await listProducts({ searchQuery: toolArgs.searchQuery, inStockOnly: toolArgs.inStockOnly || false, forHotelsRestaurants: toolArgs.forHotelsRestaurants ?? null });
-            result = { content: [{ type: "text", text: JSON.stringify(r) }] };
-            break;
-          }
-          case "get_product_details": {
-            const r = await getProductById(toolArgs.productId);
-            result = { content: [{ type: "text", text: JSON.stringify(r) }] };
-            break;
-          }
-          case "quote_order": {
-            const quote = await createQuote(toolArgs.items);
-            result = { content: [{ type: "text", text: JSON.stringify({ success: true, quote }) }] };
-            break;
-          }
-          case "confirm_order": {
-            const order = await confirmOrder({
-              quoteId: toolArgs.quoteId, customerName: toolArgs.customerName, phoneNumber: toolArgs.phoneNumber,
-              email: toolArgs.customerEmail || null, deliveryAddress: toolArgs.deliveryAddress, city: toolArgs.city,
-              latitude: toolArgs.latitude ?? null, longitude: toolArgs.longitude ?? null, idempotencyKey: toolArgs.idempotencyKey,
-            });
-            result = { content: [{ type: "text", text: JSON.stringify({ success: true, order }) }] };
-            break;
-          }
-          case "track_order": {
-            const order = await trackOrder(toolArgs.orderId, toolArgs.phoneNumber || undefined);
-            result = { content: [{ type: "text", text: JSON.stringify({ success: true, order }) }] };
-            break;
-          }
-          case "request_human_support": {
-            console.error("[SUPPORT ESCALATION]", JSON.stringify(toolArgs));
-            result = { content: [{ type: "text", text: JSON.stringify({ success: true, message: "Your request has been forwarded to our support team. A representative will contact you shortly.", ticketId: `ESC-${Date.now().toString(36).toUpperCase()}` }) }] };
-            break;
-          }
-          default:
-            return { jsonrpc: "2.0", error: { code: -32601, message: `Tool not found: ${toolName}` }, id: id || "1" };
-        }
-        return { jsonrpc: "2.0", result, id: id || "1" };
-      } catch (e: any) {
-        return { jsonrpc: "2.0", error: { code: -32603, message: e.message || "Internal error" }, id: id || "1" };
-      }
-    }
-
-    case "resources/list":
-      return { jsonrpc: "2.0", result: { resources: mcpResources }, id: id || "1" };
-
-    case "resources/read":
-      return { jsonrpc: "2.0", result: { contents: [{ uri: params?.uri, text: "Resource content available", mimeType: "text/plain" }] }, id: id || "1" };
-
-    case "prompts/list":
-      return { jsonrpc: "2.0", result: { prompts: mcpPrompts }, id: id || "1" };
-
-    case "prompts/get":
-      return { jsonrpc: "2.0", result: { messages: [{ role: "user", content: { type: "text", text: "Customer service instructions placeholder" } }] }, id: id || "1" };
-
-    default:
-      return { jsonrpc: "2.0", error: { code: -32601, message: `Method not found: ${method}` }, id: id || "1" };
+        error: { code: -32001, message: "Unauthorized" },
+        id: null,
+      },
+      {
+        status: 401,
+        headers: { "WWW-Authenticate": "Bearer" },
+      },
+    );
   }
+
+  return mcpHandler.fetch(request);
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    if (!authenticate(request)) {
-      const err = { jsonrpc: "2.0", error: { code: -32001, message: "Unauthorized" }, id: null };
-      return NextResponse.json(err, { status: 401 });
-    }
-
-    const body = await request.json();
-    const response = await handleJsonRpc(body);
-    return NextResponse.json(response);
-  } catch (error: any) {
-    console.error("[MCP Error]", error);
-    const err = { jsonrpc: "2.0", error: { code: -32603, message: error.message || "Internal error" }, id: null };
-    return NextResponse.json(err, { status: 500 });
-  }
-}
+export const GET = handleMcpRequest;
+export const POST = handleMcpRequest;
+export const DELETE = handleMcpRequest;
