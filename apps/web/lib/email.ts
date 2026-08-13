@@ -34,6 +34,7 @@ interface OrderConfirmationData {
   customerEmail: string;
   customerPhone: string;
   deliveryAddress: string;
+  deliveryCity?: string;
   mapsUrl: string;
   items: OrderItem[];
   totalPrice: number;
@@ -62,6 +63,7 @@ export async function sendOrderConfirmation(data: OrderConfirmationData) {
     customerEmail,
     customerPhone,
     deliveryAddress,
+    deliveryCity,
     mapsUrl,
     items,
     totalPrice,
@@ -207,7 +209,7 @@ export async function sendOrderConfirmation(data: OrderConfirmationData) {
                   <tr style="background-color: #ffffff;">
                     <td style="padding: 12px; font-weight: 600; color: #27247b; font-size: 15px;">Delivery</td>
                     <td style="padding: 12px; text-align: right;">
-                      <span style="background-color: #27247b; color: #ffff03; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">${deliveryFee > 0 ? `Rs. ${deliveryFee.toLocaleString()} (Rs. 500 per 10 kg)` : 'FREE in Karachi'}</span>
+                      <span style="background-color: #27247b; color: #ffff03; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">${deliveryCity === 'Karachi' ? `Rs. ${deliveryFee.toLocaleString()} (flat fee)` : `Rs. ${deliveryFee.toLocaleString()} (Rs. 500 per started 10 kg)`}</span>
                     </td>
                   </tr>
                   <tr style="background-color: #ffff03;">

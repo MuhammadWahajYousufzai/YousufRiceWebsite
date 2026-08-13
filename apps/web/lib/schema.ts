@@ -145,10 +145,10 @@ export function getFAQSchema() {
     mainEntity: [
       {
         '@type': 'Question',
-        name: 'Do you offer free delivery?',
+        name: 'What are your delivery charges?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Yes, we offer free delivery service for all orders.',
+          text: 'Karachi delivery costs a flat Rs. 200 per order regardless of weight. Bahria Town Karachi delivery costs Rs. 500 per started 10 kg.',
         },
       },
       {

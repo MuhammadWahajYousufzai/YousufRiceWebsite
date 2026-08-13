@@ -53,6 +53,7 @@ import {
 } from "@/lib/delivery-policy";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const KARACHI = "Karachi";
 const BAHRIA_TOWN = "Bahria Town Karachi";
 
 function CheckoutContent() {
@@ -728,6 +729,7 @@ function CheckoutContent() {
               customerEmail: emailForOrder,
               customerPhone: formattedPhone,
               deliveryAddress: addressLine,
+              deliveryCity: finalCity,
               mapsUrl,
               items: items.map((item) => {
                 const savingsInfo = calculateSavings(
@@ -917,9 +919,9 @@ function CheckoutContent() {
                           </SelectContent>
                         </Select>
                         <p className="mt-2 text-xs font-medium text-gray-600">
-                          Karachi delivery is FREE. Bahria Town Karachi costs
-                          Rs. 500 up to 10 kg and Rs. 1,000 above 10 kg up to
-                          20 kg.
+                          Karachi has a flat Rs. 200 delivery charge per order.
+                          Bahria Town Karachi costs Rs. 500 up to 10 kg and Rs.
+                          1,000 above 10 kg up to 20 kg.
                         </p>
                       </div>
 
@@ -1314,9 +1316,18 @@ function CheckoutContent() {
                           Rs. 500 up to 10 kg; Rs. 1,000 up to 20 kg
                         </p>
                       </div>
+                    ) : formData.city === KARACHI ? (
+                      <div className="text-right">
+                        <span className="font-bold text-[#27247b]">
+                          {formatCurrency(deliveryFee)}
+                        </span>
+                        <p className="text-xs text-gray-500">
+                          Flat fee per order
+                        </p>
+                      </div>
                     ) : (
-                      <span className="text-[#ffff03] font-bold bg-[#27247b] px-3 py-1 rounded-full text-sm">
-                        FREE in Karachi
+                      <span className="text-sm font-medium text-gray-500">
+                        Select a city
                       </span>
                     )}
                   </div>

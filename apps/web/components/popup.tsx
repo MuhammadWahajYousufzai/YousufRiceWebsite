@@ -82,8 +82,8 @@ export function Popup() {
                                     🚚
                                 </div>
                                 <div>
-                                    <p className="text-white font-bold text-base leading-tight">Free Delivery</p>
-                                    <p className="text-yellow-300 font-semibold text-sm mt-0.5" style={{ textShadow: '0 0 10px rgba(251,191,36,0.6)' }}>✨ On all orders, no minimum</p>
+                                    <p className="text-white font-bold text-base leading-tight">Flat Rs. 200 Delivery</p>
+                                    <p className="text-yellow-300 font-semibold text-sm mt-0.5" style={{ textShadow: '0 0 10px rgba(251,191,36,0.6)' }}>✨ Karachi orders, any weight</p>
                                 </div>
                             </div>
 

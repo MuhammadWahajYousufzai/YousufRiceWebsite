@@ -124,7 +124,7 @@ export default function ContactPage() {
                 <h3 className="font-bold text-[#27247b] mb-1">Location</h3>
                 <p className="text-gray-600">Karachi, Pakistan</p>
                 <p className="mt-1 text-sm font-medium bg-green-100 text-green-700 px-2 py-1 rounded-full inline-block">
-                  Free delivery in Karachi only
+                  Flat Rs. 200 delivery in Karachi
                 </p>
               </div>
             </div>
@@ -232,9 +232,11 @@ export default function ContactPage() {
                   Where do you deliver?
                 </h3>
                 <p className="text-gray-600">
-                  We currently offer{" "}
-                  <strong>free delivery in Karachi only</strong>. Our delivery
-                  team ensures your order reaches you fresh and on time.
+                  Karachi orders have a{" "}
+                  <strong>flat Rs. 200 delivery charge</strong>, regardless of
+                  weight. Bahria Town Karachi delivery starts at Rs. 500 for up
+                  to 10 kg. Our delivery team ensures your order reaches you
+                  fresh and on time.
                 </p>
               </CardContent>
             </Card>

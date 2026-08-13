@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Yousuf Rice",
     short_name: "Yousuf Rice",
     description:
-      "Order premium quality basmati and sella rice online with big discounts on 10 kg and plus, free delivery, and cash on delivery",
+      "Order premium quality basmati and sella rice online with big discounts, flat Rs. 200 Karachi delivery, and cash on delivery",
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",

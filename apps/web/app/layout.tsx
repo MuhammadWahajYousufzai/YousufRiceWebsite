@@ -43,11 +43,11 @@ export const metadata: Metadata = {
   },
   title: {
     default:
-      "Yousuf Rice - Premium Quality Rice With Free Delivery | Best Prices in Pakistan",
+      "Yousuf Rice - Premium Quality Rice Delivery | Best Prices in Pakistan",
     template: "%s | Yousuf Rice",
   },
   description:
-    "Order premium quality basmati and sella rice online with discounts, free delivery, and cash on delivery. Every Grain XXXL, Steam Rice, Sella Rice, and Bachat varieties available.",
+    "Order premium quality basmati and sella rice online with discounts, flat Rs. 200 Karachi delivery, and cash on delivery. Every Grain XXXL, Steam Rice, Sella Rice, and Bachat varieties available.",
   keywords: [
     "SS Rice",
     "SSRice",
@@ -81,13 +81,13 @@ export const metadata: Metadata = {
     siteName: "Yousuf Rice - Part of SS International",
     title: "Yousuf Rice - Premium Quality Rice Delivery",
     description:
-      "Order premium quality rice online with Discounts, free delivery, and cash on delivery. Best prices in Pakistan.",
+      "Order premium quality rice online with discounts, flat Rs. 200 Karachi delivery, and cash on delivery. Best prices in Pakistan.",
   },
   twitter: {
     card: "summary_large_image",
     title: "Yousuf Rice - Premium Quality Rice Delivery",
     description:
-      "Order premium quality rice online with tier-based pricing and free delivery",
+      "Order premium quality rice online with tier-based pricing and flat Rs. 200 Karachi delivery",
   },
   verification: {
     google: "Agv-pQpEz2u5E8A9B_tsHrne4JOmYvN6qNuzFKABux4",
