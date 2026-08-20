@@ -25,7 +25,7 @@ interface OrderItem {
   savings?: number;
   savingsPercentage?: number;
   tierApplied?: string | null;
-  isColdDrinkBundle?: boolean;
+  shanGiftCount?: number;
 }
 
 interface OrderConfirmationData {
@@ -82,20 +82,20 @@ export async function sendOrderConfirmation(data: OrderConfirmationData) {
     <tr>
       <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
         <div style="font-weight: 600; font-size: 15px; color: #111827;">${item.productName}</div>
-        ${item.savings && item.savings > 0 && !item.isColdDrinkBundle ? `
+        ${item.savings && item.savings > 0 ? `
           <div style="font-size: 12px; color: #059669; margin-top: 6px; display: inline-block; background-color: #d1fae5; padding: 3px 8px; border-radius: 4px; font-weight: 500;">
             💰 Saved Rs. ${item.savings.toLocaleString()} (${item.savingsPercentage?.toFixed(0)}% off)
-            ${item.tierApplied && !item.isColdDrinkBundle ? `<br>🎯 ${item.tierApplied} applied` : ''}
+            ${item.tierApplied ? `<br>🎯 ${item.tierApplied} applied` : ''}
           </div>
         ` : ''}
-        ${item.isColdDrinkBundle && item.quantity >= 10 ? `
+        ${item.shanGiftCount && item.shanGiftCount > 0 ? `
           <div style="margin-top: 10px; background: linear-gradient(to right, #f0fdfa, #ecfeff); border: 1px solid #99f6e4; padding: 10px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 20px;">🥤</span>
+              <span style="font-size: 20px;">🎁</span>
               <div>
-                <div style="font-size: 10px; color: #0f766e; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; margin-bottom: 2px;">Bundle Offer</div>
+                <div style="font-size: 10px; color: #0f766e; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; margin-bottom: 2px;">Every Grain 10kg Gift</div>
                 <div style="font-size: 13px; color: #115e59; font-weight: bold;">
-                  Includes ${Math.floor(item.quantity / 10)}x Free 1L Cold Drink
+                  Includes ${item.shanGiftCount}x Shan Biryani Masala + Kheer Mix gift set
                 </div>
               </div>
             </div>
@@ -209,7 +209,7 @@ export async function sendOrderConfirmation(data: OrderConfirmationData) {
                   <tr style="background-color: #ffffff;">
                     <td style="padding: 12px; font-weight: 600; color: #27247b; font-size: 15px;">Delivery</td>
                     <td style="padding: 12px; text-align: right;">
-                      <span style="background-color: #27247b; color: #ffff03; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">${deliveryCity === 'Karachi' ? `Rs. ${deliveryFee.toLocaleString()} (flat fee)` : `Rs. ${deliveryFee.toLocaleString()} (Rs. 500 per started 10 kg)`}</span>
+                      <span style="background-color: #27247b; color: #ffff03; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">${deliveryCity === 'Karachi' ? `Rs. ${deliveryFee.toLocaleString()} (flat fee)` : deliveryCity === 'Bahria Town Karachi' ? `Rs. ${deliveryFee.toLocaleString()} (Rs. 500 per started 10 kg)` : `Rs. ${deliveryFee.toLocaleString()}`}</span>
                     </td>
                   </tr>
                   <tr style="background-color: #ffff03;">

@@ -38,7 +38,9 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   }
 
   const images = await getCachedProductImagesById(id);
-  const primaryImage = images.find((img) => img.is_primary) || images[0];
+  const visibleImages = images.filter((img) => !img.is_cold_drink_bundle);
+  const primaryImage =
+    visibleImages.find((img) => img.is_primary) || visibleImages[0];
 
   const imageUrl = primaryImage
     ? `${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${STORAGE_BUCKET_ID}/files/${primaryImage.file_id}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID}`
@@ -82,14 +84,16 @@ async function ProductDetailContent({ params }: ProductPageProps) {
     notFound();
   }
 
+  // Expired cold-drink campaign artwork stays hidden from customers.
+  const visibleImages = images.filter((img) => !img.is_cold_drink_bundle);
+
   // Generate image URLs directly using string interpolation
-  const imageUrls = images.map((img) =>
+  const imageUrls = visibleImages.map((img) =>
     `${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${STORAGE_BUCKET_ID}/files/${img.file_id}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID}`
   );
 
-  // Find the primary and bundle image indices
-  const primaryImageIndex = images.findIndex((img) => img.is_primary);
-  const bundleImageIndex = images.findIndex((img) => img.is_cold_drink_bundle);
+  // Find the primary image index
+  const primaryImageIndex = visibleImages.findIndex((img) => img.is_primary);
 
   return (
     <Suspense fallback={<ProductDetailSkeleton />}>
@@ -97,7 +101,6 @@ async function ProductDetailContent({ params }: ProductPageProps) {
         product={product}
         imageUrls={imageUrls}
         primaryImageIndex={primaryImageIndex >= 0 ? primaryImageIndex : 0}
-        bundleImageIndex={bundleImageIndex >= 0 ? bundleImageIndex : undefined}
       />
     </Suspense>
   );

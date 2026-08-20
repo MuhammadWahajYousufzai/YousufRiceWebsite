@@ -59,6 +59,32 @@ const sameLine = (
   item.product.$id === productId &&
   Boolean(item.isColdDrinkBundle) === isColdDrinkBundle;
 
+function migrateExpiredBundleItems(savedItems: CartItem[]): CartItem[] {
+  const merged = new Map<string, CartItem>();
+
+  for (const savedItem of savedItems) {
+    const existing = merged.get(savedItem.product.$id);
+    const savedBags = savedItem.bags ?? emptyBags();
+    const bags = existing
+      ? {
+          kg3: existing.bags.kg3 + (savedBags.kg3 || 0),
+          kg5: existing.bags.kg5 + (savedBags.kg5 || 0),
+          kg10: existing.bags.kg10 + (savedBags.kg10 || 0),
+          kg25: existing.bags.kg25 + (savedBags.kg25 || 0),
+        }
+      : { ...savedBags };
+
+    merged.set(savedItem.product.$id, {
+      ...savedItem,
+      bags,
+      isColdDrinkBundle: false,
+      quantity: calculateQuantityFromBags(bags),
+    });
+  }
+
+  return Array.from(merged.values()).filter((item) => item.quantity > 0);
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const hydrated = useRef(false);
@@ -69,7 +95,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       .then((saved) => {
         if (!mounted || !saved) return;
         const parsed = JSON.parse(saved) as CartItem[];
-        if (Array.isArray(parsed)) setItems(parsed);
+        if (Array.isArray(parsed)) setItems(migrateExpiredBundleItems(parsed));
       })
       .catch(() => undefined)
       .finally(() => {

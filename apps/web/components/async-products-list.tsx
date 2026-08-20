@@ -1,18 +1,17 @@
 "use cache";
 
 import { ProductCard } from "@/components/product-card";
-import { ColdDrinkBundleCard } from "@/components/cold-drink-bundle-card";
 import {
   getCachedRegularProducts,
   getCachedProductImages,
 } from "@/lib/cached-data";
 import {
   groupProductsByCatalogCategory,
-  isColdDrinkBundleProduct,
-  shouldShowColdDrinkBadge,
+  isEveryGrainProduct,
   sortProductsForCatalog,
 } from "@repo/utils";
 import { Package } from "lucide-react";
+import { everyGrainShanOfferEnabled } from "@/lib/feature-flags";
 
 /**
  * Async component that fetches and displays products
@@ -31,13 +30,6 @@ export async function AsyncProductsList() {
   const imageMap = new Map(
     images
       .filter((img) => img.is_primary)
-      .map((img) => [img.product_id, img.file_id]),
-  );
-
-  // Map cold drink bundle images specifically for the bundle cards
-  const bundleImageMap = new Map(
-    images
-      .filter((img) => img.is_cold_drink_bundle)
       .map((img) => [img.product_id, img.file_id]),
   );
 
@@ -70,44 +62,6 @@ export async function AsyncProductsList() {
           with our quality guarantee.
         </p>
       </div>
-
-      {/* Free Cold Drink Bundles Section */}
-      {process.env.NEXT_PUBLIC_ENABLE_COLD_DRINK_BUNDLE === "true" && (
-        <div className="mb-16 w-full">
-          <div className="mb-8 mt-8">
-            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-              <div className="flex-1 h-0.5 bg-linear-to-r from-transparent via-blue-500 to-blue-500"></div>
-              <h3 className="min-w-0 max-w-[min(100%,42rem)] text-center text-xl sm:text-2xl md:text-3xl font-black text-blue-600 leading-tight flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
-                <span className="text-2xl sm:text-3xl">🥤</span> Cold Drink Bundles
-              </h3>
-              <div className="flex-1 h-0.5 bg-linear-to-l from-transparent via-blue-500 to-blue-500"></div>
-            </div>
-          </div>
-
-          <div className="flex justify-center w-full">
-            <div className="grid gap-6 justify-center grid-cols-[repeat(auto-fit,minmax(250px,1fr))] max-w-5xl w-full">
-              {sortedProducts
-                .filter(isColdDrinkBundleProduct)
-                .map((product) => (
-                  <div
-                    key={`bundle-${product.$id}`}
-                    className="flex justify-center"
-                  >
-                    <div className="w-full max-w-sm">
-                      <ColdDrinkBundleCard
-                        product={product}
-                        imageFileId={
-                          bundleImageMap.get(product.$id) ||
-                          imageMap.get(product.$id)
-                        }
-                      />
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Products Grid with Category Headings */}
       <div className="mb-16 w-full">
@@ -145,8 +99,9 @@ export async function AsyncProductsList() {
                           product={product}
                           imageFileId={imageMap.get(product.$id)}
                           badgeLabel={
-                            shouldShowColdDrinkBadge(product)
-                              ? "Free Cold Drink"
+                            everyGrainShanOfferEnabled &&
+                            isEveryGrainProduct(product)
+                              ? "Free Shan Gifts"
                               : undefined
                           }
                         />

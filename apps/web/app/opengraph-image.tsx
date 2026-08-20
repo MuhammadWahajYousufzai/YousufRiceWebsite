@@ -103,7 +103,7 @@ export default async function Image() {
               margin: 0,
             }}
           >
-            Order More, Save More • Flat Rs. 200 Karachi Delivery • Cash on Delivery
+            Order More, Save More • Karachi &amp; Bahria Delivery • Cash on Delivery
           </p>
         </div>
 

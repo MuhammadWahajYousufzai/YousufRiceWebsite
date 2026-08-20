@@ -82,8 +82,8 @@ export function Popup() {
                                     🚚
                                 </div>
                                 <div>
-                                    <p className="text-white font-bold text-base leading-tight">Flat Rs. 200 Delivery</p>
-                                    <p className="text-yellow-300 font-semibold text-sm mt-0.5" style={{ textShadow: '0 0 10px rgba(251,191,36,0.6)' }}>✨ Karachi orders, any weight</p>
+                                    <p className="text-white font-bold text-base leading-tight">Delivery Charges</p>
+                                    <p className="text-yellow-300 font-semibold text-sm mt-0.5" style={{ textShadow: '0 0 10px rgba(251,191,36,0.6)' }}>✨ Karachi Rs. 200 · Bahria Rs. 500 per started 10kg</p>
                                 </div>
                             </div>
 

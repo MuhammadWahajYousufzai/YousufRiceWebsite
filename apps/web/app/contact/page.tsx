@@ -234,9 +234,9 @@ export default function ContactPage() {
                 <p className="text-gray-600">
                   Karachi orders have a{" "}
                   <strong>flat Rs. 200 delivery charge</strong>, regardless of
-                  weight. Bahria Town Karachi delivery starts at Rs. 500 for up
-                  to 10 kg. Our delivery team ensures your order reaches you
-                  fresh and on time.
+                  weight. Bahria Town Karachi delivery costs{" "}
+                  <strong>Rs. 500 per started 10 kg</strong>. Our delivery
+                  team ensures your order reaches you fresh and on time.
                 </p>
               </CardContent>
             </Card>

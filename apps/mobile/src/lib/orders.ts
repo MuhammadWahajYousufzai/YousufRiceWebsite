@@ -7,10 +7,13 @@ import type {
 } from "@repo/types";
 import {
   calculateItemTotal,
+  calculateDeliveryFee,
   calculateTierPricing,
   formatOrderItems,
   formatPhoneNumber,
   generateMapsUrl,
+  getEveryGrainShanGiftCount,
+  requireDeliveryCity,
 } from "@repo/utils";
 import { Platform } from "react-native";
 import {
@@ -23,6 +26,7 @@ import {
   Query,
   tablesDB,
 } from "@/lib/appwrite";
+import { everyGrainShanOfferEnabled } from "@/lib/feature-flags";
 
 export interface CheckoutFormData {
   addressLine: string;
@@ -38,6 +42,7 @@ export interface CheckoutFormData {
 
 export interface PlaceOrderResult {
   customerId: string;
+  deliveryFee: number;
   orderId: string;
   totalPrice: number;
 }
@@ -223,7 +228,7 @@ export async function placeCodOrder(
   const fullName = formData.fullName.trim();
   const phone = formData.phone.trim();
   const addressLine = formData.addressLine.trim();
-  const city = formData.city.trim();
+  const city = requireDeliveryCity(formData.city);
   const email = formData.email?.trim().toLowerCase() || "";
   const notes = formData.notes?.trim() || "";
   const userId = formData.userId?.trim() || "guest";
@@ -303,9 +308,7 @@ export async function placeCodOrder(
       tierPricing.pricePerKg,
       item.quantity,
     );
-    const tierDiscountAmount = item.isColdDrinkBundle
-      ? 0
-      : tierPricing.discountAmount;
+    const tierDiscountAmount = tierPricing.discountAmount;
     const totalItemDiscount = Math.round(
       tierDiscountAmount + itemCalculation.discountAmount,
     );
@@ -328,6 +331,9 @@ export async function placeCodOrder(
       totalItemDiscount,
     };
   });
+
+  const deliveryFee = calculateDeliveryFee(city, totalWeightKg);
+  finalTotalPrice += deliveryFee;
 
   if (finalTotalPrice <= 0) {
     throw new Error("Cannot place an order with a zero total.");
@@ -356,11 +362,17 @@ export async function placeCodOrder(
                   (item.product.base_price_per_kg * item.quantity)) *
                 100
               : 0,
-          notes:
-            notes +
-            (item.isColdDrinkBundle && item.quantity >= 10
-              ? "\n(Free Cold Drink Deal Qualified)"
-              : ""),
+          notes: (() => {
+            const giftCount = everyGrainShanOfferEnabled
+              ? getEveryGrainShanGiftCount(item.product, item.bags)
+              : 0;
+            return (
+              notes +
+              (giftCount > 0
+                ? `\n(Every Grain 10kg Shan Gift Qualified: ${giftCount} set${giftCount === 1 ? "" : "s"})`
+                : "")
+            );
+          })(),
           order_id: orderId,
           price_per_kg_at_order: tierPricing.pricePerKg,
           product_description: item.product.description || "",
@@ -440,6 +452,7 @@ export async function placeCodOrder(
 
   return {
     customerId,
+    deliveryFee,
     orderId,
     totalPrice: finalTotalPrice,
   };

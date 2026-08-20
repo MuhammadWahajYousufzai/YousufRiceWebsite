@@ -13,9 +13,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
+  calculateDeliveryFee,
   calculatePrice,
+  DELIVERY_CITIES,
   formatCurrency,
   formatPhoneNumberForDisplay,
+  getEveryGrainShanGiftCount,
   getPricePerKg,
   validatePakistaniPhoneNumber,
 } from "@repo/utils";
@@ -27,6 +30,7 @@ import { OrderDetailsModal } from "@/components/order-details-modal";
 import { StorefrontHeader } from "@/components/storefront-header";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
+import { everyGrainShanOfferEnabled } from "@/lib/feature-flags";
 import { successFeedback, warningFeedback } from "@/lib/native-feedback";
 import {
   trackMobileInitiateCheckout,
@@ -69,6 +73,13 @@ export default function CartScreen() {
     notes: "",
     phone: "",
   });
+  const subtotal = getTotalPrice();
+  const totalWeightKg = items.reduce(
+    (total, item) => total + item.quantity,
+    0,
+  );
+  const deliveryFee = calculateDeliveryFee(formData.city, totalWeightKg);
+  const checkoutTotal = subtotal + deliveryFee;
 
   useEffect(() => {
     if (!user?.email) return;
@@ -117,18 +128,17 @@ export default function CartScreen() {
     }
     const checkoutKey = items
       .map(
-        (item) =>
-          `${item.product.$id}:${item.quantity}:${item.isColdDrinkBundle ? "bundle" : "regular"}`,
+        (item) => `${item.product.$id}:${item.quantity}`,
       )
       .join("|");
     if (trackedCheckoutKey.current === checkoutKey) return;
     trackedCheckoutKey.current = checkoutKey;
     void trackMobileInitiateCheckout({
-      value: getTotalPrice(),
+      value: checkoutTotal,
       numItems: getTotalItems(),
       contentIds: items.map((item) => item.product.$id),
     });
-  }, [getTotalItems, getTotalPrice, items]);
+  }, [checkoutTotal, getTotalItems, items]);
 
   const setField = (field: keyof typeof formData, value: string | number) =>
     setFormData((current) => ({ ...current, [field]: value }));
@@ -202,7 +212,7 @@ export default function CartScreen() {
       );
       return;
     }
-    if (getTotalPrice() <= 0) {
+    if (checkoutTotal <= 0) {
       Alert.alert("Invalid cart", "Cannot place an order with a zero total.");
       return;
     }
@@ -317,7 +327,10 @@ export default function CartScreen() {
                       ? item.product.imageUrl
                       : undefined;
                   const itemTotal = calculatePrice(item.product, item.quantity);
-                  const itemKey = `${item.product.$id}:${item.isColdDrinkBundle ? "bundle" : "regular"}`;
+                  const shanGiftCount = everyGrainShanOfferEnabled
+                    ? getEveryGrainShanGiftCount(item.product, item.bags)
+                    : 0;
+                  const itemKey = item.product.$id;
                   return (
                     <View
                       key={itemKey}
@@ -341,9 +354,9 @@ export default function CartScreen() {
                           <Text className="text-[17px] font-extrabold text-brand-800">
                             {item.product.name}
                           </Text>
-                          {item.isColdDrinkBundle && (
+                          {shanGiftCount > 0 && (
                             <Text className="self-start rounded-full bg-brand-50 px-2 py-1 text-[11px] font-bold text-brand-700">
-                              Free cold drink bundle
+                              {shanGiftCount}x free Shan Biryani Masala + Kheer Mix
                             </Text>
                           )}
                           <Text className="text-[13px] font-semibold text-muted">
@@ -382,7 +395,6 @@ export default function CartScreen() {
                                     removeBag(
                                       item.product.$id,
                                       size,
-                                      item.isColdDrinkBundle,
                                     )
                                   }
                                   className="h-9 w-9 items-center justify-center rounded-full border border-line bg-white active:bg-brand-50"
@@ -399,7 +411,6 @@ export default function CartScreen() {
                                     addBag(
                                       item.product,
                                       size,
-                                      item.isColdDrinkBundle,
                                     )
                                   }
                                   className="h-9 w-9 items-center justify-center rounded-full bg-brand-800 active:bg-brand-900"
@@ -414,7 +425,7 @@ export default function CartScreen() {
                       </View>
                       <Pressable
                         onPress={() =>
-                          removeItem(item.product.$id, item.isColdDrinkBundle)
+                          removeItem(item.product.$id)
                         }
                         className="self-start py-1"
                       >
@@ -427,13 +438,31 @@ export default function CartScreen() {
                 })}
               </View>
             )}
-            <View className="flex-row items-center justify-between rounded-card bg-brand-800 p-4">
-              <Text className="text-[15px] font-bold text-brand-100">
-                Order total
-              </Text>
-              <Text className="text-[25px] font-extrabold text-white">
-                {formatCurrency(getTotalPrice())}
-              </Text>
+            <View className="gap-2 rounded-card bg-brand-800 p-4">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-[13px] font-bold text-brand-100">
+                  Subtotal
+                </Text>
+                <Text className="text-[15px] font-extrabold text-white">
+                  {formatCurrency(subtotal)}
+                </Text>
+              </View>
+              <View className="flex-row items-center justify-between">
+                <Text className="text-[13px] font-bold text-brand-100">
+                  Delivery
+                </Text>
+                <Text className="text-[15px] font-extrabold text-white">
+                  {formatCurrency(deliveryFee)}
+                </Text>
+              </View>
+              <View className="mt-1 flex-row items-center justify-between border-t border-white/20 pt-3">
+                <Text className="text-[15px] font-bold text-brand-100">
+                  Order total
+                </Text>
+                <Text className="text-[25px] font-extrabold text-white">
+                  {formatCurrency(checkoutTotal)}
+                </Text>
+              </View>
             </View>
             <View className="gap-4 rounded-card border border-line bg-white p-4">
               <View>
@@ -472,13 +501,34 @@ export default function CartScreen() {
                 placeholder="you@example.com"
                 value={formData.email}
               />
-              <Field
-                autoCapitalize="words"
-                label="City"
-                onChangeText={(value) => setField("city", value)}
-                placeholder="Karachi"
-                value={formData.city}
-              />
+              <View className="gap-1.5">
+                <Text className="text-[12px] font-bold text-body">City</Text>
+                <View className="gap-2">
+                  {DELIVERY_CITIES.map((city) => {
+                    const selected = formData.city === city;
+                    return (
+                      <Pressable
+                        key={city}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
+                        onPress={() => setField("city", city)}
+                        className={`rounded-xl border px-3.5 py-3 ${selected ? "border-brand-800 bg-brand-50" : "border-line bg-canvas"}`}
+                      >
+                        <Text
+                          className={`text-[14px] font-extrabold ${selected ? "text-brand-800" : "text-ink"}`}
+                        >
+                          {city}
+                        </Text>
+                        <Text className="mt-1 text-[12px] text-muted">
+                          {city === "Karachi"
+                            ? "Rs. 200 delivery"
+                            : "Rs. 500 per started 10kg"}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
               <Field
                 label="Address"
                 multiline
@@ -523,7 +573,8 @@ export default function CartScreen() {
                 {submitting ? "Placing order…" : "Place COD order"}
               </AppButton>
               <Text className="text-center text-[11px] leading-4 text-muted">
-                Secure checkout · Cash on Delivery · Free Karachi delivery
+                Secure checkout · COD · Karachi Rs. 200 · Bahria Town Rs. 500
+                per started 10kg
               </Text>
             </View>
           </View>

@@ -17,20 +17,19 @@ import { formatCurrency, getPricePerKg, calculatePrice } from "@/lib/utils";
 import { useMetaTracking } from "@/lib/hooks/use-meta-tracking";
 import { useBagSelection } from "@/lib/hooks/use-bag-selection";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { isEveryGrainProduct } from "@repo/utils";
+import { everyGrainShanOfferEnabled } from "@/lib/feature-flags";
 
 interface ProductDetailClientProps {
   product: Product;
   imageUrls: string[];
   primaryImageIndex: number;
-  bundleImageIndex?: number;
 }
 
 export default function ProductDetailClient({
   product,
   imageUrls,
   primaryImageIndex,
-  bundleImageIndex,
 }: ProductDetailClientProps) {
   const [isBuyNowHovered, setIsBuyNowHovered] = useState(false);
   const { trackViewContent, trackAddToCart, trackInitiateCheckout } =
@@ -38,16 +37,10 @@ export default function ProductDetailClient({
   const hasTrackedViewRef = useRef(false);
   const { items: cartItems } = useCartStore();
 
-  const searchParams = useSearchParams();
-  const isColdDrinkBundle =
-    searchParams?.get("bundle") === "colddrink" &&
-    process.env.NEXT_PUBLIC_ENABLE_COLD_DRINK_BUNDLE === "true";
-
-  const [selectedImageIndex, setSelectedImageIndex] = useState(
-    isColdDrinkBundle && bundleImageIndex !== undefined
-      ? bundleImageIndex
-      : primaryImageIndex,
-  );
+  const hasShanOffer =
+    everyGrainShanOfferEnabled && isEveryGrainProduct(product);
+  const [selectedImageIndex, setSelectedImageIndex] =
+    useState(primaryImageIndex);
 
   const {
     bagCounts,
@@ -57,7 +50,7 @@ export default function ProductDetailClient({
     handleAddBag,
     handleRemoveBag,
     handleBuyNow: buyNow,
-  } = useBagSelection(product, isColdDrinkBundle);
+  } = useBagSelection(product);
 
   // Track ViewContent event when product page loads
   useEffect(() => {
@@ -206,11 +199,6 @@ export default function ProductDetailClient({
                         Primary
                       </div>
                     )}
-                    {index === bundleImageIndex && (
-                      <div className="absolute bottom-0.5 right-0.5 sm:bottom-1 sm:right-1 bg-blue-600 text-white text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-bold shadow-sm transform -rotate-3">
-                        🥤 Bundle
-                      </div>
-                    )}
                   </button>
                 ))}
               </div>
@@ -224,9 +212,9 @@ export default function ProductDetailClient({
                 <div className="flex-1 min-w-0">
                   <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-linear-to-r from-[#27247b] via-[#1a1854] to-[#27247b] bg-clip-text text-transparent leading-tight mb-2 wrap-break-word flex flex-col sm:flex-row sm:items-center gap-2">
                     {product.name}
-                    {isColdDrinkBundle && (
+                    {hasShanOffer && (
                       <span className="text-[10px] sm:text-xs bg-linear-to-r from-cyan-400 to-blue-500 text-white px-2.5 py-1 rounded-full font-black tracking-widest uppercase shadow-lg whitespace-nowrap mt-1 sm:mt-0 self-start animate-bounce">
-                        + Free Cold Drink 🥤
+                        + Free Shan Gifts 🎁
                       </span>
                     )}
                   </h1>
@@ -318,12 +306,11 @@ export default function ProductDetailClient({
                 )}
               </div>
 
-              {/* Deal Announcement - replaces Ramadan Offer for bundles */}
-              {isColdDrinkBundle && (
+              {hasShanOffer && (
                 <div className="mb-4 p-3 sm:p-5 rounded-xl border-2 border-cyan-400/50 bg-linear-to-r from-[#27247b] to-blue-800 text-white shadow-[0_8px_25px_rgba(39,36,123,0.3)] relative overflow-hidden group hover:scale-[1.02] transition-all duration-400">
                   <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-40 transition-opacity">
                     <span className="text-8xl group-hover:animate-bounce inline-block transform rotate-12 -mt-4 -mr-4">
-                      🥤
+                      🎁
                     </span>
                   </div>
                   <div className="flex items-center gap-4 relative z-10">
@@ -332,18 +319,18 @@ export default function ProductDetailClient({
                     </span>
                     <div>
                       <h3 className="font-black text-cyan-300 mb-1 text-base sm:text-lg tracking-widest uppercase drop-shadow">
-                        Cold Drink Bundle
+                        Every Grain 10kg Gift
                       </h3>
                       <p className="text-xs sm:text-sm text-blue-50 font-medium leading-relaxed">
-                        You get{" "}
+                        Get{" "}
                         <span className="text-[#27247b] font-black bg-linear-to-r from-cyan-300 to-cyan-400 px-2 py-0.5 rounded shadow-md mx-1 inline-block transform -rotate-1 scale-105">
-                          1 FREE Cold Drink (1L)
+                          Shan Biryani Masala + Kheer Mix FREE
                         </span>{" "}
-                        for{" "}
+                        with each{" "}
                         <strong className="text-white border-b-2 border-cyan-300 pb-0.5 tracking-wide">
-                          EVERY 10kg
+                          EVERY GRAIN 10kg BAG
                         </strong>{" "}
-                        you buy!
+                        you buy. Other bag sizes do not qualify.
                       </p>
                     </div>
                   </div>
@@ -351,8 +338,7 @@ export default function ProductDetailClient({
               )}
 
               {/* Ramadan Offer Banner */}
-              {!isColdDrinkBundle &&
-                process.env.NEXT_PUBLIC_ENABLE_RAMADAN_OFFER === "true" &&
+              {process.env.NEXT_PUBLIC_ENABLE_RAMADAN_OFFER === "true" &&
                 (() => {
                   // Calculate total weight from cart (cart already includes current product if added)
                   const cartWeight = cartItems.reduce(
@@ -400,8 +386,7 @@ export default function ProductDetailClient({
 
               <div className="space-y-2 sm:space-y-3">
                 {/* 3kg Bag */}
-                {!isColdDrinkBundle &&
-                  !product.name.toLowerCase().includes("every") && (
+                {!product.name.toLowerCase().includes("every") && (
                     <div className="group flex items-center justify-between bg-linear-to-r from-white to-gray-50 p-2 sm:p-3 rounded-lg border-2 border-gray-200 hover:border-[#27247b] hover:shadow-md transition-all duration-300">
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="bg-linear-to-br from-[#27247b] to-[#1a1854] text-white w-9 h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-lg flex items-center justify-center font-bold text-xs sm:text-sm shadow-md group-hover:scale-105 transition-transform duration-300 shrink-0">
@@ -443,7 +428,7 @@ export default function ProductDetailClient({
                   )}
 
                 {/* 5kg Bag */}
-                {!isColdDrinkBundle && (
+                {(
                   <div className="group flex items-center justify-between bg-linear-to-r from-white to-gray-50 p-2 sm:p-3 rounded-lg border-2 border-gray-200 hover:border-[#27247b] hover:shadow-md transition-all duration-300">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="bg-linear-to-br from-[#27247b] to-[#1a1854] text-white w-9 h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-lg flex items-center justify-center font-bold text-xs sm:text-sm shadow-md group-hover:scale-105 transition-transform duration-300 shrink-0">
@@ -496,9 +481,9 @@ export default function ProductDetailClient({
                     <div className="min-w-0">
                       <p className="font-bold text-[#27247b] text-xs sm:text-sm md:text-base flex items-center gap-1 flex-wrap">
                         10kg Bag
-                        {isColdDrinkBundle ? (
+                        {hasShanOffer ? (
                           <span className="text-[10px] sm:text-xs bg-linear-to-r from-cyan-400 to-blue-500 text-white px-2 py-0.5 rounded-full font-black shadow-md whitespace-nowrap animate-pulse">
-                            + 1L Cold Drink FREE 🥤
+                            + Shan Biryani Masala &amp; Kheer Mix FREE 🎁
                           </span>
                         ) : (
                           <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-semibold">
@@ -537,7 +522,7 @@ export default function ProductDetailClient({
                 </div>
 
                 {/* 25kg Bag */}
-                {!isColdDrinkBundle && (
+                {(
                   <div className="group flex items-center justify-between bg-linear-to-r from-[#ffff03]/20 via-[#ffff03]/10 to-white p-2 sm:p-3 rounded-lg border-2 border-[#ffff03] hover:border-[#ffd700] hover:shadow-lg transition-all duration-300 relative overflow-hidden">
                     <div className="absolute top-0 right-0 bg-linear-to-l from-[#ffff03] to-transparent w-24 h-full opacity-20"></div>
                     <div className="flex items-center gap-2 min-w-0 relative z-10">

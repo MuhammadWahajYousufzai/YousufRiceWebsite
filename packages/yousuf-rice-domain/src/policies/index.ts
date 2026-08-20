@@ -1,4 +1,5 @@
 export interface DeliveryPolicy {
+  bahriaTownFeePerStarted10Kg?: number;
   deliveryAreas: string[];
   deliveryFee: number;
   deliveryTimeline: string;
@@ -19,8 +20,9 @@ export interface ContactInfo {
 }
 
 export const DEFAULT_DELIVERY_POLICY: DeliveryPolicy = {
-  deliveryAreas: ["Karachi"],
-  deliveryFee: 0,
+  bahriaTownFeePerStarted10Kg: 500,
+  deliveryAreas: ["Karachi", "Bahria Town Karachi"],
+  deliveryFee: 200,
   deliveryTimeline: "2-3 business days after order is placed",
   sameDayAvailable: false,
 };
@@ -70,7 +72,7 @@ export const CUSTOMER_SERVICE_INSTRUCTIONS = `
 - Provide the escalation reason, severity, and conversation summary
 
 ## Restrictions
-- Delivery is only available in Karachi
+- Delivery is available in Karachi (Rs. 200) and Bahria Town Karachi (Rs. 500 per started 10 kg)
 - Payment is Cash on Delivery only
 - Delivery takes 2-3 business days
 - Do not promise confirmation calls

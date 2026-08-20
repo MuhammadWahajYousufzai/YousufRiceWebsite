@@ -4,6 +4,8 @@ import {
   requireDeliveryCity,
 } from "@/lib/delivery-policy";
 import type { DeliveryCity } from "@/lib/delivery-policy";
+import { getEveryGrainShanGiftCount } from "@repo/utils";
+import { everyGrainShanOfferEnabled } from "@/lib/feature-flags";
 
 function getTablesDB(): TablesDB {
   const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
@@ -180,7 +182,10 @@ export async function confirmOrder(input: { quoteId: string; customerName: strin
 
   for (const item of enrichedItems) {
     const discountPct = item.basePricePerKg > 0 ? (item.discountAmount / (item.basePricePerKg * item.quantity)) * 100 : 0;
-    await db.createRow({ databaseId: databaseId(), tableId: orderItemsTableId(), rowId: ID.unique(), data: { order_id: orderId, product_id: item.productId, product_name: item.productName, product_description: "", quantity_kg: item.quantity, bags_3kg: item.bags.kg3, bags_5kg: item.bags.kg5, bags_10kg: item.bags.kg10, bags_25kg: item.bags.kg25, price_per_kg_at_order: item.pricePerKg, base_price_per_kg: item.basePricePerKg, tier_applied: item.pricePerKg < item.basePricePerKg ? "discount" : "base", discount_percentage: discountPct, discount_amount: item.discountAmount, subtotal_before_discount: item.basePricePerKg * item.quantity, total_after_discount: item.subtotal, notes: "" } });
+    const giftCount = everyGrainShanOfferEnabled
+      ? getEveryGrainShanGiftCount({ name: item.productName }, item.bags)
+      : 0;
+    await db.createRow({ databaseId: databaseId(), tableId: orderItemsTableId(), rowId: ID.unique(), data: { order_id: orderId, product_id: item.productId, product_name: item.productName, product_description: "", quantity_kg: item.quantity, bags_3kg: item.bags.kg3, bags_5kg: item.bags.kg5, bags_10kg: item.bags.kg10, bags_25kg: item.bags.kg25, price_per_kg_at_order: item.pricePerKg, base_price_per_kg: item.basePricePerKg, tier_applied: item.pricePerKg < item.basePricePerKg ? "discount" : "base", discount_percentage: discountPct, discount_amount: item.discountAmount, subtotal_before_discount: item.basePricePerKg * item.quantity, total_after_discount: item.subtotal, notes: giftCount > 0 ? `(Every Grain 10kg Shan Gift Qualified: ${giftCount} set${giftCount === 1 ? "" : "s"})` : "" } });
   }
 
   const addressId = ID.unique();

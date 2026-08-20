@@ -51,6 +51,8 @@ import {
   DELIVERY_CITIES,
   requireDeliveryCity,
 } from "@/lib/delivery-policy";
+import { getEveryGrainShanGiftCount } from "@repo/utils";
+import { everyGrainShanOfferEnabled } from "@/lib/feature-flags";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const KARACHI = "Karachi";
@@ -472,10 +474,8 @@ function CheckoutContent() {
         const tierPricing = calculateTierPricing(product, item.quantity);
 
         // Calculate item totals with loyalty discount if applicable
-        // Disallow loyalty discount on Cold Drink bundles
         const loyaltyDiscountPercent =
-          (appliedDiscount?.extra_discount_percentage || 0) *
-          (item.isColdDrinkBundle ? 0 : 1);
+          appliedDiscount?.extra_discount_percentage || 0;
         const itemCalculations = calculateItemTotal(
           tierPricing.pricePerKg,
           item.quantity,
@@ -485,10 +485,7 @@ function CheckoutContent() {
         // Calculate total discount for this item (Tier Discount + Loyalty Discount)
         // Tier Discount = (Base Price - Tier Price) * Quantity
         // Loyalty Discount = itemCalculations.discountAmount
-        // No tier discount for Cold Drink bundles
-        const tierDiscountAmount = item.isColdDrinkBundle
-          ? 0
-          : tierPricing.discountAmount;
+        const tierDiscountAmount = tierPricing.discountAmount;
         const totalItemDiscount =
           tierDiscountAmount + itemCalculations.discountAmount;
 
@@ -577,11 +574,17 @@ function CheckoutContent() {
               total_after_discount: roundedItemTotal, // Rounded
 
               // Metadata
-              notes:
-                notes +
-                (item.isColdDrinkBundle && item.quantity >= 10
-                  ? `\n(Free Cold Drink Deal Qualified)`
-                  : ""),
+              notes: (() => {
+                const giftCount = everyGrainShanOfferEnabled
+                  ? getEveryGrainShanGiftCount(item.product, item.bags)
+                  : 0;
+                return (
+                  notes +
+                  (giftCount > 0
+                    ? `\n(Every Grain 10kg Shan Gift Qualified: ${giftCount} set${giftCount === 1 ? "" : "s"})`
+                    : "")
+                );
+              })(),
             },
           });
           createdItemIds.push(itemId);
@@ -744,7 +747,9 @@ function CheckoutContent() {
                   savings: savingsInfo.savings,
                   savingsPercentage: savingsInfo.savingsPercentage,
                   tierApplied: savingsInfo.tierApplied,
-                  isColdDrinkBundle: item.isColdDrinkBundle,
+                  shanGiftCount: everyGrainShanOfferEnabled
+                    ? getEveryGrainShanGiftCount(item.product, item.bags)
+                    : 0,
                 };
               }),
               totalPrice: finalTotalPrice,
@@ -807,7 +812,6 @@ function CheckoutContent() {
 
   const loyaltyDiscountAmount = appliedDiscount
     ? items.reduce((acc, item) => {
-        if (item.isColdDrinkBundle) return acc;
         return (
           acc +
           (calculatePrice(item.product, item.quantity) *
@@ -920,8 +924,8 @@ function CheckoutContent() {
                         </Select>
                         <p className="mt-2 text-xs font-medium text-gray-600">
                           Karachi has a flat Rs. 200 delivery charge per order.
-                          Bahria Town Karachi costs Rs. 500 up to 10 kg and Rs.
-                          1,000 above 10 kg up to 20 kg.
+                          Bahria Town Karachi costs Rs. 500 per started 10 kg:
+                          Rs. 500 up to 10 kg, Rs. 1,000 up to 20 kg, and so on.
                         </p>
                       </div>
 
@@ -1079,8 +1083,7 @@ function CheckoutContent() {
 
           <div className="lg:col-span-1 space-y-6">
             {/* Discount Code Section */}
-            {process.env.NEXT_PUBLIC_ENABLE_LOYALTY_DISCOUNT === "true" &&
-              !items.some((item) => item.isColdDrinkBundle) && (
+            {process.env.NEXT_PUBLIC_ENABLE_LOYALTY_DISCOUNT === "true" && (
                 <Card className="border-2 border-gray-200 shadow-xl rounded-2xl overflow-hidden">
                   <CardHeader className="bg-linear-to-r from-[#27247b] to-[#27247b]/90 p-6">
                     <CardTitle className="text-xl font-bold text-white flex items-center">
@@ -1210,9 +1213,12 @@ function CheckoutContent() {
                     const imageUrl = item.product.primary_image_id
                       ? `${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${STORAGE_BUCKET_ID}/files/${item.product.primary_image_id}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID}`
                       : null;
+                    const shanGiftCount = everyGrainShanOfferEnabled
+                      ? getEveryGrainShanGiftCount(item.product, item.bags)
+                      : 0;
                     return (
                       <div
-                        key={`${item.product.$id}-${item.isColdDrinkBundle ? "bundle" : "standard"}`}
+                        key={item.product.$id}
                         className="flex gap-3 bg-gray-50 rounded-lg p-3 border border-gray-200"
                       >
                         <div className="relative w-16 h-16 shrink-0 bg-gray-100 rounded-lg overflow-hidden">
@@ -1237,26 +1243,22 @@ function CheckoutContent() {
                               {item.product.name}
                             </span>
 
-                            {/* Bundle Deal Styling */}
-                            {item.isColdDrinkBundle && (
+                            {shanGiftCount > 0 && (
                               <div className="mt-1 inline-flex items-center gap-1.5 bg-linear-to-r from-teal-50 to-cyan-50 border border-teal-200 px-2 py-1 rounded-md shadow-sm w-fit">
-                                <span className="text-sm">🥤</span>
+                                <span className="text-sm">🎁</span>
                                 <div>
                                   <p className="text-[9px] font-bold text-teal-700 uppercase tracking-widest leading-none mb-0.5">
-                                    Bundle Offer
+                                    Every Grain 10kg Gift
                                   </p>
                                   <p className="text-[10px] text-teal-900 font-bold leading-none">
-                                    {item.quantity >= 10
-                                      ? Math.floor(item.quantity / 10)
-                                      : 0}
-                                    x Free 1L Cold Drink
+                                    {shanGiftCount}x Shan Biryani Masala + Kheer
+                                    Mix
                                   </p>
                                 </div>
                               </div>
                             )}
 
-                            {itemSavings.savings > 0 &&
-                              !item.isColdDrinkBundle && (
+                            {itemSavings.savings > 0 && (
                                 <span className="text-xs text-green-600 font-bold bg-green-100 px-2 py-0.5 rounded-full w-fit mt-1">
                                   {itemSavings.savingsPercentage.toFixed(0)}%
                                   OFF

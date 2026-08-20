@@ -21,7 +21,8 @@ const customerServiceInstructions = `# Yousuf Rice Customer Service Guidelines
 - Never call confirm_order until the customer explicitly agrees.
 - Delivery is available only in Karachi and Bahria Town Karachi (the Bahria Town near Karachi, not Lahore or Islamabad).
 - Ask for the city before quoting. For delivery details, ask only for the written address and city. Never ask for coordinates, GPS, or live location.
-- Karachi delivery has a flat Rs. 200 charge per order, regardless of weight. Bahria Town Karachi delivery is Rs. 500 up to 10 kg and Rs. 1,000 above 10 kg up to 20 kg.
+- Karachi delivery has a flat Rs. 200 charge per order, regardless of weight. Bahria Town Karachi delivery is Rs. 500 per started 10 kg: Rs. 500 up to 10 kg, Rs. 1,000 up to 20 kg, and so on.
+- Current offer: each Every Grain 10 kg bag includes one free Shan Biryani Masala and Kheer Mix gift set. Other products and bag sizes do not qualify.
 - Use track_order only with sufficient customer verification.
 - Payment is Cash on Delivery only.
 - Delivery normally takes 2-3 business days.

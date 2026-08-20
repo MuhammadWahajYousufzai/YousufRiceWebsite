@@ -12,7 +12,7 @@ Current iOS identifiers:
 - Xcode workspace: `ios/YousufRice.xcworkspace`
 - Xcode scheme: `YousufRice`
 - App version: `1.0.0`
-- Build number: `1`
+- Build number: `5`
 
 ## Local Checks
 
@@ -27,6 +27,29 @@ Then run the app locally:
 ```bash
 pnpm --filter @yousuf-rice/mobile ios
 ```
+
+## Mobile Offer Flags (iOS and Android)
+
+The Expo iOS and Android apps use the same build-time offer flag:
+
+```bash
+EXPO_PUBLIC_ENABLE_EVERY_GRAIN_SHAN_OFFER=true
+```
+
+- Set it to `true` to show and record the Every Grain 10kg Shan Biryani
+  Masala + Kheer Mix gift.
+- Set it to `false` to hide and stop recording that gift.
+- The expired `EXPO_PUBLIC_ENABLE_COLD_DRINK_BUNDLE` flag must remain `false`.
+  Its storefront and order logic have been retired, so an old build variable
+  cannot make the cold-drink deal appear again.
+
+For local development, set the values in `apps/mobile/.env.local`. For local
+App Store and Google Play builds, set them in
+`apps/mobile/.env.appstoreconnect.local` and
+`apps/mobile/.env.googleplay.local` respectively. For Xcode Cloud, add the same
+variables under the workflow environment settings. Public Expo flags are
+compiled into the app bundle, so restart the dev server or create a new iOS or
+Android build after changing them.
 
 ## Prepare App Store Connect
 

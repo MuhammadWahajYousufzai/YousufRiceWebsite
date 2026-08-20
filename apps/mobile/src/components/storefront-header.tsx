@@ -5,9 +5,11 @@ import { Image } from "@/components/app-image";
 export function StorefrontAnnouncement({
   offerEnabled,
   onOrderNow,
+  shanOfferEnabled,
 }: {
   offerEnabled: boolean;
   onOrderNow: () => void;
+  shanOfferEnabled: boolean;
 }) {
   return (
     <View className="relative flex-row items-center gap-3 overflow-hidden bg-gray-50 px-4 py-2.5">
@@ -16,7 +18,9 @@ export function StorefrontAnnouncement({
       <Text className="flex-1 text-[11px] font-extrabold leading-4 text-gray-900">
         {offerEnabled
           ? "⏳ HURRY! Get 1kg FREE rice for every 15kg."
-          : "Yousuf Rice 2026 — premium rice with Free Delivery across Karachi!"}
+          : shanOfferEnabled
+            ? "🎁 Every Grain 10kg: FREE Shan Biryani Masala + Kheer Mix."
+            : "Karachi delivery Rs. 200 · Bahria Town Rs. 500 per started 10kg."}
       </Text>
       <Pressable
         accessibilityRole="button"

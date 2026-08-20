@@ -18,6 +18,7 @@ export interface QuoteItem {
 }
 
 export interface Quote {
+  city: "Karachi" | "Bahria Town Karachi";
   id: string;
   items: QuoteItem[];
   subtotal: number;
@@ -52,8 +53,6 @@ export interface OrderResult {
 }
 
 const QUOTE_TTL_MS = 30 * 60 * 1000;
-const DELIVERY_FEE = 0;
-
 const quotes = new Map<string, Quote & { idempotencyKey?: string }>();
 const idempotencyMap = new Map<string, string>();
 
@@ -89,11 +88,23 @@ function validateItems(items: Array<{ productId: string; quantity: number }>): v
   }
 }
 
-export async function createQuote(items: Array<{ productId: string; quantity: number }>): Promise<Quote> {
+function calculateDeliveryFee(
+  city: "Karachi" | "Bahria Town Karachi",
+  totalWeightKg: number,
+): number {
+  if (totalWeightKg <= 0) return 0;
+  return city === "Karachi" ? 200 : Math.ceil(totalWeightKg / 10) * 500;
+}
+
+export async function createQuote(
+  items: Array<{ productId: string; quantity: number }>,
+  city: "Karachi" | "Bahria Town Karachi" = "Karachi",
+): Promise<Quote> {
   validateItems(items);
 
   const quoteItems: QuoteItem[] = [];
   let subtotal = 0;
+  let totalWeightKg = 0;
 
   for (const item of items) {
     const product = await getProductRecord(item.productId);
@@ -117,16 +128,19 @@ export async function createQuote(items: Array<{ productId: string; quantity: nu
     });
 
     subtotal += calc.subtotal;
+    totalWeightKg += item.quantity;
   }
 
-  const grandTotal = subtotal + DELIVERY_FEE;
+  const deliveryFee = calculateDeliveryFee(city, totalWeightKg);
+  const grandTotal = subtotal + deliveryFee;
   const now = Date.now();
 
   const quote: Quote = {
+    city,
     id: ID.unique(),
     items: quoteItems,
     subtotal,
-    deliveryFee: DELIVERY_FEE,
+    deliveryFee,
     grandTotal,
     createdAt: new Date(now).toISOString(),
     expiresAt: new Date(now + QUOTE_TTL_MS).toISOString(),
@@ -165,6 +179,12 @@ export async function confirmOrder(input: OrderConfirmationInput): Promise<Order
   }
 
   const quote = await getQuote(input.quoteId);
+
+  if (input.city !== quote.city) {
+    throw new ValidationError(
+      "The delivery city does not match the accepted quote. Create a new quote for this city.",
+    );
+  }
 
   const customerResult = await findOrCreateCustomer({
     name: input.customerName,
@@ -220,11 +240,13 @@ export async function confirmOrder(input: OrderConfirmationInput): Promise<Order
     totalDiscountAmount += calc.discountAmount;
   }
 
-  const finalTotalPrice = subtotalBeforeDiscount - totalDiscountAmount;
+  const finalTotalPrice =
+    subtotalBeforeDiscount - totalDiscountAmount + quote.deliveryFee;
 
   if (finalTotalPrice !== quote.grandTotal) {
     const newQuote = await createQuote(
-      quote.items.map((i) => ({ productId: i.productId, quantity: i.quantity }))
+      quote.items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+      quote.city,
     );
     throw new PriceChangedError(input.quoteId, quote.grandTotal, newQuote.grandTotal);
   }
@@ -422,8 +444,4 @@ export async function trackOrder(orderId: string, verifiedPhone?: string): Promi
     items,
     createdAt: order.$createdAt,
   };
-}
-
-export async function setDeliveryFee(fee: number): Promise<void> {
-  (globalThis as any).__yousuf_rice_delivery_fee = fee;
 }

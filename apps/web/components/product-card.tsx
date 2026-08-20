@@ -69,7 +69,7 @@ export function ProductCard({ product, imageFileId, badgeLabel }: ProductCardSim
             {badgeLabel && (
               <div className="absolute top-0 right-0 z-20 overflow-hidden w-44 h-44">
                 <div className="absolute transform rotate-45 bg-linear-to-r from-amber-400 to-orange-500 text-white font-black text-center py-2 -right-12.5 top-6 w-52 shadow-[0_4px_15px_rgba(245,158,11,0.3)] border-b-2 border-amber-200 tracking-widest text-sm flex items-center justify-center gap-1 animate-[pulse_3s_ease-in-out_infinite]">
-                  <span className="inline-block shrink-0">🥤</span>
+                  <span className="inline-block shrink-0">🎁</span>
                   <span className="shrink-0">{badgeLabel}</span>
                 </div>
               </div>

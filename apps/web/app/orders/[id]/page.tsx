@@ -319,14 +319,13 @@ function OrderDetailContent() {
                       {formatCurrency(item.price_per_kg_at_order)}/kg
                     </p>
                     
-                    {/* Bundle Deal Styling */}
-                    {(item.notes?.includes("Next Cola Deal") || item.notes?.includes("Cold Drink Bundle") || item.notes?.includes("colddrink") || item.notes?.includes("Free Cold Drink Deal Qualified")) && (
+                    {item.notes?.includes("Every Grain 10kg Shan Gift") && (
                       <div className="mt-2 inline-flex items-center gap-2 bg-linear-to-r from-teal-50 to-cyan-50 border border-teal-200 px-3 py-1.5 rounded-lg shadow-sm">
-                        <span className="text-lg">🥤</span>
+                        <span className="text-lg">🎁</span>
                         <div>
-                          <p className="text-[10px] font-bold text-teal-700 uppercase tracking-widest leading-none mb-0.5">Bundle Offer</p>
+                          <p className="text-[10px] font-bold text-teal-700 uppercase tracking-widest leading-none mb-0.5">Every Grain 10kg Gift</p>
                           <p className="text-xs text-teal-900 font-bold leading-none">
-                            Includes {item.quantity_kg >= 10 ? Math.floor(item.quantity_kg / 10) : 0}x Free 1L Cold Drink
+                            Includes Shan Biryani Masala + Kheer Mix
                           </p>
                         </div>
                       </div>
@@ -346,7 +345,10 @@ function OrderDetailContent() {
                   (sum, item) => sum + item.total_after_discount,
                   0
                 );
-                const discountAmount = itemsTotal - data.total_price;
+                const deliveryFee = Math.max(
+                  0,
+                  data.total_price - itemsTotal,
+                );
 
                 return (
                   <div className="space-y-2">
@@ -355,12 +357,10 @@ function OrderDetailContent() {
                       <span>{formatCurrency(itemsTotal)}</span>
                     </div>
 
-                    {discountAmount > 0 && (
-                      <div className="flex justify-between items-center text-green-600">
-                        <span>Discount</span>
-                        <span>-{formatCurrency(discountAmount)}</span>
-                      </div>
-                    )}
+                    <div className="flex justify-between items-center text-gray-600">
+                      <span>Delivery ({data.address?.city || "area"})</span>
+                      <span>{formatCurrency(deliveryFee)}</span>
+                    </div>
 
                     <div className="flex justify-between items-center pt-2 border-t mt-2">
                       <span className="text-xl font-bold">Total</span>

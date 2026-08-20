@@ -24,9 +24,8 @@ import {
   formatCurrency,
   getPricePerKg,
   groupProductsByCatalogCategory,
-  isColdDrinkBundleProduct,
+  isEveryGrainProduct,
   shouldHideThreeKgBag,
-  shouldShowColdDrinkBadge,
   shouldShowPremiumBadge,
 } from "@repo/utils";
 
@@ -40,6 +39,7 @@ import {
 import { useLiveCatalog } from "@/hooks/use-live-catalog";
 import type { BannerImage, ProductWithImage } from "@/lib/catalog";
 import { useCart } from "@/lib/cart";
+import { everyGrainShanOfferEnabled } from "@/lib/feature-flags";
 import {
   trackMobileAddToCart,
   trackMobileViewContent,
@@ -49,8 +49,6 @@ type BagSize = 3 | 5 | 10 | 25;
 
 const ramadanOfferEnabled =
   process.env.EXPO_PUBLIC_ENABLE_RAMADAN_OFFER === "true";
-const coldDrinkBundleEnabled =
-  process.env.EXPO_PUBLIC_ENABLE_COLD_DRINK_BUNDLE === "true";
 const emptyBags = { kg3: 0, kg5: 0, kg10: 0, kg25: 0 };
 
 export default function HomeScreen() {
@@ -65,17 +63,12 @@ export default function HomeScreen() {
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const [selectedProduct, setSelectedProduct] =
     useState<ProductWithImage | null>(null);
-  const [selectedBundle, setSelectedBundle] = useState(false);
   const groupedProducts = useMemo(
     () => groupProductsByCatalogCategory(products),
     [products],
   );
-  const bundleProducts = useMemo(
-    () => products.filter(isColdDrinkBundleProduct),
-    [products],
-  );
   const selectedCartItem = selectedProduct
-    ? getItem(selectedProduct.$id, selectedBundle)
+    ? getItem(selectedProduct.$id)
     : undefined;
   const bagCounts = selectedCartItem?.bags ?? emptyBags;
   const totalKg =
@@ -111,22 +104,20 @@ export default function HomeScreen() {
     });
   };
 
-  const openProduct = (product: ProductWithImage, isBundle = false) => {
+  const openProduct = (product: ProductWithImage) => {
     setSelectedProduct(product);
-    setSelectedBundle(isBundle);
     void trackMobileViewContent({
       contentName: product.name,
       contentId: product.$id,
-      value: calculatePrice(product, isBundle ? 10 : 5),
+      value: calculatePrice(product, 5),
     });
   };
   const closeProduct = () => {
     setSelectedProduct(null);
-    setSelectedBundle(false);
   };
   const handleAddBag = (bagSize: BagSize) => {
     if (!selectedProduct?.available) return;
-    addBag(selectedProduct, bagSize, selectedBundle);
+    addBag(selectedProduct, bagSize);
     void trackMobileAddToCart({
       contentName: selectedProduct.name,
       contentId: selectedProduct.$id,
@@ -135,8 +126,7 @@ export default function HomeScreen() {
     });
   };
   const handleRemoveBag = (bagSize: BagSize) => {
-    if (selectedProduct)
-      removeBag(selectedProduct.$id, bagSize, selectedBundle);
+    if (selectedProduct) removeBag(selectedProduct.$id, bagSize);
   };
   const handleShareProduct = async () => {
     if (!selectedProduct) return;
@@ -162,6 +152,7 @@ export default function HomeScreen() {
         <StorefrontAnnouncement
           offerEnabled={ramadanOfferEnabled}
           onOrderNow={showProducts}
+          shanOfferEnabled={everyGrainShanOfferEnabled}
         />
         <StorefrontHeader
           cartCount={getTotalItems()}
@@ -229,21 +220,13 @@ export default function HomeScreen() {
             </View>
           )}
 
-          {coldDrinkBundleEnabled && bundleProducts.length > 0 && (
-            <ProductSection
-              title="Cold Drink Bundles"
-              products={bundleProducts}
-              badgeLabel="Free cold drink"
-              onPress={(product) => openProduct(product, true)}
-              accent="blue"
-            />
-          )}
           {groupedProducts.map(({ category, products: categoryProducts }) => (
             <ProductSection
               key={category}
               title={category}
               products={categoryProducts}
               onPress={openProduct}
+              showShanOffer={everyGrainShanOfferEnabled}
             />
           ))}
 
@@ -275,7 +258,6 @@ export default function HomeScreen() {
 
       <ProductSelectionModal
         bagCounts={bagCounts}
-        isBundle={selectedBundle}
         onAddBag={handleAddBag}
         onBuyNow={() => {
           if (totalKg > 0) {
@@ -288,6 +270,7 @@ export default function HomeScreen() {
         onShare={handleShareProduct}
         pricePerKg={pricePerKg}
         product={selectedProduct}
+        showShanOffer={everyGrainShanOfferEnabled}
         totalKg={totalKg}
         totalPrice={totalPrice}
         visible={Boolean(selectedProduct)}
@@ -404,47 +387,36 @@ function BannerCarousel({
 }
 
 function ProductSection({
-  accent = "yellow",
-  badgeLabel,
   onPress,
   products,
+  showShanOffer,
   title,
 }: {
-  accent?: "blue" | "yellow";
-  badgeLabel?: string;
-  onPress: (product: ProductWithImage, isBundle?: boolean) => void;
+  onPress: (product: ProductWithImage) => void;
   products: ProductWithImage[];
+  showShanOffer: boolean;
   title: string;
 }) {
   return (
     <View className="mb-14 gap-6">
       <View className="flex-row items-center gap-3">
-        <View
-          className={`h-0.5 flex-1 ${accent === "blue" ? "bg-blue-500" : "bg-gold-400"}`}
-        />
-        <Text
-          className={`max-w-[250px] text-center text-[23px] font-extrabold leading-7 ${accent === "blue" ? "text-blue-600" : "text-brand-800"}`}
-        >
-          {accent === "blue" ? "🥤 " : ""}
+        <View className="h-0.5 flex-1 bg-gold-400" />
+        <Text className="max-w-[250px] text-center text-[23px] font-extrabold leading-7 text-brand-800">
           {title}
         </Text>
-        <View
-          className={`h-0.5 flex-1 ${accent === "blue" ? "bg-blue-500" : "bg-gold-400"}`}
-        />
+        <View className="h-0.5 flex-1 bg-gold-400" />
       </View>
       <View className="gap-6">
         {products.map((product) => (
           <ProductCard
-            key={`${badgeLabel ? "bundle" : "regular"}-${product.$id}`}
+            key={product.$id}
             product={product}
-            imageUrl={badgeLabel ? product.bundleImageUrl : undefined}
             badgeLabel={
-              badgeLabel ??
-              (shouldShowColdDrinkBadge(product)
-                ? "Free Cold Drink"
-                : undefined)
+              showShanOffer && isEveryGrainProduct(product)
+                ? "Free Shan gifts"
+                : undefined
             }
-            onPress={() => onPress(product, Boolean(badgeLabel))}
+            onPress={() => onPress(product)}
           />
         ))}
       </View>
@@ -524,7 +496,7 @@ function ProductCard({
             }}
           >
             <Text className="text-[11px] font-black uppercase tracking-[1px] text-white">
-              🥤 {badgeLabel}
+              🎁 {badgeLabel}
             </Text>
           </View>
         )}
@@ -584,7 +556,6 @@ function ProductCard({
 
 function ProductSelectionModal({
   bagCounts,
-  isBundle,
   onAddBag,
   onBuyNow,
   onClose,
@@ -592,12 +563,12 @@ function ProductSelectionModal({
   onShare,
   pricePerKg,
   product,
+  showShanOffer,
   totalKg,
   totalPrice,
   visible,
 }: {
   bagCounts: typeof emptyBags;
-  isBundle: boolean;
   onAddBag: (bagSize: BagSize) => void;
   onBuyNow: () => void;
   onClose: () => void;
@@ -605,18 +576,22 @@ function ProductSelectionModal({
   onShare: () => void;
   pricePerKg: number;
   product: ProductWithImage | null;
+  showShanOffer: boolean;
   totalKg: number;
   totalPrice: number;
   visible: boolean;
 }) {
   if (!product) return null;
+  const hasShanOffer = showShanOffer && isEveryGrainProduct(product);
   const bagRows = (
     [
       { label: "3kg bag", size: 3, value: bagCounts.kg3 },
       { label: "5kg bag", tag: "Popular", size: 5, value: bagCounts.kg5 },
       {
         label: "10kg bag",
-        tag: isBundle ? "+ 1L cold drink free" : "Great deal",
+        tag: hasShanOffer
+          ? "+ Shan Biryani Masala & Kheer Mix FREE"
+          : "Great deal",
         size: 10,
         value: bagCounts.kg10,
       },
@@ -627,11 +602,7 @@ function ProductSelectionModal({
       tag?: string;
       value: number;
     }[]
-  ).filter((row) =>
-    isBundle
-      ? row.size === 10
-      : row.size !== 3 || !shouldHideThreeKgBag(product),
-  );
+  ).filter((row) => row.size !== 3 || !shouldHideThreeKgBag(product));
   return (
     <Modal
       animationType="slide"
@@ -663,11 +634,7 @@ function ProductSelectionModal({
             <View className="aspect-square overflow-hidden rounded-card bg-wash">
               {product.imageUrl ? (
                 <Image
-                  source={{
-                    uri: isBundle
-                      ? (product.bundleImageUrl ?? product.imageUrl)
-                      : product.imageUrl,
-                  }}
+                  source={{ uri: product.imageUrl }}
                   contentFit="contain"
                   className="h-full w-full"
                 />
@@ -690,9 +657,10 @@ function ProductSelectionModal({
                   </Text>
                 )}
               </View>
-              {isBundle && (
+              {hasShanOffer && (
                 <Text className="rounded-xl border border-brand-200 bg-brand-50 p-3 text-[13px] font-bold leading-5 text-brand-800">
-                  Get one free 1L cold drink with every 10kg bag.
+                  Buy an Every Grain 10kg bag and get Shan Biryani Masala plus
+                  Kheer Mix free. Only 10kg bags qualify.
                 </Text>
               )}
               {!!product.description && (

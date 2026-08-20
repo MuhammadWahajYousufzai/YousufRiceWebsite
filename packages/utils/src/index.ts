@@ -34,6 +34,36 @@ export function formatCurrency(amount: number): string {
   return `Rs. ${amount.toLocaleString()}`;
 }
 
+export const DELIVERY_CITIES = ["Karachi", "Bahria Town Karachi"] as const;
+
+export type DeliveryCity = (typeof DELIVERY_CITIES)[number];
+
+export function isDeliveryCity(city: string): city is DeliveryCity {
+  return DELIVERY_CITIES.includes(city.trim() as DeliveryCity);
+}
+
+export function requireDeliveryCity(city: string): DeliveryCity {
+  const normalized = city.trim();
+  if (!isDeliveryCity(normalized)) {
+    throw new Error(
+      "Delivery is available only in Karachi and Bahria Town Karachi.",
+    );
+  }
+  return normalized;
+}
+
+export function calculateDeliveryFee(
+  city: string,
+  totalWeightKg: number,
+): number {
+  if (totalWeightKg <= 0) return 0;
+  if (city === "Karachi") return 200;
+  if (city === "Bahria Town Karachi") {
+    return Math.ceil(totalWeightKg / 10) * 500;
+  }
+  return 0;
+}
+
 export function calculateSavings(
   product: Product,
   quantity: number,
@@ -238,9 +268,24 @@ export function isRegularCatalogProduct(product: Pick<Product, "name" | "descrip
   return !searchText.includes("hotel") && !searchText.includes("restaurant");
 }
 
-export function isColdDrinkBundleProduct(product: Pick<Product, "name">): boolean {
-  const name = product.name.toLowerCase();
-  return name.includes("ultimate sella") || name.includes("x-steam") || name.includes("x steam");
+export function isEveryGrainProduct(product: Pick<Product, "name">): boolean {
+  const normalizedName = product.name.toLowerCase().replace(/\s+/g, " ").trim();
+  return (
+    normalizedName.includes("every grain") ||
+    normalizedName.includes("everygrain")
+  );
+}
+
+export function getEveryGrainShanGiftCount(
+  product: Pick<Product, "name">,
+  bags: { kg10?: number } | null | undefined,
+): number {
+  if (!isEveryGrainProduct(product)) return 0;
+
+  const tenKgBags = Number(bags?.kg10 ?? 0);
+  return Number.isFinite(tenKgBags) && tenKgBags > 0
+    ? Math.floor(tenKgBags)
+    : 0;
 }
 
 export function shouldHideThreeKgBag(product: Pick<Product, "name">): boolean {
@@ -250,13 +295,6 @@ export function shouldHideThreeKgBag(product: Pick<Product, "name">): boolean {
 export function shouldShowPremiumBadge(product: Pick<Product, "name">): boolean {
   const name = product.name.toLowerCase();
   return !name.includes("bachat") && !name.includes("mota") && !name.includes("regular");
-}
-
-export function shouldShowColdDrinkBadge(
-  product: Pick<Product, "$id">,
-  excludedIds = ["6916cb0a0021c185b7e9", "6916cbbe0016c5a0e97a", "6916cbef001ae8761e0c"],
-): boolean {
-  return !new Set(excludedIds).has(product.$id);
 }
 
 export function calculateBagsFromQuantity(quantity: number): {

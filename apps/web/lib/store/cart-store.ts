@@ -28,9 +28,10 @@ const migrateLegacyCartItem = (item: any): CartItem => {
     return {
       ...item,
       bags: { kg3: 0, kg5: 0, kg10: 0, kg25: 0 },
+      isColdDrinkBundle: false,
     };
   }
-  return item as CartItem;
+  return { ...item, isColdDrinkBundle: false } as CartItem;
 };
 
 export const useCartStore = create<CartStore>()(
@@ -202,7 +203,32 @@ export const useCartStore = create<CartStore>()(
       onRehydrateStorage: () => (state) => {
         // Migrate legacy cart items when loading from storage
         if (state?.items) {
-          state.items = state.items.map(migrateLegacyCartItem);
+          const merged = new Map<string, CartItem>();
+          state.items.map(migrateLegacyCartItem).forEach((item) => {
+            const existing = merged.get(item.product.$id);
+            if (!existing) {
+              merged.set(item.product.$id, item);
+              return;
+            }
+
+            const bags = {
+              kg3: existing.bags.kg3 + item.bags.kg3,
+              kg5: existing.bags.kg5 + item.bags.kg5,
+              kg10: existing.bags.kg10 + item.bags.kg10,
+              kg25: existing.bags.kg25 + item.bags.kg25,
+            };
+            merged.set(item.product.$id, {
+              ...item,
+              bags,
+              isColdDrinkBundle: false,
+              quantity:
+                bags.kg3 * 3 +
+                bags.kg5 * 5 +
+                bags.kg10 * 10 +
+                bags.kg25 * 25,
+            });
+          });
+          state.items = Array.from(merged.values());
         }
       },
     }

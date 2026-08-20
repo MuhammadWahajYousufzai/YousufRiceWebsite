@@ -20,8 +20,6 @@ export interface BannerImage {
 }
 
 export interface ProductWithImage extends Product {
-  bundleImage?: ProductImage;
-  bundleImageUrl?: string;
   imageUrl?: string;
   primaryImage?: ProductImage;
 }
@@ -95,20 +93,14 @@ export async function listProductsWithPrimaryImages(): Promise<
   ]);
 
   return products.map((product) => {
-    const primaryImage =
-      images.find(
-        (image) => image.product_id === product.$id && image.is_primary,
-      ) ?? images.find((image) => image.product_id === product.$id);
-    const bundleImage = images.find(
-      (image) => image.product_id === product.$id && image.is_cold_drink_bundle,
+    const visibleImages = images.filter(
+      (image) =>
+        image.product_id === product.$id && !image.is_cold_drink_bundle,
     );
-
+    const primaryImage =
+      visibleImages.find((image) => image.is_primary) ?? visibleImages[0];
     return {
       ...product,
-      bundleImage,
-      bundleImageUrl: bundleImage
-        ? getStorageFileViewUrl(STORAGE_BUCKET_ID, bundleImage.file_id)
-        : undefined,
       primaryImage,
       imageUrl: primaryImage
         ? getStorageFileViewUrl(STORAGE_BUCKET_ID, primaryImage.file_id)

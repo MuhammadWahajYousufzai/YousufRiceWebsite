@@ -78,6 +78,16 @@ export function OrderDetailsModal({
     if (url && (await Linking.canOpenURL(url))) await Linking.openURL(url);
   };
   const currentStep = data ? statusIndex(data.status) : 0;
+  const deliveryFee = data
+    ? Math.max(
+        0,
+        data.total_price -
+          data.items.reduce(
+            (total, item) => total + item.total_after_discount,
+            0,
+          ),
+      )
+    : 0;
   return (
     <Modal
       animationType="slide"
@@ -201,9 +211,9 @@ export function OrderDetailsModal({
                       {item.quantity_kg}kg ·{" "}
                       {formatCurrency(item.price_per_kg_at_order)}/kg
                     </Text>
-                    {item.notes?.includes("Free Cold Drink") && (
+                    {item.notes?.includes("Every Grain 10kg Shan Gift") && (
                       <Text className="mt-1 text-[12px] font-bold text-gold-700">
-                        Includes free cold drink offer
+                        Includes free Shan Biryani Masala + Kheer Mix gift
                       </Text>
                     )}
                   </View>
@@ -212,6 +222,19 @@ export function OrderDetailsModal({
                   </Text>
                 </View>
               ))}
+              <View className="flex-row items-center justify-between border-b border-line pb-3">
+                <View>
+                  <Text className="text-[13px] font-bold text-body">
+                    Delivery
+                  </Text>
+                  <Text className="mt-1 text-[12px] text-muted">
+                    {data.address?.city || "Delivery area"}
+                  </Text>
+                </View>
+                <Text className="text-[15px] font-extrabold text-brand-800">
+                  {formatCurrency(deliveryFee)}
+                </Text>
+              </View>
               <View className="flex-row items-center justify-between pt-1">
                 <View>
                   <Text className="text-[13px] font-bold text-body">
