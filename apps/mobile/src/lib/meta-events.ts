@@ -1,22 +1,19 @@
 import * as Crypto from "expo-crypto";
 import Constants from "expo-constants";
-import {
-  getTrackingPermissionsAsync,
-  isAvailable as isTrackingTransparencyAvailable,
-  requestTrackingPermissionsAsync,
-} from "expo-tracking-transparency";
 import { AppState, Platform } from "react-native";
 
 const META_EVENTS_ENDPOINT =
   process.env.EXPO_PUBLIC_META_EVENTS_URL ||
   "https://yousufrice.com/api/meta-events";
 const APP_VERSION = Constants.expoConfig?.version || "1.0.0";
+let inFlightTrackingPermissionRequest: Promise<MobileAdTrackingPermission> | null =
+  null;
 
-type MetaContents = Array<{
+type MetaContents = {
   id: string;
   quantity: number;
   item_price?: number;
-}>;
+}[];
 
 export interface MobileMetaCustomData {
   value?: number;
@@ -122,21 +119,27 @@ function waitForActiveApp(timeoutMs = 5000): Promise<boolean> {
 const waitForPermissionDialogWindow = () =>
   new Promise<void>((resolve) => setTimeout(resolve, 450));
 
+const loadTrackingTransparency = () => import("expo-tracking-transparency");
+
 export async function getMobileAdTrackingPermission(): Promise<MobileAdTrackingPermission> {
   if (Platform.OS !== "ios") {
     return { canAskAgain: false, granted: true, status: "granted" };
   }
-  if (!isTrackingTransparencyAvailable()) return unavailableTrackingPermission;
 
   try {
-    return normalizeTrackingPermission(await getTrackingPermissionsAsync());
+    const trackingTransparency = await loadTrackingTransparency();
+    if (!trackingTransparency.isAvailable())
+      return unavailableTrackingPermission;
+    return normalizeTrackingPermission(
+      await trackingTransparency.getTrackingPermissionsAsync(),
+    );
   } catch (error) {
     console.warn("[Meta App Events] ATT permission check failed", error);
     return unavailableTrackingPermission;
   }
 }
 
-export async function requestMobileAdTrackingPermission(): Promise<MobileAdTrackingPermission> {
+async function performMobileAdTrackingPermissionRequest(): Promise<MobileAdTrackingPermission> {
   const currentPermission = await getMobileAdTrackingPermission();
   if (
     Platform.OS !== "ios" ||
@@ -148,8 +151,8 @@ export async function requestMobileAdTrackingPermission(): Promise<MobileAdTrack
 
   try {
     // Apple only displays ATT while the app is fully active and no other
-    // permission sheet is being dismissed. Waiting here also avoids requesting
-    // during a navigation transition into Checkout or Account.
+    // permission sheet is being dismissed. The short delay lets the initial
+    // native launch transition finish before presenting Apple's dialog.
     if (!(await waitForActiveApp())) return currentPermission;
     await waitForPermissionDialogWindow();
 
@@ -159,10 +162,26 @@ export async function requestMobileAdTrackingPermission(): Promise<MobileAdTrack
     const readyPermission = await getMobileAdTrackingPermission();
     if (readyPermission.status !== "undetermined") return readyPermission;
 
-    return normalizeTrackingPermission(await requestTrackingPermissionsAsync());
+    const trackingTransparency = await loadTrackingTransparency();
+    return normalizeTrackingPermission(
+      await trackingTransparency.requestTrackingPermissionsAsync(),
+    );
   } catch (error) {
     console.warn("[Meta App Events] ATT permission request failed", error);
     return getMobileAdTrackingPermission();
+  }
+}
+
+export async function requestMobileAdTrackingPermission(): Promise<MobileAdTrackingPermission> {
+  // React development builds may mount effects twice. Coalesce overlapping
+  // startup calls so iOS receives only one ATT request at a time.
+  inFlightTrackingPermissionRequest ??=
+    performMobileAdTrackingPermissionRequest();
+
+  try {
+    return await inFlightTrackingPermissionRequest;
+  } finally {
+    inFlightTrackingPermissionRequest = null;
   }
 }
 
@@ -202,8 +221,10 @@ export async function trackMobileMetaEvent(
     });
 
     if (!response.ok) {
+      const responseBody = await response.text().catch(() => "");
       console.warn(
         `[Meta App Events] ${eventName} failed with HTTP ${response.status}`,
+        responseBody,
       );
       return false;
     }

@@ -65,6 +65,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
+    // Initial authentication is remote session synchronization, and the
+    // mounted guard prevents completion from updating an unmounted provider.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshUser()
       .catch(() => null)
       .finally(() => {

@@ -2,8 +2,7 @@ import { MetadataRoute } from 'next';
 import { tablesDB, PRODUCTS_TABLE_ID, DATABASE_ID } from "@/lib/appwrite";
 import { Product } from '@/lib/types';
 import { Query } from 'appwrite';
-
-export const revalidate = 3600; // Revalidate every hour
+import { cacheLife } from 'next/cache';
 
 const isProductionBuild = () =>
   process.env.NODE_ENV === 'production' &&
@@ -11,6 +10,9 @@ const isProductionBuild = () =>
   process.env.NEXT_PHASE === 'phase-production-build';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  'use cache';
+  cacheLife({ revalidate: 3600 });
+
   // Use primary domain for sitemap
   const baseUrl = process.env.NEXT_PUBLIC_PRIMARY_DOMAIN || 'https://yourdomain.com';
 

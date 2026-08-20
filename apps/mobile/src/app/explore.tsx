@@ -24,11 +24,11 @@ import { AppButton } from "@/components/app-button";
 import { Image } from "@/components/app-image";
 import { CheckoutSuccessModal } from "@/components/checkout-success-modal";
 import { OrderDetailsModal } from "@/components/order-details-modal";
+import { StorefrontHeader } from "@/components/storefront-header";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { successFeedback, warningFeedback } from "@/lib/native-feedback";
 import {
-  requestMobileAdTrackingPermission,
   trackMobileInitiateCheckout,
   trackMobilePurchase,
 } from "@/lib/meta-events";
@@ -73,6 +73,8 @@ export default function CartScreen() {
   useEffect(() => {
     if (!user?.email) return;
     let cancelled = false;
+    // Loading state belongs to this user-scoped remote-data synchronization.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingSavedDetails(true);
     loadSavedCheckoutDetails(user.$id)
       .then(({ address, customer }) => {
@@ -205,10 +207,6 @@ export default function CartScreen() {
       return;
     }
 
-    // The order is never blocked by this choice. If the user declines ATT,
-    // checkout continues and no Meta tracking or hashed phone is transmitted.
-    await requestMobileAdTrackingPermission();
-
     setSubmitting(true);
     try {
       const result = await placeCodOrder(
@@ -258,7 +256,7 @@ export default function CartScreen() {
   };
 
   return (
-    <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-canvas">
+    <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-white">
       <CheckoutSuccessModal
         onClose={() => {
           setPlacedOrder(null);
@@ -274,12 +272,16 @@ export default function CartScreen() {
         onClose={() => setSelectedOrderId(null)}
         orderId={selectedOrderId}
       />
+      <StorefrontHeader
+        actionLabel="Shop"
+        onActionPress={() => router.push("/")}
+      />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="flex-1"
       >
         <ScrollView keyboardShouldPersistTaps="handled" className="flex-1">
-          <View className="gap-5 px-4 pb-6 pt-4">
+          <View className="gap-5 bg-canvas px-4 pb-6 pt-6">
             <View className="gap-2">
               <Text className="text-[11px] font-extrabold uppercase tracking-[1px] text-muted">
                 Checkout
@@ -363,7 +365,7 @@ export default function CartScreen() {
                             [5, item.bags.kg5],
                             [10, item.bags.kg10],
                             [25, item.bags.kg25],
-                          ] as Array<[BagSize, number]>
+                          ] as [BagSize, number][]
                         )
                           .filter(([, count]) => count > 0)
                           .map(([size, count]) => (

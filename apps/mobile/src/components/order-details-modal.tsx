@@ -17,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "@/components/app-button";
 import { getOrderWithDetails, type OrderWithDetails } from "@/lib/orders";
 
-const statusSteps: Array<{ key: OrderStatus; label: string }> = [
+const statusSteps: { key: OrderStatus; label: string }[] = [
   { key: "pending", label: "Order placed" },
   { key: "accepted", label: "Order accepted" },
   { key: "out_for_delivery", label: "Out for delivery" },
@@ -42,7 +42,8 @@ export function OrderDetailsModal({
   const load = useCallback(
     async (refresh = false) => {
       if (!orderId) return;
-      refresh ? setRefreshing(true) : setLoading(true);
+      if (refresh) setRefreshing(true);
+      else setLoading(true);
       setError(null);
       try {
         setData(await getOrderWithDetails(orderId));
@@ -60,6 +61,8 @@ export function OrderDetailsModal({
     [orderId],
   );
   useEffect(() => {
+    // Clear the previous order before synchronizing details for a new order ID.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setData(null);
     if (orderId) void load();
   }, [load, orderId]);

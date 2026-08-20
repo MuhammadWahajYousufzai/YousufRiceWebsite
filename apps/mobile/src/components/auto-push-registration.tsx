@@ -5,14 +5,15 @@ import { registerMobilePushTargetIfAllowed } from "@/lib/mobile-notifications";
 
 export function AutoPushRegistration() {
   const { user } = useAuth();
+  const userId = user?.$id;
 
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     registerMobilePushTargetIfAllowed().catch(() => {
       // Manual enable on the Account screen surfaces actionable setup errors.
     });
-  }, [user?.$id]);
+  }, [userId]);
 
   return null;
 }

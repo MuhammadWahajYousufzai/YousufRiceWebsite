@@ -10,13 +10,20 @@ import AppTabs from "@/components/app-tabs";
 import { AutoPushRegistration } from "@/components/auto-push-registration";
 import { AuthProvider } from "@/lib/auth";
 import { CartProvider } from "@/lib/cart";
-import { trackMobilePageView } from "@/lib/meta-events";
+import {
+  requestMobileAdTrackingPermission,
+  trackMobilePageView,
+} from "@/lib/meta-events";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   useEffect(() => {
-    void trackMobilePageView();
+    // Ask with Apple's native ATT dialog on the first eligible launch. There
+    // is intentionally no custom pre-prompt or button before this request.
+    void requestMobileAdTrackingPermission().then((permission) => {
+      if (permission.granted) void trackMobilePageView();
+    });
   }, []);
 
   return (

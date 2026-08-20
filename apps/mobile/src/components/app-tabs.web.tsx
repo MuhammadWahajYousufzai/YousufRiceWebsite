@@ -6,12 +6,9 @@ import {
   TabTriggerSlotProps,
   Tabs,
 } from "expo-router/ui";
-import { SymbolView } from "expo-symbols";
-import { Pressable, useColorScheme, View } from "react-native";
+import { Pressable, View } from "react-native";
 
-import { ExternalLink } from "./external-link";
 import { ThemedText } from "./themed-text";
-import { ThemedView } from "./themed-view";
 
 export default function AppTabs() {
   return (
@@ -23,7 +20,10 @@ export default function AppTabs() {
             <TabButton>Home</TabButton>
           </TabTrigger>
           <TabTrigger name="explore" href="/explore" asChild>
-            <TabButton>Explore</TabButton>
+            <TabButton>Cart</TabButton>
+          </TabTrigger>
+          <TabTrigger name="account" href="/account" asChild>
+            <TabButton>Account</TabButton>
           </TabTrigger>
         </CustomTabList>
       </TabList>
@@ -38,48 +38,29 @@ export function TabButton({
 }: TabTriggerSlotProps) {
   return (
     <Pressable {...props} className="active:opacity-70">
-      <ThemedView
-        type={isFocused ? "backgroundSelected" : "backgroundElement"}
-        className="rounded-3xl px-4 py-1"
+      <View
+        className={`min-w-20 items-center rounded-full px-4 py-2 ${isFocused ? "bg-gold-400" : "bg-white"}`}
       >
         <ThemedText
-          type="small"
+          type="smallBold"
           themeColor={isFocused ? "text" : "textSecondary"}
         >
           {children}
         </ThemedText>
-      </ThemedView>
+      </View>
     </Pressable>
   );
 }
 
 export function CustomTabList(props: TabListProps) {
-  const scheme = useColorScheme();
-  const textColor = scheme === "dark" ? "#FFFFFF" : "#27247B";
   return (
     <View
       {...props}
-      className="absolute w-full flex-row items-center justify-center p-4"
+      className="absolute bottom-0 w-full flex-row items-center justify-center border-t border-gray-200 bg-white px-4 pb-4 pt-2"
     >
-      <ThemedView
-        type="backgroundElement"
-        className="w-full max-w-[800px] flex-row items-center gap-2 rounded-[32px] px-8 py-2"
-      >
-        <ThemedText type="smallBold" className="mr-auto">
-          Yousuf Rice
-        </ThemedText>
+      <View className="w-full max-w-[520px] flex-row items-center justify-around">
         {props.children}
-        <ExternalLink href="https://docs.expo.dev" asChild>
-          <Pressable className="ml-4 flex-row items-center justify-center gap-1">
-            <ThemedText type="link">Docs</ThemedText>
-            <SymbolView
-              tintColor={textColor}
-              name={{ ios: "arrow.up.right.square", web: "link" }}
-              size={12}
-            />
-          </Pressable>
-        </ExternalLink>
-      </ThemedView>
+      </View>
     </View>
   );
 }

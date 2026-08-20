@@ -1,5 +1,11 @@
 import { useRouter } from "expo-router";
-import { useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -9,7 +15,6 @@ import {
   ScrollView,
   Share,
   Text,
-  TextInput,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -28,8 +33,12 @@ import {
 import { AppButton } from "@/components/app-button";
 import { Image } from "@/components/app-image";
 import { AppScrollView } from "@/components/screen";
+import {
+  StorefrontAnnouncement,
+  StorefrontHeader,
+} from "@/components/storefront-header";
 import { useLiveCatalog } from "@/hooks/use-live-catalog";
-import type { ProductWithImage } from "@/lib/catalog";
+import type { BannerImage, ProductWithImage } from "@/lib/catalog";
 import { useCart } from "@/lib/cart";
 import {
   trackMobileAddToCart,
@@ -48,32 +57,22 @@ export default function HomeScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
+  const bannerRef = useRef<ScrollView>(null);
+  const productsOffsetRef = useRef(0);
   const { addBag, getItem, getTotalItems, removeBag } = useCart();
-  const { banners, error, loading, products, refresh, refreshing, updatedAt } =
+  const { banners, error, loading, products, refresh, refreshing } =
     useLiveCatalog();
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const [selectedProduct, setSelectedProduct] =
     useState<ProductWithImage | null>(null);
   const [selectedBundle, setSelectedBundle] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const filteredProducts = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    return query
-      ? products.filter((product) =>
-          `${product.name} ${product.description ?? ""}`
-            .toLowerCase()
-            .includes(query),
-        )
-      : products;
-  }, [products, searchQuery]);
   const groupedProducts = useMemo(
-    () => groupProductsByCatalogCategory(filteredProducts),
-    [filteredProducts],
+    () => groupProductsByCatalogCategory(products),
+    [products],
   );
   const bundleProducts = useMemo(
-    () => filteredProducts.filter(isColdDrinkBundleProduct),
-    [filteredProducts],
+    () => products.filter(isColdDrinkBundleProduct),
+    [products],
   );
   const selectedCartItem = selectedProduct
     ? getItem(selectedProduct.$id, selectedBundle)
@@ -90,6 +89,27 @@ export default function HomeScreen() {
   const totalPrice = selectedProduct
     ? calculatePrice(selectedProduct, totalKg)
     : 0;
+
+  useEffect(() => {
+    if (banners.length < 2) return;
+
+    const interval = setInterval(() => {
+      setActiveBannerIndex((current) => {
+        const next = (current + 1) % banners.length;
+        bannerRef.current?.scrollTo({ x: next * width, animated: true });
+        return next;
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [banners.length, width]);
+
+  const showProducts = () => {
+    scrollRef.current?.scrollTo({
+      y: Math.max(0, productsOffsetRef.current - 12),
+      animated: true,
+    });
+  };
 
   const openProduct = (product: ProductWithImage, isBundle = false) => {
     setSelectedProduct(product);
@@ -130,195 +150,69 @@ export default function HomeScreen() {
     <>
       <AppScrollView
         ref={scrollRef}
+        contentContainerClassName="bg-white pb-8"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => refresh("manual")}
+            tintColor="#27247B"
           />
         }
       >
-        <View className="gap-5 px-4 pb-6 pt-4">
-          <View className="flex-row items-center justify-between rounded-card border border-line bg-white px-3 py-3">
-            <View className="flex-row items-center gap-3">
-              <Image
-                source={require("@/assets/images/splash-icon.png")}
-                contentFit="contain"
-                className="h-10 w-[62px]"
-              />
-              <View>
-                <Text className="text-[15px] font-extrabold text-brand-800">
-                  Yousuf Rice
-                </Text>
-                <Text className="mt-0.5 text-[11px] font-semibold text-muted">
-                  Karachi delivery
-                </Text>
-              </View>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`${getTotalItems()} bags in cart`}
-              onPress={() => router.push("/explore")}
-              className="relative min-h-[42px] justify-center rounded-full bg-brand-800 px-5 active:bg-brand-900"
-            >
-              <Text className="text-[13px] font-extrabold text-white">Bag</Text>
-              {getTotalItems() > 0 && (
-                <View className="absolute -right-1.5 -top-2 min-w-5 items-center rounded-full bg-gold-400 px-1.5 py-1">
-                  <Text className="text-[11px] font-extrabold text-brand-800">
-                    {getTotalItems()}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
+        <StorefrontAnnouncement
+          offerEnabled={ramadanOfferEnabled}
+          onOrderNow={showProducts}
+        />
+        <StorefrontHeader
+          cartCount={getTotalItems()}
+          onActionPress={() => router.push("/explore")}
+        />
 
-          <View className="flex-row items-center gap-3 rounded-card border border-line bg-white px-3 py-3">
-            <Text className="flex-1 text-[12px] font-bold leading-[17px] text-ink">
-              {ramadanOfferEnabled
-                ? "Get 1kg free for every 15kg. Free Karachi delivery."
-                : "Premium rice, clear prices, and free Karachi delivery."}
-            </Text>
-            <Pressable
-              onPress={() =>
-                scrollRef.current?.scrollTo({ y: 360, animated: true })
-              }
-              className="rounded-full bg-brand-800 px-3 py-2"
-            >
-              <Text className="text-[12px] font-bold text-white">
-                Order now
-              </Text>
-            </Pressable>
-          </View>
+        <BannerCarousel
+          activeIndex={activeBannerIndex}
+          banners={banners}
+          onIndexChange={setActiveBannerIndex}
+          scrollRef={bannerRef}
+          width={width}
+        />
 
-          <View className="gap-2">
-            <Text className="text-[30px] font-extrabold leading-[35px] text-brand-800">
-              Premium rice for Karachi homes
+        <View
+          className="px-4 pb-6 pt-12"
+          onLayout={(event) => {
+            productsOffsetRef.current = event.nativeEvent.layout.y;
+          }}
+        >
+          <View className="mb-12 items-center">
+            <Text className="text-center text-[34px] font-extrabold leading-[40px] text-brand-800">
+              Our Products
             </Text>
-            <Text className="text-[15px] font-medium leading-[22px] text-body">
-              Aged basmati, honest per-kg pricing, and Cash on Delivery at your
-              doorstep.
+            <View className="mt-3 h-1.5 w-44 rounded-full bg-gold-400" />
+            <Text className="mt-5 max-w-[330px] text-center text-[16px] leading-6 text-gray-600">
+              Choose your preferred quantity for the best pricing. All products
+              come with our quality guarantee.
             </Text>
           </View>
 
-          <View className="flex-row overflow-hidden rounded-card border border-line bg-white">
-            {[
-              ["Free", "Karachi delivery"],
-              ["COD", "Pay on arrival"],
-              ["Aged", "Best rice"],
-            ].map(([value, label], index) => (
-              <View
-                key={value}
-                className={`flex-1 px-2 py-3 ${index > 0 ? "border-l border-line" : ""}`}
-              >
-                <Text className="text-center text-[16px] font-extrabold text-brand-800">
-                  {value}
-                </Text>
-                <Text className="mt-1 text-center text-[10px] font-semibold text-muted">
-                  {label}
-                </Text>
-              </View>
-            ))}
-          </View>
-
-          <View className="overflow-hidden rounded-card bg-wash">
-            {banners.length > 0 ? (
-              <>
-                <ScrollView
-                  horizontal
-                  pagingEnabled
-                  showsHorizontalScrollIndicator={false}
-                  onMomentumScrollEnd={(
-                    event: NativeSyntheticEvent<NativeScrollEvent>,
-                  ) =>
-                    setActiveBannerIndex(
-                      Math.round(
-                        event.nativeEvent.contentOffset.x /
-                          (event.nativeEvent.layoutMeasurement.width || 1),
-                      ),
-                    )
-                  }
+          {loading && products.length === 0 && (
+            <View className="mb-10 gap-4">
+              {[0, 1].map((item) => (
+                <View
+                  key={item}
+                  className="overflow-hidden rounded-card border border-gray-200 bg-white"
                 >
-                  {banners.map((banner) => (
-                    <Image
-                      key={banner.$id}
-                      source={{ uri: banner.url }}
-                      contentFit="contain"
-                      transition={180}
-                      className="aspect-[3/1] bg-wash"
-                      style={{ width: Math.max(320, width - 32) }}
-                    />
-                  ))}
-                </ScrollView>
-                <View className="absolute bottom-2 left-0 right-0 flex-row justify-center gap-1.5">
-                  {banners.map((banner, index) => (
-                    <View
-                      key={banner.$id}
-                      className={`h-1.5 rounded-full ${index === activeBannerIndex ? "w-[18px] bg-gold-400" : "w-1.5 bg-white/70"}`}
-                    />
-                  ))}
+                  <View className="h-80 bg-gray-100" />
+                  <View className="gap-3 p-4">
+                    <View className="h-5 w-4/5 rounded bg-gray-100" />
+                    <View className="h-4 w-full rounded bg-gray-100" />
+                    <View className="h-11 rounded-full bg-gray-200" />
+                  </View>
                 </View>
-              </>
-            ) : (
-              <View className="aspect-[3/1] items-center justify-center">
-                <Text className="text-[15px] font-bold text-body">
-                  Fresh stock, delivered daily
-                </Text>
-                <Text className="mt-1 text-[13px] text-muted">
-                  Pull down to refresh banners.
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <View className="flex-row items-center justify-between rounded-card border border-line bg-white px-4 py-3">
-            <View>
-              <Text className="text-[11px] font-extrabold uppercase tracking-[1px] text-muted">
-                Available today
-              </Text>
-              <Text className="mt-1 text-[17px] font-extrabold text-brand-800">
-                {loading
-                  ? "Loading products"
-                  : `${products.length} available products`}
-              </Text>
+              ))}
             </View>
-            <Text className="rounded-full bg-gold-100 px-3 py-2 text-[12px] font-extrabold text-gold-700">
-              Cash on delivery
-            </Text>
-          </View>
-
-          <View className="gap-2 rounded-card border border-line bg-white p-3">
-            <Text className="text-[12px] font-extrabold uppercase tracking-[1px] text-muted">
-              Search the catalog
-            </Text>
-            <TextInput
-              accessibilityLabel="Search rice products"
-              autoCorrect={false}
-              clearButtonMode="while-editing"
-              onChangeText={setSearchQuery}
-              placeholder="Basmati, sela, premium…"
-              placeholderTextColor="#A3A5B5"
-              returnKeyType="search"
-              value={searchQuery}
-              className="rounded-xl border border-line bg-canvas px-3 py-3 text-[15px] text-ink"
-            />
-            {!!searchQuery && (
-              <Text className="text-[12px] font-semibold text-muted">
-                {filteredProducts.length}{" "}
-                {filteredProducts.length === 1 ? "product" : "products"} found
-              </Text>
-            )}
-          </View>
-
-          {updatedAt && (
-            <Text className="text-[11px] font-semibold text-muted">
-              Updated{" "}
-              {new Date(updatedAt).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </Text>
           )}
+
           {error && (
-            <View className="gap-2 rounded-card border border-coral-100 bg-coral-50 p-4">
+            <View className="mb-8 gap-2 rounded-card border border-coral-100 bg-coral-50 p-4">
               <Text className="text-[16px] font-extrabold text-coral-700">
                 Could not refresh catalog
               </Text>
@@ -339,9 +233,9 @@ export default function HomeScreen() {
             <ProductSection
               title="Cold Drink Bundles"
               products={bundleProducts}
-              horizontal
               badgeLabel="Free cold drink"
               onPress={(product) => openProduct(product, true)}
+              accent="blue"
             />
           )}
           {groupedProducts.map(({ category, products: categoryProducts }) => (
@@ -353,27 +247,29 @@ export default function HomeScreen() {
             />
           ))}
 
-          {!loading && filteredProducts.length === 0 && !error && (
-            <View className="gap-2 rounded-card border border-line bg-white p-4">
-              <Text className="text-[17px] font-extrabold text-ink">
-                {searchQuery ? "No matching rice" : "No products available"}
+          {!loading && products.length === 0 && !error && (
+            <View className="items-center gap-3 rounded-card border border-gray-200 bg-white px-5 py-12">
+              <Text className="text-[48px]">🌾</Text>
+              <Text className="text-[20px] font-extrabold text-brand-800">
+                No Products Available
               </Text>
-              <Text className="text-[14px] leading-5 text-body">
-                {searchQuery
-                  ? "Try a shorter product name or clear the search."
-                  : "Check back soon for our premium rice selection."}
+              <Text className="text-center text-[14px] leading-5 text-gray-600">
+                Check back soon for our premium rice selection.
               </Text>
-              {!!searchQuery && (
-                <AppButton
-                  size="sm"
-                  variant="outline"
-                  onPress={() => setSearchQuery("")}
-                >
-                  Clear search
-                </AppButton>
-              )}
             </View>
           )}
+        </View>
+
+        <View className="bg-brand-800 px-5 py-7">
+          <Text className="text-[22px] font-extrabold text-white">
+            Yousuf Rice
+          </Text>
+          <Text className="mt-1 text-[12px] font-semibold text-brand-200">
+            © Yousuf Rice | A Brand of SS International
+          </Text>
+          <Text className="mt-3 max-w-[330px] text-[13px] leading-5 text-white/80">
+            Premium quality rice delivered to your doorstep across Karachi.
+          </Text>
         </View>
       </AppScrollView>
 
@@ -400,86 +296,202 @@ export default function HomeScreen() {
   );
 }
 
+function BannerCarousel({
+  activeIndex,
+  banners,
+  onIndexChange,
+  scrollRef,
+  width,
+}: {
+  activeIndex: number;
+  banners: BannerImage[];
+  onIndexChange: (index: number) => void;
+  scrollRef: RefObject<ScrollView | null>;
+  width: number;
+}) {
+  const goToBanner = (index: number) => {
+    if (banners.length === 0) return;
+    const next = (index + banners.length) % banners.length;
+    onIndexChange(next);
+    scrollRef.current?.scrollTo({ x: next * width, animated: true });
+  };
+
+  if (banners.length === 0) {
+    return (
+      <View
+        className="items-center justify-center bg-gray-100"
+        style={{ height: width / 3 }}
+      >
+        <Text className="text-[14px] font-bold text-gray-500">
+          Fresh stock, delivered daily
+        </Text>
+      </View>
+    );
+  }
+
+  const activeBanner = banners[Math.min(activeIndex, banners.length - 1)];
+
+  return (
+    <View
+      className="relative overflow-hidden bg-gray-100"
+      style={{ height: width / 3 }}
+    >
+      <Image
+        source={{ uri: activeBanner.url }}
+        contentFit="cover"
+        blurRadius={28}
+        className="absolute inset-0 h-full w-full opacity-75"
+        style={{ transform: [{ scale: 1.25 }] }}
+      />
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={(
+          event: NativeSyntheticEvent<NativeScrollEvent>,
+        ) =>
+          onIndexChange(
+            Math.round(
+              event.nativeEvent.contentOffset.x /
+                (event.nativeEvent.layoutMeasurement.width || 1),
+            ),
+          )
+        }
+      >
+        {banners.map((banner) => (
+          <View key={banner.$id} style={{ height: width / 3, width }}>
+            <Image
+              source={{ uri: banner.url }}
+              contentFit="contain"
+              transition={250}
+              className="h-full w-full"
+            />
+          </View>
+        ))}
+      </ScrollView>
+
+      {banners.length > 1 && (
+        <>
+          <Pressable
+            accessibilityLabel="Previous banner"
+            onPress={() => goToBanner(activeIndex - 1)}
+            className="absolute left-1 top-1/2 h-8 w-8 -translate-y-4 items-center justify-center rounded-full bg-black/40 active:bg-black/60"
+          >
+            <Text className="text-[19px] font-bold text-white">‹</Text>
+          </Pressable>
+          <Pressable
+            accessibilityLabel="Next banner"
+            onPress={() => goToBanner(activeIndex + 1)}
+            className="absolute right-1 top-1/2 h-8 w-8 -translate-y-4 items-center justify-center rounded-full bg-black/40 active:bg-black/60"
+          >
+            <Text className="text-[19px] font-bold text-white">›</Text>
+          </Pressable>
+          <View className="absolute bottom-2 left-0 right-0 flex-row justify-center gap-1.5">
+            {banners.map((banner, index) => (
+              <Pressable
+                accessibilityLabel={`Go to banner ${index + 1}`}
+                key={banner.$id}
+                onPress={() => goToBanner(index)}
+                className={`h-2 w-2 rounded-full ${index === activeIndex ? "bg-brand-800" : "bg-white/60"}`}
+              />
+            ))}
+          </View>
+        </>
+      )}
+    </View>
+  );
+}
+
 function ProductSection({
+  accent = "yellow",
   badgeLabel,
-  horizontal,
   onPress,
   products,
   title,
 }: {
+  accent?: "blue" | "yellow";
   badgeLabel?: string;
-  horizontal?: boolean;
   onPress: (product: ProductWithImage, isBundle?: boolean) => void;
   products: ProductWithImage[];
   title: string;
 }) {
   return (
-    <View className="gap-3">
+    <View className="mb-14 gap-6">
       <View className="flex-row items-center gap-3">
-        <View className="h-px flex-1 bg-line" />
-        <Text className="text-[18px] font-extrabold text-brand-800">
+        <View
+          className={`h-0.5 flex-1 ${accent === "blue" ? "bg-blue-500" : "bg-gold-400"}`}
+        />
+        <Text
+          className={`max-w-[250px] text-center text-[23px] font-extrabold leading-7 ${accent === "blue" ? "text-blue-600" : "text-brand-800"}`}
+        >
+          {accent === "blue" ? "🥤 " : ""}
           {title}
         </Text>
-        <View className="h-px flex-1 bg-line" />
+        <View
+          className={`h-0.5 flex-1 ${accent === "blue" ? "bg-blue-500" : "bg-gold-400"}`}
+        />
       </View>
-      {horizontal ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerClassName="gap-3 pr-4"
-        >
-          {products.map((product) => (
-            <ProductCard
-              key={product.$id}
-              compact
-              product={product}
-              badgeLabel={badgeLabel}
-              onPress={() => onPress(product, true)}
-            />
-          ))}
-        </ScrollView>
-      ) : (
-        <View className="flex-row flex-wrap justify-between gap-y-4">
-          {products.map((product) => (
-            <ProductCard
-              key={product.$id}
-              product={product}
-              badgeLabel={
-                shouldShowColdDrinkBadge(product)
-                  ? "Free cold drink"
-                  : undefined
-              }
-              onPress={() => onPress(product)}
-            />
-          ))}
-        </View>
-      )}
+      <View className="gap-6">
+        {products.map((product) => (
+          <ProductCard
+            key={`${badgeLabel ? "bundle" : "regular"}-${product.$id}`}
+            product={product}
+            imageUrl={badgeLabel ? product.bundleImageUrl : undefined}
+            badgeLabel={
+              badgeLabel ??
+              (shouldShowColdDrinkBadge(product)
+                ? "Free Cold Drink"
+                : undefined)
+            }
+            onPress={() => onPress(product, Boolean(badgeLabel))}
+          />
+        ))}
+      </View>
     </View>
   );
 }
 
 function ProductCard({
   badgeLabel,
-  compact,
   imageUrl,
   onPress,
   product,
 }: {
   badgeLabel?: string;
-  compact?: boolean;
   imageUrl?: string;
   onPress: () => void;
   product: ProductWithImage;
 }) {
   const source = imageUrl ?? product.imageUrl;
+  const tenKgDiscountPrice =
+    product.has_tier_pricing &&
+    product.tier_10kg_up_price &&
+    product.tier_10kg_up_price > 0
+      ? product.tier_10kg_up_price
+      : null;
+  const hasTenKgDiscount =
+    tenKgDiscountPrice !== null &&
+    tenKgDiscountPrice < product.base_price_per_kg;
+  const tenKgSavings = hasTenKgDiscount
+    ? (product.base_price_per_kg - tenKgDiscountPrice) * 10
+    : 0;
+
   return (
     <Pressable
       accessibilityRole="button"
       disabled={!product.available}
       onPress={onPress}
-      className={`${compact ? "w-[280px]" : "w-[48%]"} overflow-hidden rounded-card border border-line bg-white active:opacity-85`}
+      className="w-full overflow-hidden rounded-card border border-gray-200 bg-white active:opacity-85"
+      style={{
+        elevation: 3,
+        shadowColor: "#111827",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+      }}
     >
-      <View className="relative aspect-square bg-wash">
+      <View className="relative h-80 overflow-hidden bg-wash">
         {source ? (
           <Image
             source={{ uri: source }}
@@ -502,42 +514,68 @@ function ProductCard({
           </View>
         )}
         {badgeLabel && product.available && (
-          <Text className="absolute left-2 top-2 rounded-md bg-coral-500 px-2 py-1 text-[10px] font-bold text-white">
-            {badgeLabel}
-          </Text>
+          <View
+            className="absolute items-center bg-orange-500 py-2"
+            style={{
+              right: -52,
+              top: 24,
+              transform: [{ rotate: "45deg" }],
+              width: 190,
+            }}
+          >
+            <Text className="text-[11px] font-black uppercase tracking-[1px] text-white">
+              🥤 {badgeLabel}
+            </Text>
+          </View>
         )}
       </View>
-      <View className="gap-1.5 p-3">
-        <View className="flex-row items-start gap-1">
-          <Text
-            numberOfLines={2}
-            className="flex-1 text-[13px] font-bold leading-[18px] text-ink"
-          >
-            {product.name}
-          </Text>
-          {shouldShowPremiumBadge(product) && (
-            <Text className="rounded-md bg-gold-100 px-1.5 py-1 text-[9px] font-extrabold text-gold-700">
-              Premium
-            </Text>
-          )}
-        </View>
+      <View className="p-4">
+        <Text className="text-[18px] font-extrabold leading-6 text-brand-800">
+          {product.name}
+        </Text>
         {!!product.description && (
-          <Text numberOfLines={2} className="text-[11px] leading-4 text-muted">
+          <Text
+            numberOfLines={3}
+            className="mt-2 text-[14px] leading-5 text-gray-600"
+          >
             {product.description}
           </Text>
         )}
-        <View className="mt-2 flex-row items-center justify-between border-t border-line pt-2">
-          <View>
-            <Text className="text-[10px] font-semibold uppercase tracking-[.7px] text-muted">
-              Per kg
+
+        {tenKgDiscountPrice && (
+          <View className="mt-4 rounded-lg border border-gold-400 bg-gold-50 p-3">
+            <Text className="text-[10px] font-black uppercase tracking-[1.5px] text-brand-700">
+              10kg discounted price
             </Text>
-            <Text className="mt-0.5 text-[16px] font-extrabold text-brand-800">
-              {formatCurrency(getPricePerKg(product, 5))}
-            </Text>
+            <View className="mt-1 flex-row flex-wrap items-baseline gap-2">
+              <Text className="text-[23px] font-black text-brand-800">
+                {formatCurrency(tenKgDiscountPrice)}
+              </Text>
+              <Text className="text-[12px] font-bold text-brand-700">/kg</Text>
+              {hasTenKgDiscount && (
+                <Text className="text-[12px] font-semibold text-gray-500 line-through">
+                  {formatCurrency(product.base_price_per_kg)}/kg
+                </Text>
+              )}
+            </View>
+            {hasTenKgDiscount && (
+              <View className="mt-2 border-t border-brand-800/10 pt-2">
+                <Text className="text-[12px] font-extrabold leading-4 text-brand-800">
+                  Same quality rice, save {formatCurrency(tenKgSavings)} on every
+                  10kg order
+                </Text>
+              </View>
+            )}
           </View>
-          <Text className="rounded-full bg-brand-800 px-3 py-2 text-[11px] font-bold text-white">
-            Add
-          </Text>
+        )}
+
+        <View className="mt-4 border-t border-gray-200 pt-4">
+          <View className="min-h-11 flex-row items-center justify-center rounded-full bg-brand-800 px-4">
+            <Text className="text-[14px] font-extrabold text-white">
+              Order Now
+            </Text>
+            <Text className="ml-2 text-[18px] font-bold text-white">›</Text>
+          </View>
         </View>
       </View>
     </Pressable>
@@ -583,12 +621,12 @@ function ProductSelectionModal({
         value: bagCounts.kg10,
       },
       { label: "25kg bag", tag: "Best value", size: 25, value: bagCounts.kg25 },
-    ] satisfies Array<{
+    ] satisfies {
       label: string;
       size: BagSize;
       tag?: string;
       value: number;
-    }>
+    }[]
   ).filter((row) =>
     isBundle
       ? row.size === 10

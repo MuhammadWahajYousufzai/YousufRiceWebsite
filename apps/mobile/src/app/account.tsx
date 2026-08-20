@@ -1,9 +1,9 @@
 import type { Customer, Order } from "@repo/types";
 import { formatCurrency, formatPhoneNumberForDisplay } from "@repo/utils";
+import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
-  AppState,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -18,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppButton } from "@/components/app-button";
 import { OrderDetailsModal } from "@/components/order-details-modal";
+import { StorefrontHeader } from "@/components/storefront-header";
 import {
   CUSTOMERS_TABLE_ID,
   DATABASE_ID,
@@ -26,12 +27,8 @@ import {
   tablesDB,
 } from "@/lib/appwrite";
 import { useAuth } from "@/lib/auth";
+import { useCart } from "@/lib/cart";
 import { registerMobilePushTarget } from "@/lib/mobile-notifications";
-import {
-  getMobileAdTrackingPermission,
-  requestMobileAdTrackingPermission,
-  type MobileAdTrackingPermission,
-} from "@/lib/meta-events";
 import { successFeedback, warningFeedback } from "@/lib/native-feedback";
 import { findOrdersByPhone } from "@/lib/orders";
 
@@ -61,6 +58,8 @@ function orderStatusLabel(status: Order["status"]) {
 }
 
 export default function AccountScreen() {
+  const router = useRouter();
+  const { getTotalItems } = useCart();
   const {
     deleteAccount,
     error,
@@ -81,9 +80,6 @@ export default function AccountScreen() {
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [pushStatus, setPushStatus] = useState<string | null>(null);
   const [registeringPush, setRegisteringPush] = useState(false);
-  const [adTrackingPermission, setAdTrackingPermission] =
-    useState<MobileAdTrackingPermission | null>(null);
-  const [requestingAdTracking, setRequestingAdTracking] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [trackPhone, setTrackPhone] = useState("");
@@ -141,18 +137,11 @@ export default function AccountScreen() {
     }
   }, [user]);
   useEffect(() => {
+    // This effect intentionally synchronizes remote order state when the
+    // signed-in Appwrite user changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadOrders();
   }, [loadOrders]);
-  const refreshAdTrackingPermission = useCallback(async () => {
-    setAdTrackingPermission(await getMobileAdTrackingPermission());
-  }, []);
-  useEffect(() => {
-    void refreshAdTrackingPermission();
-    const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") void refreshAdTrackingPermission();
-    });
-    return () => subscription.remove();
-  }, [refreshAdTrackingPermission]);
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -256,58 +245,6 @@ export default function AccountScreen() {
       setRegisteringPush(false);
     }
   };
-  const handleAdTrackingPermission = async () => {
-    if (
-      adTrackingPermission &&
-      adTrackingPermission.status !== "undetermined" &&
-      !adTrackingPermission.granted
-    ) {
-      Alert.alert(
-        "iOS has blocked the tracking prompt",
-        "Apple only shows this prompt while its status is Not Determined. Open iPhone Settings > Privacy & Security > Tracking, enable Allow Apps to Request to Track, and enable Yousuf Rice. If Yousuf Rice is not listed, enable the main switch first, delete and reinstall the app, then try again.",
-        [
-          {
-            text: "Check Again",
-            style: "cancel",
-            onPress: () => {
-              void refreshAdTrackingPermission();
-            },
-          },
-          {
-            text: "Open Settings",
-            onPress: () => {
-              void Linking.openSettings();
-            },
-          },
-        ],
-      );
-      return;
-    }
-
-    setRequestingAdTracking(true);
-    try {
-      const permission = await requestMobileAdTrackingPermission();
-      setAdTrackingPermission(permission);
-      if (permission.granted) {
-        Alert.alert(
-          "Permission allowed",
-          "Ad measurement is enabled. Your orders and account still work if you change this choice later.",
-        );
-      } else if (!permission.canAskAgain) {
-        Alert.alert(
-          "iOS returned Not Allowed",
-          "Open iPhone Settings > Privacy & Security > Tracking and enable Yousuf Rice. iOS will not display the native prompt again while this status is denied or restricted.",
-        );
-      } else if (permission.status === "undetermined") {
-        Alert.alert(
-          "iOS did not present the prompt",
-          "The status is still Not Determined. Close any other permission dialog, keep Yousuf Rice active, and tap Request Permission again.",
-        );
-      }
-    } finally {
-      setRequestingAdTracking(false);
-    }
-  };
   const confirmAccountDeletion = () => {
     void warningFeedback();
     Alert.alert(
@@ -351,17 +288,21 @@ export default function AccountScreen() {
 
   if (!isAuthenticated)
     return (
-      <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-canvas">
+      <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-white">
         <OrderDetailsModal
           onClose={() => setSelectedOrderId(null)}
           orderId={selectedOrderId}
+        />
+        <StorefrontHeader
+          cartCount={getTotalItems()}
+          onActionPress={() => router.push("/explore")}
         />
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           className="flex-1"
         >
           <ScrollView keyboardShouldPersistTaps="handled" className="flex-1">
-            <View className="gap-5 px-4 pb-6 pt-4">
+            <View className="gap-5 bg-canvas px-4 pb-6 pt-6">
               <View className="gap-2">
                 <Text className="text-[11px] font-extrabold uppercase tracking-[1px] text-muted">
                   Yousuf Rice account
@@ -379,11 +320,6 @@ export default function AccountScreen() {
                 registeringPush={registeringPush}
                 onPress={handleRegisterPush}
                 guest
-              />
-              <AdTrackingCard
-                onPress={handleAdTrackingPermission}
-                permission={adTrackingPermission}
-                requesting={requestingAdTracking}
               />
               <View className="gap-4 rounded-card border border-line bg-white p-4">
                 <Text className="text-[20px] font-extrabold text-brand-800">
@@ -511,10 +447,14 @@ export default function AccountScreen() {
     );
 
   return (
-    <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-canvas">
+    <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-white">
       <OrderDetailsModal
         onClose={() => setSelectedOrderId(null)}
         orderId={selectedOrderId}
+      />
+      <StorefrontHeader
+        cartCount={getTotalItems()}
+        onActionPress={() => router.push("/explore")}
       />
       <ScrollView
         refreshControl={
@@ -522,7 +462,7 @@ export default function AccountScreen() {
         }
         className="flex-1"
       >
-        <View className="gap-5 px-4 pb-6 pt-4">
+        <View className="gap-5 bg-canvas px-4 pb-6 pt-6">
           <View className="gap-2">
             <Text className="text-[11px] font-extrabold uppercase tracking-[1px] text-muted">
               Account
@@ -563,11 +503,6 @@ export default function AccountScreen() {
             pushStatus={pushStatus}
             registeringPush={registeringPush}
             onPress={handleRegisterPush}
-          />
-          <AdTrackingCard
-            onPress={handleAdTrackingPermission}
-            permission={adTrackingPermission}
-            requesting={requestingAdTracking}
           />
           <View className="flex-row items-center justify-between">
             <Text className="text-[20px] font-extrabold text-brand-800">
@@ -680,71 +615,6 @@ function NotificationCard({
   );
 }
 
-function AdTrackingCard({
-  onPress,
-  permission,
-  requesting,
-}: {
-  onPress: () => void;
-  permission: MobileAdTrackingPermission | null;
-  requesting: boolean;
-}) {
-  const statusLabel = !permission
-    ? "Checking iPhone status…"
-    : permission.granted
-      ? "Status: Allowed"
-      : permission.status === "undetermined"
-        ? "Status: Not decided"
-          : permission.status === "unavailable"
-            ? "Status: Unavailable"
-            : "Status: Not allowed";
-  const diagnosticLabel = permission
-    ? `Apple status: ${permission.status} · can ask again: ${permission.canAskAgain ? "yes" : "no"}`
-    : null;
-  const buttonLabel = requesting
-    ? "Requesting…"
-    : permission?.granted
-      ? "Allowed"
-      : permission?.canAskAgain
-        ? "Request Permission"
-        : "Open Settings";
-
-  return (
-    <View className="gap-3 rounded-card border border-line bg-white p-4">
-      <View className="gap-1">
-        <Text className="text-[11px] font-extrabold uppercase tracking-[1px] text-muted">
-          Privacy choice
-        </Text>
-        <Text className="text-[16px] font-extrabold text-brand-800">
-          Ad measurement permission
-        </Text>
-        <Text className="text-[13px] leading-5 text-body">
-          Apple requires your permission before Yousuf Rice can share shopping
-          activity or a hashed phone number with Meta for ad measurement.
-          Ordering works either way.
-        </Text>
-        <Text
-          className={`text-[12px] font-extrabold ${permission?.granted ? "text-emerald-700" : "text-brand-700"}`}
-        >
-          {statusLabel}
-        </Text>
-        {diagnosticLabel && (
-          <Text className="text-[11px] font-semibold text-muted">
-            {diagnosticLabel}
-          </Text>
-        )}
-      </View>
-      <AppButton
-        disabled={requesting || !permission || permission.granted}
-        size="sm"
-        variant={permission?.granted ? "outline" : "primary"}
-        onPress={onPress}
-      >
-        {buttonLabel}
-      </AppButton>
-    </View>
-  );
-}
 function OrderSummary({
   onPress,
   order,

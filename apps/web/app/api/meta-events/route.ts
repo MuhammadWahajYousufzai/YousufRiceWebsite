@@ -85,7 +85,10 @@ export async function POST(request: NextRequest) {
       state: user_data?.state,
       zipCode: user_data?.zipCode,
       country: user_data?.country,
-      clientIp: resolvedActionSource === "website" ? clientIp : undefined,
+      // Mobile requests reach this endpoint only after ATT authorization.
+      // Send IP + user agent so app events without customer contact fields
+      // still satisfy Meta's required customer-matching parameters.
+      clientIp,
       userAgent,
       fbp: user_data?.fbp,
       fbc: user_data?.fbc,
