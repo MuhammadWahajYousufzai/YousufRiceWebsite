@@ -102,7 +102,9 @@ xcodebuild archive \
   -allowProvisioningUpdates \
   -authenticationKeyPath "$ASC_KEY_PATH" \
   -authenticationKeyID "$ASC_KEY_ID" \
-  -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+  -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+  DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+  CODE_SIGN_STYLE=Automatic
 
 echo "Exporting archive with destination=$DESTINATION..."
 xcodebuild -exportArchive \

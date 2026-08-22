@@ -8,6 +8,7 @@
     "scheme": "yousufrice",
     "userInterfaceStyle": "light",
     "ios": {
+      "appleTeamId": "V4AYP7YKGS",
       "bundleIdentifier": "com.yousufrice.mobile",
       "buildNumber": "6",
       "icon": "./assets/images/icon.png",
