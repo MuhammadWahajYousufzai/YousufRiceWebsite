@@ -3,7 +3,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MOBILE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-REPO_ROOT="$(cd "$MOBILE_DIR/../.." && pwd)"
 LOCAL_ENV="$MOBILE_DIR/.env.appstoreconnect.local"
 
 usage() {
@@ -87,7 +86,7 @@ cat > "$EXPORT_OPTIONS_PLIST" <<PLIST
 </plist>
 PLIST
 
-cd "$REPO_ROOT"
+cd "$MOBILE_DIR"
 
 echo "Synchronizing the native iOS project with Expo configuration..."
 "$MOBILE_DIR/node_modules/.bin/expo" prebuild --platform ios
