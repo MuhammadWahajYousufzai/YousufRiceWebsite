@@ -89,7 +89,7 @@ PLIST
 cd "$MOBILE_DIR"
 
 echo "Synchronizing the native iOS project with Expo configuration..."
-"$MOBILE_DIR/node_modules/.bin/expo" prebuild --platform ios
+"$MOBILE_DIR/node_modules/.bin/expo" prebuild --platform ios --no-clean
 
 echo "Archiving $SCHEME for App Store Connect..."
 xcodebuild archive \

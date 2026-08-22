@@ -1,7 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { useColorScheme } from "react-native";
+import { AppState, useColorScheme } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import "@/global.css";
@@ -21,9 +21,28 @@ export default function TabLayout() {
   useEffect(() => {
     // Ask with Apple's native ATT dialog on the first eligible launch. There
     // is intentionally no custom pre-prompt or button before this request.
-    void requestMobileAdTrackingPermission().then((permission) => {
-      if (permission.granted) void trackMobilePageView();
+    let cancelled = false;
+    let startupPageViewSent = false;
+
+    const requestAtStartup = async () => {
+      const permission = await requestMobileAdTrackingPermission();
+      if (cancelled || !permission.granted || startupPageViewSent) return;
+      startupPageViewSent = true;
+      void trackMobilePageView();
+    };
+
+    void requestAtStartup();
+    const subscription = AppState.addEventListener("change", (state) => {
+      // If iOS could not present ATT during the initial transition, try again
+      // when the app next becomes active. Denied/restricted statuses return
+      // immediately and are never prompted again.
+      if (state === "active") void requestAtStartup();
     });
+
+    return () => {
+      cancelled = true;
+      subscription.remove();
+    };
   }, []);
 
   return (

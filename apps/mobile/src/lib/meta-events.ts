@@ -116,8 +116,10 @@ function waitForActiveApp(timeoutMs = 5000): Promise<boolean> {
   });
 }
 
-const waitForPermissionDialogWindow = () =>
-  new Promise<void>((resolve) => setTimeout(resolve, 450));
+const ATT_STARTUP_RETRY_DELAYS_MS = [750, 1000, 1500] as const;
+
+const waitForPermissionDialogWindow = (delayMs: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, delayMs));
 
 const loadTrackingTransparency = () => import("expo-tracking-transparency");
 
@@ -140,7 +142,7 @@ export async function getMobileAdTrackingPermission(): Promise<MobileAdTrackingP
 }
 
 async function performMobileAdTrackingPermissionRequest(): Promise<MobileAdTrackingPermission> {
-  const currentPermission = await getMobileAdTrackingPermission();
+  let currentPermission = await getMobileAdTrackingPermission();
   if (
     Platform.OS !== "ios" ||
     currentPermission.granted ||
@@ -150,22 +152,30 @@ async function performMobileAdTrackingPermissionRequest(): Promise<MobileAdTrack
   }
 
   try {
-    // Apple only displays ATT while the app is fully active and no other
-    // permission sheet is being dismissed. The short delay lets the initial
-    // native launch transition finish before presenting Apple's dialog.
-    if (!(await waitForActiveApp())) return currentPermission;
-    await waitForPermissionDialogWindow();
+    // iOS discards an ATT request made while the app is inactive or while a
+    // different system permission sheet is pending. Wait until the launch
+    // overlay is gone, then retry only while Apple still reports notDetermined.
+    // A displayed ATT sheet resolves this call with the user's actual choice,
+    // so these retries can never show multiple prompts.
+    for (const delayMs of ATT_STARTUP_RETRY_DELAYS_MS) {
+      if (!(await waitForActiveApp())) return currentPermission;
+      await waitForPermissionDialogWindow(delayMs);
 
-    // Re-check after the delay because the user may have changed the setting
-    // while the app was inactive. Only `notDetermined` can show the native ATT
-    // sheet; denied/restricted choices must be changed in iPhone Settings.
-    const readyPermission = await getMobileAdTrackingPermission();
-    if (readyPermission.status !== "undetermined") return readyPermission;
+      currentPermission = await getMobileAdTrackingPermission();
+      if (currentPermission.status !== "undetermined") {
+        return currentPermission;
+      }
 
-    const trackingTransparency = await loadTrackingTransparency();
-    return normalizeTrackingPermission(
-      await trackingTransparency.requestTrackingPermissionsAsync(),
-    );
+      const trackingTransparency = await loadTrackingTransparency();
+      currentPermission = normalizeTrackingPermission(
+        await trackingTransparency.requestTrackingPermissionsAsync(),
+      );
+      if (currentPermission.status !== "undetermined") {
+        return currentPermission;
+      }
+    }
+
+    return currentPermission;
   } catch (error) {
     console.warn("[Meta App Events] ATT permission request failed", error);
     return getMobileAdTrackingPermission();
