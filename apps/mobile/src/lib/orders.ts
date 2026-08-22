@@ -4,6 +4,7 @@ import type {
   Customer,
   Order,
   OrderItem,
+  StorefrontContent,
 } from "@repo/types";
 import {
   calculateItemTotal,
@@ -12,7 +13,8 @@ import {
   formatOrderItems,
   formatPhoneNumber,
   generateMapsUrl,
-  getEveryGrainShanGiftCount,
+  getProductPromotion,
+  getPromotionRewardCount,
   requireDeliveryCity,
 } from "@repo/utils";
 import { Platform } from "react-native";
@@ -26,7 +28,6 @@ import {
   Query,
   tablesDB,
 } from "@/lib/appwrite";
-import { everyGrainShanOfferEnabled } from "@/lib/feature-flags";
 
 export interface CheckoutFormData {
   addressLine: string;
@@ -218,6 +219,7 @@ export async function loadSavedCheckoutDetails(
 export async function placeCodOrder(
   formData: CheckoutFormData,
   items: CartItem[],
+  storefrontContents: StorefrontContent[] = [],
 ): Promise<PlaceOrderResult> {
   assertOrderConfig();
 
@@ -363,13 +365,19 @@ export async function placeCodOrder(
                 100
               : 0,
           notes: (() => {
-            const giftCount = everyGrainShanOfferEnabled
-              ? getEveryGrainShanGiftCount(item.product, item.bags)
-              : 0;
+            const promotion = getProductPromotion(
+              storefrontContents,
+              item.product.$id,
+              "mobile",
+            );
+            const rewardCount = getPromotionRewardCount(
+              promotion,
+              item.bags,
+            );
             return (
               notes +
-              (giftCount > 0
-                ? `\n(Every Grain 10kg Shan Gift Qualified: ${giftCount} set${giftCount === 1 ? "" : "s"})`
+              (rewardCount > 0 && promotion?.reward_text
+                ? `\n(Promotion: ${rewardCount}x ${promotion.reward_text})`
                 : "")
             );
           })(),

@@ -2250,6 +2250,196 @@
                 }
             ],
             "indexes": []
+        },
+        {
+            "$id": "storefront_content",
+            "$permissions": [
+                "read(\"any\")",
+                "create(\"label:admin\")",
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "databaseId": "6915ff74001aa13f6189",
+            "name": "Storefront Content",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "placement",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "promotion",
+                        "announcement"
+                    ]
+                },
+                {
+                    "key": "enabled",
+                    "type": "boolean",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "title",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 180,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "description",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "badge_text",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 80,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "cta_text",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 48,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "cta_url",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "product_id",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "theme",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "harvest",
+                        "midnight",
+                        "saffron",
+                        "emerald",
+                        "rose"
+                    ]
+                },
+                {
+                    "key": "visual_style",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "product_focus",
+                        "split",
+                        "minimal"
+                    ]
+                },
+                {
+                    "key": "sort_order",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1000
+                },
+                {
+                    "key": "show_on_web",
+                    "type": "boolean",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "show_on_mobile",
+                    "type": "boolean",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "show_product_price",
+                    "type": "boolean",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "qualifying_bag_size_kg",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 1,
+                    "max": 100
+                },
+                {
+                    "key": "reward_text",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "reward_quantity",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 1,
+                    "max": 100
+                },
+                {
+                    "key": "starts_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "ends_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": []
         }
     ],
     "buckets": [

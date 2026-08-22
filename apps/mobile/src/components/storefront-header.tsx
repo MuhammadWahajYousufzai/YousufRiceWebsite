@@ -1,36 +1,48 @@
 import { Pressable, Text, View } from "react-native";
+import type { StorefrontContent } from "@repo/types";
 
 import { Image } from "@/components/app-image";
 
 export function StorefrontAnnouncement({
-  offerEnabled,
+  announcement,
   onOrderNow,
-  shanOfferEnabled,
 }: {
-  offerEnabled: boolean;
+  announcement?: StorefrontContent;
   onOrderNow: () => void;
-  shanOfferEnabled: boolean;
 }) {
+  if (!announcement) return null;
+  const themeColors = {
+    harvest: { backgroundColor: "#6e4d22", color: "#ffffff" },
+    midnight: { backgroundColor: "#27247b", color: "#ffffff" },
+    saffron: { backgroundColor: "#ffff03", color: "#27247b" },
+    emerald: { backgroundColor: "#176345", color: "#ffffff" },
+    rose: { backgroundColor: "#8e3f3a", color: "#ffffff" },
+  }[announcement.theme];
+
   return (
-    <View className="relative flex-row items-center gap-3 overflow-hidden bg-gray-50 px-4 py-2.5">
-      <View className="absolute -left-10 -top-8 h-20 w-36 rotate-12 rounded-full bg-brand-200/70" />
-      <View className="absolute -right-8 -top-8 h-20 w-36 -rotate-12 rounded-full bg-gold-400/40" />
-      <Text className="flex-1 text-[11px] font-extrabold leading-4 text-gray-900">
-        {offerEnabled
-          ? "⏳ HURRY! Get 1kg FREE rice for every 15kg."
-          : shanOfferEnabled
-            ? "🎁 Every Grain 10kg: FREE Shan Biryani Masala + Kheer Mix."
-            : "Karachi delivery Rs. 200 · Bahria Town Rs. 500 per started 10kg."}
-      </Text>
-      <Pressable
-        accessibilityRole="button"
-        onPress={onOrderNow}
-        className="rounded-full bg-gray-900 px-3 py-2 active:opacity-80"
+    <View
+      className="relative flex-row items-center gap-3 overflow-hidden px-4 py-2.5"
+      style={{ backgroundColor: themeColors.backgroundColor }}
+    >
+      <View className="absolute -left-10 -top-8 h-20 w-36 rotate-12 rounded-full border border-white/15" />
+      <View className="absolute -right-8 -top-8 h-20 w-36 -rotate-12 rounded-full border border-white/15" />
+      <Text
+        className="flex-1 text-[11px] font-extrabold leading-4"
+        style={{ color: themeColors.color }}
       >
-        <Text className="text-[11px] font-extrabold text-white">
-          Order now →
-        </Text>
-      </Pressable>
+        {announcement.title}
+      </Text>
+      {announcement.cta_text && (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onOrderNow}
+          className="rounded-full bg-black/25 px-3 py-2 active:opacity-80"
+        >
+          <Text className="text-[11px] font-extrabold text-white">
+            {announcement.cta_text} →
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }

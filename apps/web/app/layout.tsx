@@ -11,8 +11,8 @@ import "./globals.css";
 import AnnocementBar from "@/components/annoucement-bar";
 import { Suspense } from "react";
 import { ImageProtection } from "@/components/image-protection";
-import { Popup } from "@/components/popup";
 import { CartDrawer } from "@/components/cart-drawer";
+import { StorefrontContentProvider } from "@/components/storefront-content-provider";
 
 // Support multiple domains - uses primary domain for metadata
 const primaryDomain =
@@ -139,9 +139,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body className="antialiased">
-        <MetaPixel />
-        <MetaPixelDebug />
-        {/* Transitions removed */}
+        <StorefrontContentProvider>
+          <MetaPixel />
+          <MetaPixelDebug />
+          {/* Transitions removed */}
 
         {/* Wrap dynamic components in Suspense for PPR */}
         <Suspense fallback={null}>
@@ -167,16 +168,14 @@ export default function RootLayout({
           <FloatingPushNotification />
         </Suspense>
         <Suspense fallback={null}>
-          <Popup />
-        </Suspense>
-        <Suspense fallback={null}>
           <CartDrawer />
         </Suspense>
-        <ImageProtection />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
+          <ImageProtection />
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          />
+        </StorefrontContentProvider>
       </body>
     </html>
   );

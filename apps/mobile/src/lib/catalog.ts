@@ -1,23 +1,16 @@
-import type { Product, ProductImage } from "@repo/types";
+import type { Product, ProductImage, StorefrontContent } from "@repo/types";
 import { isRegularCatalogProduct, sortProductsForCatalog } from "@repo/utils";
 import {
   APPWRITE_ENDPOINT,
   APPWRITE_PROJECT_ID,
-  BANNER_STORAGE_BUCKET_ID,
   DATABASE_ID,
   PRODUCT_IMAGES_TABLE_ID,
   PRODUCTS_TABLE_ID,
   Query,
   STORAGE_BUCKET_ID,
-  storage,
+  STOREFRONT_CONTENT_TABLE_ID,
   tablesDB,
 } from "@/lib/appwrite";
-
-export interface BannerImage {
-  $id: string;
-  name: string;
-  url: string;
-}
 
 export interface ProductWithImage extends Product {
   imageUrl?: string;
@@ -109,28 +102,19 @@ export async function listProductsWithPrimaryImages(): Promise<
   });
 }
 
-export async function listBannerImages(): Promise<BannerImage[]> {
-  if (!APPWRITE_ENDPOINT || !APPWRITE_PROJECT_ID || !BANNER_STORAGE_BUCKET_ID) {
-    return [];
-  }
-
-  const result = await storage.listFiles({
-    bucketId: BANNER_STORAGE_BUCKET_ID,
-    queries: [Query.limit(20)],
+export async function listStorefrontContent(): Promise<StorefrontContent[]> {
+  if (!DATABASE_ID || !STOREFRONT_CONTENT_TABLE_ID) return [];
+  const response = await tablesDB.listRows({
+    databaseId: DATABASE_ID,
+    tableId: STOREFRONT_CONTENT_TABLE_ID,
+    queries: [Query.limit(100)],
   });
-
-  return result.files.map((file) => ({
-    $id: file.$id,
-    name: file.name,
-    url: getStorageFileViewUrl(BANNER_STORAGE_BUCKET_ID, file.$id),
-  }));
+  return rowsFromResponse<StorefrontContent>(
+    response as unknown as RowList<StorefrontContent>,
+  );
 }
 
 export async function loadCatalogSnapshot() {
-  const [products, banners] = await Promise.all([
-    listProductsWithPrimaryImages(),
-    listBannerImages(),
-  ]);
-
-  return { products, banners };
+  const products = await listProductsWithPrimaryImages();
+  return { products };
 }

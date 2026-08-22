@@ -15,8 +15,8 @@ import { STORAGE_BUCKET_ID } from "@/lib/appwrite";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMetaTracking } from "@/lib/hooks/use-meta-tracking";
-import { getEveryGrainShanGiftCount } from "@repo/utils";
-import { everyGrainShanOfferEnabled } from "@/lib/feature-flags";
+import { getProductPromotion, getPromotionRewardCount } from "@repo/utils";
+import { useStorefrontContent } from "@/components/storefront-content-provider";
 
 export function CartDrawer() {
   const {
@@ -30,6 +30,7 @@ export function CartDrawer() {
     clearCart,
   } = useCartStore();
   const { trackInitiateCheckout } = useMetaTracking();
+  const { contents } = useStorefrontContent();
   const totalPrice = getTotalPrice();
   const router = useRouter();
 
@@ -119,9 +120,15 @@ export function CartDrawer() {
                         item.product,
                         item.quantity,
                       );
-                      const shanGiftCount = everyGrainShanOfferEnabled
-                        ? getEveryGrainShanGiftCount(item.product, item.bags)
-                        : 0;
+                      const promotion = getProductPromotion(
+                        contents,
+                        item.product.$id,
+                        "web",
+                      );
+                      const rewardCount = getPromotionRewardCount(
+                        promotion,
+                        item.bags,
+                      );
 
                       const imageUrl = item.product.primary_image_id
                         ? `${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${STORAGE_BUCKET_ID}/files/${item.product.primary_image_id}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID}`
@@ -155,10 +162,9 @@ export function CartDrawer() {
                                 <div className="flex justify-between items-start gap-2">
                                   <h3 className="text-sm font-semibold text-gray-900 truncate flex-1 leading-tight">
                                     {item.product.name}
-                                    {shanGiftCount > 0 && (
+                                    {rewardCount > 0 && promotion?.reward_text && (
                                       <span className="block mt-1 text-[10px] sm:text-xs bg-linear-to-r from-cyan-400 to-blue-500 text-white font-black px-1.5 py-0.5 rounded shadow-sm w-fit truncate">
-                                        + {shanGiftCount}x FREE SHAN BIRYANI
-                                        MASALA &amp; KHEER MIX 🎁
+                                        + {rewardCount}x FREE {promotion.reward_text} 🎁
                                       </span>
                                     )}
                                   </h3>

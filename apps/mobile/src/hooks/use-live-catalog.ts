@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, type AppStateStatus } from "react-native";
-import type { BannerImage, ProductWithImage } from "@/lib/catalog";
+import type { ProductWithImage } from "@/lib/catalog";
 import { loadCatalogSnapshot } from "@/lib/catalog";
 import {
-  BANNER_STORAGE_BUCKET_ID,
   Channel,
   APPWRITE_REALTIME_ENABLED,
   DATABASE_ID,
@@ -14,7 +13,6 @@ import {
 } from "@/lib/appwrite";
 
 interface CatalogState {
-  banners: BannerImage[];
   error: string | null;
   loading: boolean;
   products: ProductWithImage[];
@@ -23,7 +21,6 @@ interface CatalogState {
 }
 
 const initialState: CatalogState = {
-  banners: [],
   error: null,
   loading: true,
   products: [],
@@ -40,9 +37,6 @@ function catalogChannels() {
       ? Channel.tablesdb(DATABASE_ID).table(PRODUCT_IMAGES_TABLE_ID).row()
       : null,
     STORAGE_BUCKET_ID ? Channel.bucket(STORAGE_BUCKET_ID).file() : null,
-    BANNER_STORAGE_BUCKET_ID
-      ? Channel.bucket(BANNER_STORAGE_BUCKET_ID).file()
-      : null,
   ];
 
   return channels

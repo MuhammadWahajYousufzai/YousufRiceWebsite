@@ -34,6 +34,9 @@ export const STORAGE_BUCKET_ID =
   process.env.EXPO_PUBLIC_APPWRITE_STORAGE_BUCKET_ID ?? "";
 export const BANNER_STORAGE_BUCKET_ID =
   process.env.EXPO_PUBLIC_BANNER_STORAGE_BUCKET_ID ?? "";
+export const STOREFRONT_CONTENT_TABLE_ID =
+  process.env.EXPO_PUBLIC_APPWRITE_STOREFRONT_CONTENT_TABLE_ID ??
+  "storefront_content";
 export const APPWRITE_REALTIME_ENABLED =
   process.env.EXPO_PUBLIC_ENABLE_APPWRITE_REALTIME === "true";
 

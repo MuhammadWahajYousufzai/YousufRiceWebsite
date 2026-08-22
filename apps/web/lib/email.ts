@@ -25,7 +25,8 @@ interface OrderItem {
   savings?: number;
   savingsPercentage?: number;
   tierApplied?: string | null;
-  shanGiftCount?: number;
+  promotionRewardCount?: number;
+  promotionRewardText?: string;
 }
 
 interface OrderConfirmationData {
@@ -72,7 +73,6 @@ export async function sendOrderConfirmation(data: OrderConfirmationData) {
     totalOriginalPrice = 0,
     loyaltyCode,
     loyaltyPercent,
-    totalWeight = 0,
   } = data;
 
   // Generate order items HTML
@@ -88,14 +88,14 @@ export async function sendOrderConfirmation(data: OrderConfirmationData) {
             ${item.tierApplied ? `<br>🎯 ${item.tierApplied} applied` : ''}
           </div>
         ` : ''}
-        ${item.shanGiftCount && item.shanGiftCount > 0 ? `
+        ${item.promotionRewardCount && item.promotionRewardCount > 0 && item.promotionRewardText ? `
           <div style="margin-top: 10px; background: linear-gradient(to right, #f0fdfa, #ecfeff); border: 1px solid #99f6e4; padding: 10px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
             <div style="display: flex; align-items: center; gap: 8px;">
               <span style="font-size: 20px;">🎁</span>
               <div>
                 <div style="font-size: 10px; color: #0f766e; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; margin-bottom: 2px;">Every Grain 10kg Gift</div>
                 <div style="font-size: 13px; color: #115e59; font-weight: bold;">
-                  Includes ${item.shanGiftCount}x Shan Biryani Masala + Kheer Mix gift set
+                  Includes ${item.promotionRewardCount}x ${item.promotionRewardText}
                 </div>
               </div>
             </div>
@@ -218,43 +218,6 @@ export async function sendOrderConfirmation(data: OrderConfirmationData) {
                   </tr>
                 </tbody>
               </table>
-
-              ${process.env.NEXT_PUBLIC_ENABLE_RAMADAN_OFFER === 'true' ? `
-              <!-- Ramadan Offer Banner -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #27247b 0%, #27247b 100%); border: 2px solid #ffff03; border-radius: 8px; margin-bottom: 20px; position: relative; overflow: hidden;">
-                <tr>
-                  <td style="padding: 20px; position: relative;">
-                    <div style="position: absolute; top: 0; right: 0; padding: 8px; opacity: 0.1;">
-                      <span style="font-size: 60px;">🌙</span>
-                    </div>
-                    <div style="position: relative; z-index: 10;">
-                      <h3 style="margin: 0 0 8px 0; color: #ffff03; font-size: 18px; font-weight: bold;">
-                        ⏳ Post-Eid Special (Ends Soon)
-                      </h3>
-                      ${(() => {
-                        const freeKg = Math.floor(totalWeight / 15);
-                        const nextThreshold = (freeKg + 1) * 15;
-                        const kgNeeded = nextThreshold - totalWeight;
-                        
-                        if (freeKg > 0) {
-                          return `
-                            <p style="margin: 0; color: #ffffff; font-size: 14px;">
-                              🎉 <span style="font-weight: bold; color: #ffff03;">${freeKg}kg FREE Rice</span> qualified! Add <span style="font-weight: bold; color: #ffff03;">${kgNeeded}kg</span> more for ${freeKg + 1}kg free.
-                            </p>
-                          `;
-                        } else {
-                          return `
-                            <p style="margin: 0; color: #ffffff; font-size: 14px;">
-                              Add <span style="font-weight: bold; color: #ffff03;">${kgNeeded}kg</span> more for 1kg FREE Rice!
-                            </p>
-                          `;
-                        }
-                      })()}
-                    </div>
-                  </td>
-                </tr>
-              </table>
-              ` : ''}
 
               <!-- Delivery Info -->
               <h3 style="color: #27247b; margin: 0 0 15px 0; font-size: 20px;">🚚 Delivery Information</h3>

@@ -7,11 +7,9 @@ import {
 } from "@/lib/cached-data";
 import {
   groupProductsByCatalogCategory,
-  isEveryGrainProduct,
   sortProductsForCatalog,
 } from "@repo/utils";
 import { Package } from "lucide-react";
-import { everyGrainShanOfferEnabled } from "@/lib/feature-flags";
 
 /**
  * Async component that fetches and displays products
@@ -98,12 +96,6 @@ export async function AsyncProductsList() {
                         <ProductCard
                           product={product}
                           imageFileId={imageMap.get(product.$id)}
-                          badgeLabel={
-                            everyGrainShanOfferEnabled &&
-                            isEveryGrainProduct(product)
-                              ? "Free Shan Gifts"
-                              : undefined
-                          }
                         />
                       </div>
                     </div>

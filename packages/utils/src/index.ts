@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { Product } from "@repo/types";
+import type { Product, StorefrontContent } from "@repo/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -286,6 +286,89 @@ export function getEveryGrainShanGiftCount(
   return Number.isFinite(tenKgBags) && tenKgBags > 0
     ? Math.floor(tenKgBags)
     : 0;
+}
+
+export type StorefrontPlatform = "web" | "mobile";
+
+export function isStorefrontContentActive(
+  content: StorefrontContent,
+  platform: StorefrontPlatform,
+  now?: Date,
+): boolean {
+  if (!content.enabled) return false;
+  if (platform === "web" && !content.show_on_web) return false;
+  if (platform === "mobile" && !content.show_on_mobile) return false;
+
+  let nowTime: number | undefined;
+  const getNowTime = () => {
+    nowTime ??= now?.getTime() ?? Date.now();
+    return nowTime;
+  };
+  if (content.starts_at) {
+    const startsAt = new Date(content.starts_at).getTime();
+    if (Number.isFinite(startsAt) && startsAt > getNowTime()) return false;
+  }
+  if (content.ends_at) {
+    const endsAt = new Date(content.ends_at).getTime();
+    if (Number.isFinite(endsAt) && endsAt < getNowTime()) return false;
+  }
+
+  return true;
+}
+
+export function getActiveStorefrontContent(
+  contents: StorefrontContent[],
+  platform: StorefrontPlatform,
+  placement?: StorefrontContent["placement"],
+  now?: Date,
+): StorefrontContent[] {
+  return contents
+    .filter(
+      (content) =>
+        (!placement || content.placement === placement) &&
+        isStorefrontContentActive(content, platform, now),
+    )
+    .sort((a, b) => a.sort_order - b.sort_order);
+}
+
+export function getProductPromotion(
+  contents: StorefrontContent[],
+  productId: string,
+  platform: StorefrontPlatform,
+): StorefrontContent | undefined {
+  return getActiveStorefrontContent(contents, platform, "promotion").find(
+    (content) => content.product_id === productId,
+  );
+}
+
+export function getPromotionRewardCount(
+  promotion: StorefrontContent | null | undefined,
+  bags:
+    | { kg3?: number; kg5?: number; kg10?: number; kg25?: number }
+    | null
+    | undefined,
+): number {
+  if (
+    !promotion?.reward_text ||
+    !promotion.qualifying_bag_size_kg ||
+    promotion.placement !== "promotion"
+  ) {
+    return 0;
+  }
+
+  const bagCountBySize: Record<number, number> = {
+    3: Number(bags?.kg3 ?? 0),
+    5: Number(bags?.kg5 ?? 0),
+    10: Number(bags?.kg10 ?? 0),
+    25: Number(bags?.kg25 ?? 0),
+  };
+  const qualifyingBags = bagCountBySize[promotion.qualifying_bag_size_kg] ?? 0;
+  if (!Number.isFinite(qualifyingBags) || qualifyingBags <= 0) return 0;
+
+  return (
+    Math.floor(qualifyingBags) *
+    Math.max(1, Math.floor(promotion.reward_quantity ?? 1))
+  );
 }
 
 export function shouldHideThreeKgBag(product: Pick<Product, "name">): boolean {

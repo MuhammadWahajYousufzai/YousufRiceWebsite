@@ -18,8 +18,9 @@ import {
   DELIVERY_CITIES,
   formatCurrency,
   formatPhoneNumberForDisplay,
-  getEveryGrainShanGiftCount,
   getPricePerKg,
+  getProductPromotion,
+  getPromotionRewardCount,
   validatePakistaniPhoneNumber,
 } from "@repo/utils";
 
@@ -28,9 +29,9 @@ import { Image } from "@/components/app-image";
 import { CheckoutSuccessModal } from "@/components/checkout-success-modal";
 import { OrderDetailsModal } from "@/components/order-details-modal";
 import { StorefrontHeader } from "@/components/storefront-header";
+import { useLiveStorefrontContent } from "@/hooks/use-live-storefront-content";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
-import { everyGrainShanOfferEnabled } from "@/lib/feature-flags";
 import { successFeedback, warningFeedback } from "@/lib/native-feedback";
 import {
   trackMobileInitiateCheckout,
@@ -57,6 +58,7 @@ export default function CartScreen() {
     removeItem,
   } = useCart();
   const { user } = useAuth();
+  const { contents } = useLiveStorefrontContent();
   const [submitting, setSubmitting] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [loadingSavedDetails, setLoadingSavedDetails] = useState(false);
@@ -226,6 +228,7 @@ export default function CartScreen() {
           userId: user?.$id,
         },
         items,
+        contents,
       );
       const purchasedItems = [...items];
       const purchasedItemCount = getTotalItems();
@@ -327,9 +330,15 @@ export default function CartScreen() {
                       ? item.product.imageUrl
                       : undefined;
                   const itemTotal = calculatePrice(item.product, item.quantity);
-                  const shanGiftCount = everyGrainShanOfferEnabled
-                    ? getEveryGrainShanGiftCount(item.product, item.bags)
-                    : 0;
+                  const promotion = getProductPromotion(
+                    contents,
+                    item.product.$id,
+                    "mobile",
+                  );
+                  const rewardCount = getPromotionRewardCount(
+                    promotion,
+                    item.bags,
+                  );
                   const itemKey = item.product.$id;
                   return (
                     <View
@@ -354,9 +363,9 @@ export default function CartScreen() {
                           <Text className="text-[17px] font-extrabold text-brand-800">
                             {item.product.name}
                           </Text>
-                          {shanGiftCount > 0 && (
+                          {rewardCount > 0 && promotion?.reward_text && (
                             <Text className="self-start rounded-full bg-brand-50 px-2 py-1 text-[11px] font-bold text-brand-700">
-                              {shanGiftCount}x free Shan Biryani Masala + Kheer Mix
+                              {rewardCount}x free {promotion.reward_text}
                             </Text>
                           )}
                           <Text className="text-[13px] font-semibold text-muted">

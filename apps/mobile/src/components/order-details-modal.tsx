@@ -211,9 +211,9 @@ export function OrderDetailsModal({
                       {item.quantity_kg}kg ·{" "}
                       {formatCurrency(item.price_per_kg_at_order)}/kg
                     </Text>
-                    {item.notes?.includes("Every Grain 10kg Shan Gift") && (
+                    {item.notes?.includes("(Promotion:") && (
                       <Text className="mt-1 text-[12px] font-bold text-gold-700">
-                        Includes free Shan Biryani Masala + Kheer Mix gift
+                        Includes {item.notes.match(/\(Promotion:\s*(.*?)\)/)?.[1] || "promotional reward"}
                       </Text>
                     )}
                   </View>

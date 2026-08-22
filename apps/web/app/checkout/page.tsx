@@ -51,8 +51,8 @@ import {
   DELIVERY_CITIES,
   requireDeliveryCity,
 } from "@/lib/delivery-policy";
-import { getEveryGrainShanGiftCount } from "@repo/utils";
-import { everyGrainShanOfferEnabled } from "@/lib/feature-flags";
+import { getProductPromotion, getPromotionRewardCount } from "@repo/utils";
+import { useStorefrontContent } from "@/components/storefront-content-provider";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const KARACHI = "Karachi";
@@ -63,6 +63,7 @@ function CheckoutContent() {
   const { items, getTotalPrice, clearCart } = useCartStore();
   const { user, customer, checkAuth } = useAuthStore();
   const { trackPurchase } = useMetaTracking();
+  const { contents } = useStorefrontContent();
   const [loading, setLoading] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
 
@@ -575,13 +576,19 @@ function CheckoutContent() {
 
               // Metadata
               notes: (() => {
-                const giftCount = everyGrainShanOfferEnabled
-                  ? getEveryGrainShanGiftCount(item.product, item.bags)
-                  : 0;
+                const promotion = getProductPromotion(
+                  contents,
+                  item.product.$id,
+                  "web",
+                );
+                const rewardCount = getPromotionRewardCount(
+                  promotion,
+                  item.bags,
+                );
                 return (
                   notes +
-                  (giftCount > 0
-                    ? `\n(Every Grain 10kg Shan Gift Qualified: ${giftCount} set${giftCount === 1 ? "" : "s"})`
+                  (rewardCount > 0 && promotion?.reward_text
+                    ? `\n(Promotion: ${rewardCount}x ${promotion.reward_text})`
                     : "")
                 );
               })(),
@@ -747,9 +754,15 @@ function CheckoutContent() {
                   savings: savingsInfo.savings,
                   savingsPercentage: savingsInfo.savingsPercentage,
                   tierApplied: savingsInfo.tierApplied,
-                  shanGiftCount: everyGrainShanOfferEnabled
-                    ? getEveryGrainShanGiftCount(item.product, item.bags)
-                    : 0,
+                  promotionRewardCount: getPromotionRewardCount(
+                    getProductPromotion(contents, item.product.$id, "web"),
+                    item.bags,
+                  ),
+                  promotionRewardText: getProductPromotion(
+                    contents,
+                    item.product.$id,
+                    "web",
+                  )?.reward_text,
                 };
               }),
               totalPrice: finalTotalPrice,
@@ -1160,50 +1173,6 @@ function CheckoutContent() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
-                {process.env.NEXT_PUBLIC_ENABLE_RAMADAN_OFFER === "true" &&
-                  (() => {
-                    const totalWeight = items.reduce(
-                      (acc, item) => acc + item.quantity,
-                      0,
-                    );
-                    const freeKg = Math.floor(totalWeight / 15);
-                    const nextThreshold = (freeKg + 1) * 15;
-                    const kgNeeded = nextThreshold - totalWeight;
-
-                    return (
-                      <div className="mb-6 p-4 rounded-xl border-2 border-[#ffff03] bg-linear-to-r from-[#27247b] to-[#27247b]/90 text-white shadow-lg relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-2 opacity-10">
-                          <span className="text-6xl">🌙</span>
-                        </div>
-                        <div className="relative z-10">
-                          <h3 className="font-bold text-[#ffff03] flex items-center gap-2 mb-1">
-                            <span>⏳</span> Post-Eid Special (Ends April 25)
-                          </h3>
-                          {freeKg > 0 ? (
-                            <p className="text-sm">
-                              🎉{" "}
-                              <span className="font-bold text-[#ffff03]">
-                                {freeKg}kg FREE Rice
-                              </span>{" "}
-                              qualified! Add{" "}
-                              <span className="font-bold text-[#ffff03]">
-                                {kgNeeded}kg
-                              </span>{" "}
-                              more for {freeKg + 1}kg free.
-                            </p>
-                          ) : (
-                            <p className="text-sm">
-                              Add{" "}
-                              <span className="font-bold text-[#ffff03]">
-                                {kgNeeded}kg
-                              </span>{" "}
-                              more for 1kg FREE Rice!
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
                 <div className="space-y-3 mb-6">
                   {items.map((item) => {
                     const itemSavings = calculateSavings(
@@ -1213,9 +1182,15 @@ function CheckoutContent() {
                     const imageUrl = item.product.primary_image_id
                       ? `${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${STORAGE_BUCKET_ID}/files/${item.product.primary_image_id}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID}`
                       : null;
-                    const shanGiftCount = everyGrainShanOfferEnabled
-                      ? getEveryGrainShanGiftCount(item.product, item.bags)
-                      : 0;
+                    const promotion = getProductPromotion(
+                      contents,
+                      item.product.$id,
+                      "web",
+                    );
+                    const rewardCount = getPromotionRewardCount(
+                      promotion,
+                      item.bags,
+                    );
                     return (
                       <div
                         key={item.product.$id}
@@ -1243,16 +1218,15 @@ function CheckoutContent() {
                               {item.product.name}
                             </span>
 
-                            {shanGiftCount > 0 && (
+                            {rewardCount > 0 && promotion?.reward_text && (
                               <div className="mt-1 inline-flex items-center gap-1.5 bg-linear-to-r from-teal-50 to-cyan-50 border border-teal-200 px-2 py-1 rounded-md shadow-sm w-fit">
                                 <span className="text-sm">🎁</span>
                                 <div>
                                   <p className="text-[9px] font-bold text-teal-700 uppercase tracking-widest leading-none mb-0.5">
-                                    Every Grain 10kg Gift
+                                    Promotional gift
                                   </p>
                                   <p className="text-[10px] text-teal-900 font-bold leading-none">
-                                    {shanGiftCount}x Shan Biryani Masala + Kheer
-                                    Mix
+                                    {rewardCount}x {promotion.reward_text}
                                   </p>
                                 </div>
                               </div>

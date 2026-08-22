@@ -1,4 +1,4 @@
-import { Client, TablesDB, Storage, Account, ID, Query } from "appwrite";
+import { Channel, Client, TablesDB, Storage, Account, ID, Query } from "appwrite";
 
 // Client for browser usage
 const client = new Client()
@@ -54,6 +54,9 @@ export const PRODUCT_IMAGES_TABLE_ID =
   process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_IMAGES_TABLE_ID!;
 export const DISCOUNT_MANAGEMENT_TABLE_ID =
   process.env.NEXT_PUBLIC_APPWRITE_DISCOUNT_MANAGEMENT_TABLE_ID!;
+export const STOREFRONT_CONTENT_TABLE_ID =
+  process.env.NEXT_PUBLIC_APPWRITE_STOREFRONT_CONTENT_TABLE_ID ||
+  "storefront_content";
 export const STORAGE_BUCKET_ID =
   process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!;
 
@@ -70,4 +73,4 @@ export const NOTIFICATION_ANALYTICS_TABLE_ID =
 export const NOTIFICATION_IMAGES_BUCKET_ID =
   process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATION_IMAGES_BUCKET_ID || "notification-images";
 
-export { client, ID, Query };
+export { Channel, client, ID, Query };

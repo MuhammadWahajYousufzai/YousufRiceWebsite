@@ -13,7 +13,8 @@ import {
   LogOut, 
   ShieldCheck,
   Home,
-  Bell
+  Bell,
+  Megaphone
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -36,6 +37,12 @@ export function Sidebar() {
       href: '/admin/products',
       icon: Package,
       adminOnly: false,
+    },
+    {
+      name: 'Promotions',
+      href: '/admin/promotions',
+      icon: Megaphone,
+      adminOnly: true,
     },
     {
       name: 'Orders',

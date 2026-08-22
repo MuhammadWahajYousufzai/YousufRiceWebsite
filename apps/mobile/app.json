@@ -9,7 +9,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "com.yousufrice.mobile",
-      "buildNumber": "5",
+      "buildNumber": "6",
       "icon": "./assets/images/icon.png",
       "supportsTablet": false,
       "privacyManifests": {

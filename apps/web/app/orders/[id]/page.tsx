@@ -319,13 +319,13 @@ function OrderDetailContent() {
                       {formatCurrency(item.price_per_kg_at_order)}/kg
                     </p>
                     
-                    {item.notes?.includes("Every Grain 10kg Shan Gift") && (
+                    {item.notes?.includes("(Promotion:") && (
                       <div className="mt-2 inline-flex items-center gap-2 bg-linear-to-r from-teal-50 to-cyan-50 border border-teal-200 px-3 py-1.5 rounded-lg shadow-sm">
                         <span className="text-lg">🎁</span>
                         <div>
                           <p className="text-[10px] font-bold text-teal-700 uppercase tracking-widest leading-none mb-0.5">Every Grain 10kg Gift</p>
                           <p className="text-xs text-teal-900 font-bold leading-none">
-                            Includes Shan Biryani Masala + Kheer Mix
+                            Includes {item.notes.match(/\(Promotion:\s*(.*?)\)/)?.[1] || "promotional reward"}
                           </p>
                         </div>
                       </div>
@@ -452,35 +452,6 @@ function OrderDetailContent() {
             </CardContent>
           </Card>
         )}
-
-        {/* Ramadan Offer Note */}
-        {(() => {
-          // Calculate weight directly from items to ensure accuracy (like checkout page)
-          const calculatedWeight = data.items.reduce((acc, item) => acc + (Number(item.quantity_kg) || 0), 0);
-          const freeKg = Math.floor(calculatedWeight / 15);
-
-          if (
-            process.env.NEXT_PUBLIC_ENABLE_RAMADAN_OFFER === 'true' &&
-            freeKg > 0
-          ) {
-            return (
-              <Card className="border-2 border-[#ffff03] bg-linear-to-r from-[#27247b] to-[#27247b]/90 text-white">
-                <CardHeader>
-                  <CardTitle className="flex items-center text-[#ffff03]">
-                    <span className="mr-2">🎉</span> Post-Eid Gift Qualified
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-white/90">
-                    This order qualifies for the Post-Eid Special Offer (ends soon)! <strong className="text-[#ffff03]">{freeKg}kg Free Rice</strong> will be included in your delivery.
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          }
-          return null;
-        })()}
-
 
         {/* Delivery Address */}
         <Card>

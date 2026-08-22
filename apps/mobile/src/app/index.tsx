@@ -1,14 +1,6 @@
 import { useRouter } from "expo-router";
+import { useMemo, useRef, useState } from "react";
 import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type RefObject,
-} from "react";
-import {
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
   Modal,
   Pressable,
   RefreshControl,
@@ -22,9 +14,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   calculatePrice,
   formatCurrency,
+  getActiveStorefrontContent,
   getPricePerKg,
+  getProductPromotion,
   groupProductsByCatalogCategory,
-  isEveryGrainProduct,
   shouldHideThreeKgBag,
   shouldShowPremiumBadge,
 } from "@repo/utils";
@@ -37,9 +30,10 @@ import {
   StorefrontHeader,
 } from "@/components/storefront-header";
 import { useLiveCatalog } from "@/hooks/use-live-catalog";
-import type { BannerImage, ProductWithImage } from "@/lib/catalog";
+import { useLiveStorefrontContent } from "@/hooks/use-live-storefront-content";
+import type { ProductWithImage } from "@/lib/catalog";
 import { useCart } from "@/lib/cart";
-import { everyGrainShanOfferEnabled } from "@/lib/feature-flags";
+import type { StorefrontContent } from "@repo/types";
 import {
   trackMobileAddToCart,
   trackMobileViewContent,
@@ -47,20 +41,16 @@ import {
 
 type BagSize = 3 | 5 | 10 | 25;
 
-const ramadanOfferEnabled =
-  process.env.EXPO_PUBLIC_ENABLE_RAMADAN_OFFER === "true";
 const emptyBags = { kg3: 0, kg5: 0, kg10: 0, kg25: 0 };
 
 export default function HomeScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
-  const bannerRef = useRef<ScrollView>(null);
   const productsOffsetRef = useRef(0);
   const { addBag, getItem, getTotalItems, removeBag } = useCart();
-  const { banners, error, loading, products, refresh, refreshing } =
-    useLiveCatalog();
-  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+  const { error, loading, products, refresh, refreshing } = useLiveCatalog();
+  const { contents } = useLiveStorefrontContent();
   const [selectedProduct, setSelectedProduct] =
     useState<ProductWithImage | null>(null);
   const groupedProducts = useMemo(
@@ -82,20 +72,19 @@ export default function HomeScreen() {
   const totalPrice = selectedProduct
     ? calculatePrice(selectedProduct, totalKg)
     : 0;
-
-  useEffect(() => {
-    if (banners.length < 2) return;
-
-    const interval = setInterval(() => {
-      setActiveBannerIndex((current) => {
-        const next = (current + 1) % banners.length;
-        bannerRef.current?.scrollTo({ x: next * width, animated: true });
-        return next;
-      });
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [banners.length, width]);
+  const activePromotions = getActiveStorefrontContent(
+    contents,
+    "mobile",
+    "promotion",
+  );
+  const announcement = getActiveStorefrontContent(
+    contents,
+    "mobile",
+    "announcement",
+  )[0];
+  const selectedPromotion = selectedProduct
+    ? getProductPromotion(contents, selectedProduct.$id, "mobile")
+    : undefined;
 
   const showProducts = () => {
     scrollRef.current?.scrollTo({
@@ -150,20 +139,24 @@ export default function HomeScreen() {
         }
       >
         <StorefrontAnnouncement
-          offerEnabled={ramadanOfferEnabled}
-          onOrderNow={showProducts}
-          shanOfferEnabled={everyGrainShanOfferEnabled}
+          announcement={announcement}
+          onOrderNow={() => {
+            const product = products.find(
+              (candidate) => candidate.$id === announcement?.product_id,
+            );
+            if (product) openProduct(product);
+            else showProducts();
+          }}
         />
         <StorefrontHeader
           cartCount={getTotalItems()}
           onActionPress={() => router.push("/explore")}
         />
 
-        <BannerCarousel
-          activeIndex={activeBannerIndex}
-          banners={banners}
-          onIndexChange={setActiveBannerIndex}
-          scrollRef={bannerRef}
+        <MobilePromotionRail
+          onPress={openProduct}
+          products={products}
+          promotions={activePromotions}
           width={width}
         />
 
@@ -226,7 +219,7 @@ export default function HomeScreen() {
               title={category}
               products={categoryProducts}
               onPress={openProduct}
-              showShanOffer={everyGrainShanOfferEnabled}
+              promotions={activePromotions}
             />
           ))}
 
@@ -270,7 +263,7 @@ export default function HomeScreen() {
         onShare={handleShareProduct}
         pricePerKg={pricePerKg}
         product={selectedProduct}
-        showShanOffer={everyGrainShanOfferEnabled}
+        promotion={selectedPromotion}
         totalKg={totalKg}
         totalPrice={totalPrice}
         visible={Boolean(selectedProduct)}
@@ -279,109 +272,117 @@ export default function HomeScreen() {
   );
 }
 
-function BannerCarousel({
-  activeIndex,
-  banners,
-  onIndexChange,
-  scrollRef,
+function MobilePromotionRail({
+  onPress,
+  products,
+  promotions,
   width,
 }: {
-  activeIndex: number;
-  banners: BannerImage[];
-  onIndexChange: (index: number) => void;
-  scrollRef: RefObject<ScrollView | null>;
+  onPress: (product: ProductWithImage) => void;
+  products: ProductWithImage[];
+  promotions: StorefrontContent[];
   width: number;
 }) {
-  const goToBanner = (index: number) => {
-    if (banners.length === 0) return;
-    const next = (index + banners.length) % banners.length;
-    onIndexChange(next);
-    scrollRef.current?.scrollTo({ x: next * width, animated: true });
+  if (promotions.length === 0) return null;
+  const themeColors = {
+    harvest: { background: "#f3ead3", foreground: "#302615", accent: "#6e4d22" },
+    midnight: { background: "#27247b", foreground: "#ffffff", accent: "#ffff03" },
+    saffron: { background: "#fff5cb", foreground: "#3b2a00", accent: "#27247b" },
+    emerald: { background: "#e5f2e9", foreground: "#123c2b", accent: "#176345" },
+    rose: { background: "#f9e7e6", foreground: "#542624", accent: "#8e3f3a" },
   };
-
-  if (banners.length === 0) {
-    return (
-      <View
-        className="items-center justify-center bg-gray-100"
-        style={{ height: width / 3 }}
-      >
-        <Text className="text-[14px] font-bold text-gray-500">
-          Fresh stock, delivered daily
-        </Text>
-      </View>
-    );
-  }
-
-  const activeBanner = banners[Math.min(activeIndex, banners.length - 1)];
+  const cardWidth = Math.max(290, width - 44);
 
   return (
-    <View
-      className="relative overflow-hidden bg-gray-100"
-      style={{ height: width / 3 }}
-    >
-      <Image
-        source={{ uri: activeBanner.url }}
-        contentFit="cover"
-        blurRadius={28}
-        className="absolute inset-0 h-full w-full opacity-75"
-        style={{ transform: [{ scale: 1.25 }] }}
-      />
+    <View className="pb-2 pt-6">
+      <View className="mb-4 px-4">
+        <Text className="text-[10px] font-black uppercase tracking-[2px] text-amber-700">
+          On the rice counter
+        </Text>
+        <Text className="mt-1 text-[30px] font-black leading-9 text-brand-800">
+          Current offers
+        </Text>
+      </View>
       <ScrollView
-        ref={scrollRef}
         horizontal
-        pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={(
-          event: NativeSyntheticEvent<NativeScrollEvent>,
-        ) =>
-          onIndexChange(
-            Math.round(
-              event.nativeEvent.contentOffset.x /
-                (event.nativeEvent.layoutMeasurement.width || 1),
-            ),
-          )
-        }
+        snapToInterval={cardWidth + 12}
+        decelerationRate="fast"
+        contentContainerClassName="gap-3 px-4 pb-5"
       >
-        {banners.map((banner) => (
-          <View key={banner.$id} style={{ height: width / 3, width }}>
-            <Image
-              source={{ uri: banner.url }}
-              contentFit="contain"
-              transition={250}
-              className="h-full w-full"
-            />
-          </View>
-        ))}
+        {promotions.map((promotion) => {
+          const product = products.find(
+            (candidate) => candidate.$id === promotion.product_id,
+          );
+          const colors = themeColors[promotion.theme];
+          const isMidnight = promotion.theme === "midnight";
+          return (
+            <Pressable
+              accessibilityRole="button"
+              disabled={!product}
+              key={promotion.$id}
+              onPress={() => product && onPress(product)}
+              className="relative min-h-[238px] overflow-hidden rounded-[28px] border border-black/10 p-5 active:opacity-90"
+              style={{
+                backgroundColor: colors.background,
+                width: cardWidth,
+                shadowColor: "#27247b",
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.14,
+                shadowRadius: 18,
+                elevation: 5,
+              }}
+            >
+              <View className="absolute -right-12 -top-16 h-48 w-48 rounded-full border border-black/10" />
+              <View className="flex-1 flex-row gap-3">
+                <View className="flex-1 items-start">
+                  <Text
+                    className="rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-[1.4px]"
+                    style={{
+                      backgroundColor: colors.accent,
+                      color: isMidnight ? "#27247b" : "#ffffff",
+                    }}
+                  >
+                    {promotion.badge_text || "Current offer"}
+                  </Text>
+                  <Text
+                    className="mt-4 text-[28px] font-black leading-[29px]"
+                    style={{ color: colors.foreground }}
+                  >
+                    {promotion.title}
+                  </Text>
+                  {!!promotion.description && (
+                    <Text
+                      className="mt-3 text-[13px] font-semibold leading-5 opacity-75"
+                      style={{ color: colors.foreground }}
+                    >
+                      {promotion.description}
+                    </Text>
+                  )}
+                  <Text
+                    className="mt-5 rounded-full px-4 py-2 text-[12px] font-black"
+                    style={{
+                      backgroundColor: colors.accent,
+                      color: isMidnight ? "#27247b" : "#ffffff",
+                    }}
+                  >
+                    {promotion.cta_text || "View offer"} →
+                  </Text>
+                </View>
+                {promotion.visual_style !== "minimal" && product?.imageUrl && (
+                  <View className="w-[34%] justify-end">
+                    <Image
+                      source={{ uri: product.imageUrl }}
+                      contentFit="contain"
+                      className="h-[190px] w-full"
+                    />
+                  </View>
+                )}
+              </View>
+            </Pressable>
+          );
+        })}
       </ScrollView>
-
-      {banners.length > 1 && (
-        <>
-          <Pressable
-            accessibilityLabel="Previous banner"
-            onPress={() => goToBanner(activeIndex - 1)}
-            className="absolute left-1 top-1/2 h-8 w-8 -translate-y-4 items-center justify-center rounded-full bg-black/40 active:bg-black/60"
-          >
-            <Text className="text-[19px] font-bold text-white">‹</Text>
-          </Pressable>
-          <Pressable
-            accessibilityLabel="Next banner"
-            onPress={() => goToBanner(activeIndex + 1)}
-            className="absolute right-1 top-1/2 h-8 w-8 -translate-y-4 items-center justify-center rounded-full bg-black/40 active:bg-black/60"
-          >
-            <Text className="text-[19px] font-bold text-white">›</Text>
-          </Pressable>
-          <View className="absolute bottom-2 left-0 right-0 flex-row justify-center gap-1.5">
-            {banners.map((banner, index) => (
-              <Pressable
-                accessibilityLabel={`Go to banner ${index + 1}`}
-                key={banner.$id}
-                onPress={() => goToBanner(index)}
-                className={`h-2 w-2 rounded-full ${index === activeIndex ? "bg-brand-800" : "bg-white/60"}`}
-              />
-            ))}
-          </View>
-        </>
-      )}
     </View>
   );
 }
@@ -389,12 +390,12 @@ function BannerCarousel({
 function ProductSection({
   onPress,
   products,
-  showShanOffer,
+  promotions,
   title,
 }: {
   onPress: (product: ProductWithImage) => void;
   products: ProductWithImage[];
-  showShanOffer: boolean;
+  promotions: StorefrontContent[];
   title: string;
 }) {
   return (
@@ -412,9 +413,9 @@ function ProductSection({
             key={product.$id}
             product={product}
             badgeLabel={
-              showShanOffer && isEveryGrainProduct(product)
-                ? "Free Shan gifts"
-                : undefined
+              promotions.find(
+                (promotion) => promotion.product_id === product.$id,
+              )?.badge_text || undefined
             }
             onPress={() => onPress(product)}
           />
@@ -563,7 +564,7 @@ function ProductSelectionModal({
   onShare,
   pricePerKg,
   product,
-  showShanOffer,
+  promotion,
   totalKg,
   totalPrice,
   visible,
@@ -576,26 +577,43 @@ function ProductSelectionModal({
   onShare: () => void;
   pricePerKg: number;
   product: ProductWithImage | null;
-  showShanOffer: boolean;
+  promotion?: StorefrontContent;
   totalKg: number;
   totalPrice: number;
   visible: boolean;
 }) {
   if (!product) return null;
-  const hasShanOffer = showShanOffer && isEveryGrainProduct(product);
+  const qualifyingBagSize = promotion?.qualifying_bag_size_kg;
+  const rewardTagFor = (bagSize: BagSize, fallback?: string) =>
+    qualifyingBagSize === bagSize && promotion?.reward_text
+      ? `+ ${promotion.reward_text} FREE`
+      : fallback;
   const bagRows = (
     [
-      { label: "3kg bag", size: 3, value: bagCounts.kg3 },
-      { label: "5kg bag", tag: "Popular", size: 5, value: bagCounts.kg5 },
+      {
+        label: "3kg bag",
+        tag: rewardTagFor(3),
+        size: 3,
+        value: bagCounts.kg3,
+      },
+      {
+        label: "5kg bag",
+        tag: rewardTagFor(5, "Popular"),
+        size: 5,
+        value: bagCounts.kg5,
+      },
       {
         label: "10kg bag",
-        tag: hasShanOffer
-          ? "+ Shan Biryani Masala & Kheer Mix FREE"
-          : "Great deal",
+        tag: rewardTagFor(10, "Great deal"),
         size: 10,
         value: bagCounts.kg10,
       },
-      { label: "25kg bag", tag: "Best value", size: 25, value: bagCounts.kg25 },
+      {
+        label: "25kg bag",
+        tag: rewardTagFor(25, "Best value"),
+        size: 25,
+        value: bagCounts.kg25,
+      },
     ] satisfies {
       label: string;
       size: BagSize;
@@ -657,10 +675,12 @@ function ProductSelectionModal({
                   </Text>
                 )}
               </View>
-              {hasShanOffer && (
+              {promotion && (
                 <Text className="rounded-xl border border-brand-200 bg-brand-50 p-3 text-[13px] font-bold leading-5 text-brand-800">
-                  Buy an Every Grain 10kg bag and get Shan Biryani Masala plus
-                  Kheer Mix free. Only 10kg bags qualify.
+                  {promotion.description || promotion.title}
+                  {promotion.reward_text && qualifyingBagSize
+                    ? ` Only ${qualifyingBagSize}kg bags qualify for ${promotion.reward_text}.`
+                    : ""}
                 </Text>
               )}
               {!!product.description && (

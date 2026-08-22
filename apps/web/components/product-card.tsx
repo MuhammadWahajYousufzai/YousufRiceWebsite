@@ -58,14 +58,6 @@ export function ProductCard({ product, imageFileId, badgeLabel }: ProductCardSim
                 </span>
               </div>
             )}
-            {product.available &&
-              process.env.NEXT_PUBLIC_ENABLE_RAMADAN_OFFER === "true" && (
-                <div className="absolute top-2 left-2 z-10">
-                  <span className="bg-[#ffff03] text-[#27247b] text-[10px] md:text-xs font-bold px-2 py-1 rounded-full shadow-md flex items-center gap-1">
-                    <span>⏳</span> Post-Eid Special (Ends April 25)
-                  </span>
-                </div>
-              )}
             {badgeLabel && (
               <div className="absolute top-0 right-0 z-20 overflow-hidden w-44 h-44">
                 <div className="absolute transform rotate-45 bg-linear-to-r from-amber-400 to-orange-500 text-white font-black text-center py-2 -right-12.5 top-6 w-52 shadow-[0_4px_15px_rgba(245,158,11,0.3)] border-b-2 border-amber-200 tracking-widest text-sm flex items-center justify-center gap-1 animate-[pulse_3s_ease-in-out_infinite]">

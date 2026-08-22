@@ -12,7 +12,7 @@ Current iOS identifiers:
 - Xcode workspace: `ios/YousufRice.xcworkspace`
 - Xcode scheme: `YousufRice`
 - App version: `1.0.0`
-- Build number: `5`
+- Build number: `6`
 
 ## Local Checks
 
@@ -28,28 +28,22 @@ Then run the app locally:
 pnpm --filter @yousuf-rice/mobile ios
 ```
 
-## Mobile Offer Flags (iOS and Android)
+## Live Storefront Promotions (iOS and Android)
 
-The Expo iOS and Android apps use the same build-time offer flag:
+Promotions and the announcement bar are managed from **Web Admin →
+Promotions**. The iOS, Android, and web storefronts read the same
+`storefront_content` Appwrite table and subscribe to Realtime changes. A
+15-second polling fallback and refresh-on-app-focus keep content current if a
+Realtime connection is temporarily unavailable.
+
+The mobile build only needs the table identifier once:
 
 ```bash
-EXPO_PUBLIC_ENABLE_EVERY_GRAIN_SHAN_OFFER=true
+EXPO_PUBLIC_APPWRITE_STOREFRONT_CONTENT_TABLE_ID=storefront_content
 ```
 
-- Set it to `true` to show and record the Every Grain 10kg Shan Biryani
-  Masala + Kheer Mix gift.
-- Set it to `false` to hide and stop recording that gift.
-- The expired `EXPO_PUBLIC_ENABLE_COLD_DRINK_BUNDLE` flag must remain `false`.
-  Its storefront and order logic have been retired, so an old build variable
-  cannot make the cold-drink deal appear again.
-
-For local development, set the values in `apps/mobile/.env.local`. For local
-App Store and Google Play builds, set them in
-`apps/mobile/.env.appstoreconnect.local` and
-`apps/mobile/.env.googleplay.local` respectively. For Xcode Cloud, add the same
-variables under the workflow environment settings. Public Expo flags are
-compiled into the app bundle, so restart the dev server or create a new iOS or
-Android build after changing them.
+Offer copy, selected products, reward rules, designs, scheduling, ordering,
+and on/off switches are no longer compiled into the app bundle.
 
 ## Prepare App Store Connect
 

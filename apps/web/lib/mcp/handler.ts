@@ -4,8 +4,8 @@ import {
   requireDeliveryCity,
 } from "@/lib/delivery-policy";
 import type { DeliveryCity } from "@/lib/delivery-policy";
-import { getEveryGrainShanGiftCount } from "@repo/utils";
-import { everyGrainShanOfferEnabled } from "@/lib/feature-flags";
+import type { StorefrontContent } from "@repo/types";
+import { getProductPromotion, getPromotionRewardCount } from "@repo/utils";
 
 function getTablesDB(): TablesDB {
   const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
@@ -37,6 +37,13 @@ function customersTableId() {
 
 function addressesTableId() {
   return process.env.NEXT_PUBLIC_APPWRITE_ADDRESSES_TABLE_ID!;
+}
+
+function storefrontContentTableId() {
+  return (
+    process.env.NEXT_PUBLIC_APPWRITE_STOREFRONT_CONTENT_TABLE_ID ||
+    "storefront_content"
+  );
 }
 
 export interface ProductRecord {
@@ -164,6 +171,13 @@ export async function confirmOrder(input: { quoteId: string; customerName: strin
   }
 
   const enrichedItems: any[] = [];
+  const storefrontResult = await db.listRows({
+    databaseId: databaseId(),
+    tableId: storefrontContentTableId(),
+    queries: [Query.limit(100)],
+  });
+  const storefrontContents =
+    storefrontResult.rows as unknown as StorefrontContent[];
   let totalWeightKg = 0;
   for (const item of quote.items) {
     const product = await db.getRow({ databaseId: databaseId(), tableId: productsTableId(), rowId: item.productId }) as unknown as ProductRecord;
@@ -182,10 +196,13 @@ export async function confirmOrder(input: { quoteId: string; customerName: strin
 
   for (const item of enrichedItems) {
     const discountPct = item.basePricePerKg > 0 ? (item.discountAmount / (item.basePricePerKg * item.quantity)) * 100 : 0;
-    const giftCount = everyGrainShanOfferEnabled
-      ? getEveryGrainShanGiftCount({ name: item.productName }, item.bags)
-      : 0;
-    await db.createRow({ databaseId: databaseId(), tableId: orderItemsTableId(), rowId: ID.unique(), data: { order_id: orderId, product_id: item.productId, product_name: item.productName, product_description: "", quantity_kg: item.quantity, bags_3kg: item.bags.kg3, bags_5kg: item.bags.kg5, bags_10kg: item.bags.kg10, bags_25kg: item.bags.kg25, price_per_kg_at_order: item.pricePerKg, base_price_per_kg: item.basePricePerKg, tier_applied: item.pricePerKg < item.basePricePerKg ? "discount" : "base", discount_percentage: discountPct, discount_amount: item.discountAmount, subtotal_before_discount: item.basePricePerKg * item.quantity, total_after_discount: item.subtotal, notes: giftCount > 0 ? `(Every Grain 10kg Shan Gift Qualified: ${giftCount} set${giftCount === 1 ? "" : "s"})` : "" } });
+    const promotion = getProductPromotion(
+      storefrontContents,
+      item.productId,
+      "web",
+    );
+    const rewardCount = getPromotionRewardCount(promotion, item.bags);
+    await db.createRow({ databaseId: databaseId(), tableId: orderItemsTableId(), rowId: ID.unique(), data: { order_id: orderId, product_id: item.productId, product_name: item.productName, product_description: "", quantity_kg: item.quantity, bags_3kg: item.bags.kg3, bags_5kg: item.bags.kg5, bags_10kg: item.bags.kg10, bags_25kg: item.bags.kg25, price_per_kg_at_order: item.pricePerKg, base_price_per_kg: item.basePricePerKg, tier_applied: item.pricePerKg < item.basePricePerKg ? "discount" : "base", discount_percentage: discountPct, discount_amount: item.discountAmount, subtotal_before_discount: item.basePricePerKg * item.quantity, total_after_discount: item.subtotal, notes: rewardCount > 0 && promotion?.reward_text ? `(Promotion: ${rewardCount}x ${promotion.reward_text})` : "" } });
   }
 
   const addressId = ID.unique();

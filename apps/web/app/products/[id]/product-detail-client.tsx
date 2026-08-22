@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { useCartStore } from "@/lib/store/cart-store";
 import {
   Plus,
   Minus,
@@ -17,8 +16,8 @@ import { formatCurrency, getPricePerKg, calculatePrice } from "@/lib/utils";
 import { useMetaTracking } from "@/lib/hooks/use-meta-tracking";
 import { useBagSelection } from "@/lib/hooks/use-bag-selection";
 import Link from "next/link";
-import { isEveryGrainProduct } from "@repo/utils";
-import { everyGrainShanOfferEnabled } from "@/lib/feature-flags";
+import { getProductPromotion } from "@repo/utils";
+import { useStorefrontContent } from "@/components/storefront-content-provider";
 
 interface ProductDetailClientProps {
   product: Product;
@@ -35,10 +34,9 @@ export default function ProductDetailClient({
   const { trackViewContent, trackAddToCart, trackInitiateCheckout } =
     useMetaTracking();
   const hasTrackedViewRef = useRef(false);
-  const { items: cartItems } = useCartStore();
-
-  const hasShanOffer =
-    everyGrainShanOfferEnabled && isEveryGrainProduct(product);
+  const { contents } = useStorefrontContent();
+  const promotion = getProductPromotion(contents, product.$id, "web");
+  const hasPromotion = Boolean(promotion);
   const [selectedImageIndex, setSelectedImageIndex] =
     useState(primaryImageIndex);
 
@@ -212,9 +210,9 @@ export default function ProductDetailClient({
                 <div className="flex-1 min-w-0">
                   <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-linear-to-r from-[#27247b] via-[#1a1854] to-[#27247b] bg-clip-text text-transparent leading-tight mb-2 wrap-break-word flex flex-col sm:flex-row sm:items-center gap-2">
                     {product.name}
-                    {hasShanOffer && (
+                    {hasPromotion && (
                       <span className="text-[10px] sm:text-xs bg-linear-to-r from-cyan-400 to-blue-500 text-white px-2.5 py-1 rounded-full font-black tracking-widest uppercase shadow-lg whitespace-nowrap mt-1 sm:mt-0 self-start animate-bounce">
-                        + Free Shan Gifts 🎁
+                        + {promotion?.badge_text || "Special offer"} 🎁
                       </span>
                     )}
                   </h1>
@@ -306,7 +304,7 @@ export default function ProductDetailClient({
                 )}
               </div>
 
-              {hasShanOffer && (
+              {hasPromotion && (
                 <div className="mb-4 p-3 sm:p-5 rounded-xl border-2 border-cyan-400/50 bg-linear-to-r from-[#27247b] to-blue-800 text-white shadow-[0_8px_25px_rgba(39,36,123,0.3)] relative overflow-hidden group hover:scale-[1.02] transition-all duration-400">
                   <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-40 transition-opacity">
                     <span className="text-8xl group-hover:animate-bounce inline-block transform rotate-12 -mt-4 -mr-4">
@@ -319,70 +317,23 @@ export default function ProductDetailClient({
                     </span>
                     <div>
                       <h3 className="font-black text-cyan-300 mb-1 text-base sm:text-lg tracking-widest uppercase drop-shadow">
-                        Every Grain 10kg Gift
+                        {promotion?.title}
                       </h3>
                       <p className="text-xs sm:text-sm text-blue-50 font-medium leading-relaxed">
-                        Get{" "}
+                        {promotion?.description || "Get"}{" "}
                         <span className="text-[#27247b] font-black bg-linear-to-r from-cyan-300 to-cyan-400 px-2 py-0.5 rounded shadow-md mx-1 inline-block transform -rotate-1 scale-105">
-                          Shan Biryani Masala + Kheer Mix FREE
+                          {promotion?.reward_text
+                            ? `${promotion.reward_text} FREE`
+                            : "Special value"}
                         </span>{" "}
-                        with each{" "}
-                        <strong className="text-white border-b-2 border-cyan-300 pb-0.5 tracking-wide">
-                          EVERY GRAIN 10kg BAG
-                        </strong>{" "}
-                        you buy. Other bag sizes do not qualify.
+                        {promotion?.qualifying_bag_size_kg
+                          ? `with each ${promotion.qualifying_bag_size_kg}kg bag.`
+                          : "while this promotion is active."}
                       </p>
                     </div>
                   </div>
                 </div>
               )}
-
-              {/* Ramadan Offer Banner */}
-              {process.env.NEXT_PUBLIC_ENABLE_RAMADAN_OFFER === "true" &&
-                (() => {
-                  // Calculate total weight from cart (cart already includes current product if added)
-                  const cartWeight = cartItems.reduce(
-                    (acc, item) => acc + item.quantity,
-                    0,
-                  );
-                  const freeKg = Math.floor(cartWeight / 15);
-                  const nextThreshold = (freeKg + 1) * 15;
-                  const kgNeeded = nextThreshold - cartWeight;
-
-                  return (
-                    <div className="mb-4 p-3 sm:p-4 rounded-xl border-2 border-[#ffff03] bg-linear-to-r from-[#27247b] to-[#27247b]/90 text-white shadow-lg relative overflow-hidden">
-                      <div className="absolute top-0 right-0 p-2 opacity-10">
-                        <span className="text-6xl">🌙</span>
-                      </div>
-                      <div className="relative z-10">
-                        <h3 className="font-bold text-[#ffff03] flex items-center gap-2 mb-1 text-sm sm:text-base">
-                          <span>⏳</span> Post-Eid Special (Ends April 25)
-                        </h3>
-                        {freeKg > 0 ? (
-                          <p className="text-xs sm:text-sm">
-                            🎉{" "}
-                            <span className="font-bold text-[#ffff03]">
-                              {freeKg}kg FREE Rice
-                            </span>{" "}
-                            qualified! Add{" "}
-                            <span className="font-bold text-[#ffff03]">
-                              {kgNeeded}kg
-                            </span>{" "}
-                            more for {freeKg + 1}kg free.
-                          </p>
-                        ) : (
-                          <p className="text-xs sm:text-sm">
-                            Add{" "}
-                            <span className="font-bold text-[#ffff03]">
-                              {kgNeeded}kg
-                            </span>{" "}
-                            more for 1kg FREE Rice!
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()}
 
               <div className="space-y-2 sm:space-y-3">
                 {/* 3kg Bag */}
@@ -481,9 +432,9 @@ export default function ProductDetailClient({
                     <div className="min-w-0">
                       <p className="font-bold text-[#27247b] text-xs sm:text-sm md:text-base flex items-center gap-1 flex-wrap">
                         10kg Bag
-                        {hasShanOffer ? (
+                        {promotion?.qualifying_bag_size_kg === 10 && promotion.reward_text ? (
                           <span className="text-[10px] sm:text-xs bg-linear-to-r from-cyan-400 to-blue-500 text-white px-2 py-0.5 rounded-full font-black shadow-md whitespace-nowrap animate-pulse">
-                            + Shan Biryani Masala &amp; Kheer Mix FREE 🎁
+                            + {promotion.reward_text} FREE 🎁
                           </span>
                         ) : (
                           <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-semibold">

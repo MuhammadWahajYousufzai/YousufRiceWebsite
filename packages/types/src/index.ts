@@ -99,3 +99,42 @@ export interface CartItem {
   };
   isColdDrinkBundle?: boolean;
 }
+
+export type StorefrontPlacement = "promotion" | "announcement";
+
+export type StorefrontTheme =
+  | "harvest"
+  | "midnight"
+  | "saffron"
+  | "emerald"
+  | "rose";
+
+export type StorefrontVisualStyle =
+  | "product_focus"
+  | "split"
+  | "minimal";
+
+export interface StorefrontContent {
+  $id: string;
+  placement: StorefrontPlacement;
+  enabled: boolean;
+  title: string;
+  description?: string;
+  badge_text?: string;
+  cta_text?: string;
+  cta_url?: string;
+  product_id?: string;
+  theme: StorefrontTheme;
+  visual_style: StorefrontVisualStyle;
+  sort_order: number;
+  show_on_web: boolean;
+  show_on_mobile: boolean;
+  show_product_price: boolean;
+  qualifying_bag_size_kg?: number;
+  reward_text?: string;
+  reward_quantity?: number;
+  starts_at?: string;
+  ends_at?: string;
+  $createdAt: string;
+  $updatedAt: string;
+}
