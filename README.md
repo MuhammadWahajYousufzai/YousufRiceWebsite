@@ -10,9 +10,9 @@ A full-stack e-commerce platform for ordering premium quality rice online with t
 
 | Layer | Technology | Version |
 |-------|-----------|---------|
-| **Frontend** (Web) | Next.js (App Router, PPR, Turbopack) | 16.2.6 |
+| **Frontend** (Web) | Next.js (App Router, PPR, Turbopack) | 16.3.1 |
 | **Frontend** (Mobile) | Expo (React Native, Expo Router) | SDK 56 / RN 0.85 |
-| **Language** | TypeScript | 5.9 |
+| **Language** | TypeScript | 5.9 (web app) / ^6 (root) |
 | **Styling** | Tailwind CSS | 4.3 |
 | **UI Components** | shadcn/ui (New York), Base UI, Radix | — |
 | **Animations** | Motion | 12.40 |
@@ -21,7 +21,7 @@ A full-stack e-commerce platform for ordering premium quality rice online with t
 | **Validation** | Zod | 4 |
 | **Backend** | Appwrite (self-hosted) | 1.9.0 |
 | **Database** | Appwrite TablesDB | — |
-| **Storage** | Appwrite Storage (product-images, banner-images buckets) | — |
+| **Storage** | Appwrite Storage (product-images, banner-images, MillImageId, notification-images buckets) | — |
 | **Auth** | Appwrite Account (email/password, sessions, labels) | — |
 | **Messaging** | Appwrite Messaging (FCM/APNs — planned) | — |
 | **Push (Browser)** | Web Push API + VAPID | — |
@@ -29,7 +29,8 @@ A full-stack e-commerce platform for ordering premium quality rice online with t
 | **AI** | OpenAI Agents SDK | 0.11 |
 | **Tracking** | Meta Conversions API + Pixel | — |
 | **Payment** | Cash on Delivery (COD) | — |
-| **Build** | Turborepo + pnpm | 11.4 |
+| **AI Agents** | Model Context Protocol server (`@modelcontextprotocol/server`, `/api/mcp`) | 2.0 |
+| **Build** | Turborepo + pnpm | 11.18 |
 
 ---
 
@@ -62,6 +63,9 @@ A full-stack e-commerce platform for ordering premium quality rice online with t
 | CSV export (orders) | ✅ **Live** | From orders dashboard |
 | Loyalty discount system | ✅ **Live** | Discount codes, loyalty popup on order success |
 | Cold drink bundle products | ✅ **Live** | Feature-flagged |
+| AI agent MCP server (`/api/mcp`) | ✅ **Live** | 6 tools + policy resources for external AI agents, bearer-token protected |
+| Storefront promotions admin | ✅ **Live** | `/admin/promotions` manages the Storefront Content table (promos on web + mobile) |
+| Self-serve account deletion | ✅ **Live** | `DELETE /api/account` (JWT-authenticated, GDPR-style) |
 | AI Chat (OpenAI Agents) | 🔧 **Broken (web)** / 📋 **Planned (mobile)** | OpenAI Agents SDK integrated but chat is currently broken on web; not yet implemented in mobile app |
 | Meta / Facebook tracking | ✅ **Live** | Pixel + Conversions API (ViewContent, AddToCart, Purchase) |
 | Multi-domain support | ✅ **Live** | yousufrice.com, ssricemills.com, yousufricemill.com |
@@ -122,12 +126,16 @@ yousuf-rice/
 │   ├── appwrite/               # Appwrite client (web + native variants)
 │   ├── types/                  # Shared TypeScript domain types
 │   ├── ui/                     # Cross-platform Button component
-│   └── utils/                  # Shared utilities (pricing, bags, maps, phone, catalog)
+│   ├── utils/                  # Shared utilities (pricing, bags, maps, phone, catalog, delivery)
+│   └── yousuf-rice-domain/     # Shared domain logic (products, pricing, orders) used by web + mobile
 │
-├── appwrite.config.json        # Appwrite schema definition (TablesDB + sites + auth)
+├── appwrite.config.json        # Appwrite schema definition (TablesDB + buckets + auth)
+├── docs/                       # Internal docs (e.g. MCP server audit)
+├── deploy/                     # Deployment assets
 ├── turbo.json                  # Turborepo task orchestration
 ├── pnpm-workspace.yaml         # pnpm workspace config
 ├── tsconfig.base.json          # Shared TypeScript config
+├── opencode.json               # opencode CLI config wiring the Yousuf Rice MCP server
 ├── AGENTS.md                   # Detailed project guide for AI agents
 ├── DESIGN.md                   # Complete design system (colors, typography, components)
 ├── PUSH_NOTIFICATIONS.md       # Push notification architecture & setup guide
@@ -172,6 +180,7 @@ All admin routes require the `admin` label on the Appwrite user.
 | `/admin/customers` | Customer list with order count + total spent |
 | `/admin/customers/[id]` | Customer detail with order history |
 | `/admin/notifications` | Send push notifications, diagnostics |
+| `/admin/promotions` | Manage storefront promotions + announcements (Storefront Content table) |
 | `/admin/staff-performance` | Agent (Saima/Kiran) performance metrics by date range |
 | `/admin/test` | Auth/permission debugging |
 
@@ -188,6 +197,7 @@ Admin permissions use Appwrite **labels** (not preferences):
 
 | Route | Purpose | Auth |
 |-------|---------|------|
+| `POST /api/mcp` | **Yousuf Rice MCP server** for AI agents (6 tools + policy resources, see [AI Integration](#-ai-integration)) | Bearer token (optional) |
 | `POST /api/admin/graphql` | GraphQL endpoint for admin analytics | Admin |
 | `GET /api/admin/stats` | Dashboard statistics (legacy fallback) | Admin |
 | `POST /api/admin/products/update` | Product update endpoint | Admin |
@@ -208,6 +218,7 @@ Admin permissions use Appwrite **labels** (not preferences):
 | `GET /api/push/health` | Push system health | Admin (secret header) |
 | `POST /api/push/cleanup` | Clean up stale subscriptions | Admin (secret header) |
 | `POST /api/notifications/campaigns` | Campaign CRUD (server action) | Admin |
+| `DELETE /api/account` | Self-serve account deletion (detaches customer profiles, deletes Appwrite user) | JWT (customer) |
 | `POST /api/notifications/analytics` | Campaign analytics | Admin |
 
 ---
@@ -216,12 +227,14 @@ Admin permissions use Appwrite **labels** (not preferences):
 
 All data is stored using Appwrite **TablesDB** (self-hosted 1.9.0). The schema is defined in `appwrite.config.json` and can be applied via Appwrite CLI.
 
+> **Note on timestamps:** Appwrite natively maintains `$createdAt` / `$updatedAt` on every row. The `created_at` columns shown below are app-managed fields that only exist on some tables; don't assume a `created_at` column everywhere.
+
 ### 1. Products
 | Column | Type | Required | Notes |
 |--------|------|----------|-------|
 | `name` | string | ✅ | Product name |
 | `description` | string (1000) | ❌ | Product details |
-| `base_price_per_kg` | double | ❌ | Flat price if no tiers |
+| `base_price_per_kg` | double | ✅ | Flat price if no tiers; **also the fallback price for any order under 2 kg**. Required in practice — the admin product form marks it required |
 | `has_tier_pricing` | boolean | ✅ | Whether tier pricing is used |
 | `tier_2_4kg_price` | double | ❌ | Price per kg for 2–4 kg |
 | `tier_5_9kg_price` | double | ❌ | Price per kg for 5–9 kg |
@@ -406,7 +419,7 @@ All data is stored using Appwrite **TablesDB** (self-hosted 1.9.0). The schema i
 ### Prerequisites
 
 - **Node.js** 18+ (recommended: 22 LTS)
-- **pnpm** 11.4+ (`corepack enable pnpm`)
+- **pnpm** 11.18+ (`corepack enable pnpm`)
 - **Appwrite** 1.9.0 self-hosted instance (or Appwrite Cloud)
 - **VAPID keys** for browser push (optional, see [PUSH_NOTIFICATIONS.md](./PUSH_NOTIFICATIONS.md))
 
@@ -418,10 +431,10 @@ pnpm install
 
 ### 2. Environment Variables
 
-Copy `apps/web/env.example` to `apps/web/.env.local`:
+Copy `apps/web/.env.example` to `apps/web/.env.local`:
 
 ```bash
-cp apps/web/env.example apps/web/.env.local
+cp apps/web/.env.example apps/web/.env.local
 ```
 
 | Variable | Required | Description |
@@ -453,10 +466,12 @@ cp apps/web/env.example apps/web/.env.local
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | ❌ | VAPID public key for Web Push |
 | `VAPID_PRIVATE_KEY` | ❌ | VAPID private key |
 | `VAPID_EMAIL` | ❌ | VAPID contact email |
+| `NEXT_PUBLIC_APPWRITE_STOREFRONT_CONTENT_TABLE_ID` | ❌ | Storefront Content table ID (defaults to `storefront_content`) |
 | `NEXT_PUBLIC_META_DATASET_ID` | ❌ | Meta Pixel dataset ID |
 | `META_ACCESS_TOKEN` | ❌ | Meta Conversions API token |
 | `META_TEST_EVENT_CODE` | ❌ | Server-only Meta Conversions API test event code |
 | `OPENAI_API_KEY` | ❌ | OpenAI API key for AI chat |
+| `MCP_AUTH_TOKEN` | ❌ | Bearer token protecting `/api/mcp`; **if unset the MCP endpoint is open** — always set it in production |
 | `NEXT_TELEMETRY_DISABLED` | ❌ | Disable Next.js telemetry |
 
 ### 3. Appwrite TablesDB Setup
@@ -467,7 +482,18 @@ The full schema is defined in `appwrite.config.json`. Apply it via the Appwrite 
 npx appwrite deploy table --all
 ```
 
-The database requires **11 tables**: Products, Product Images, Orders, Order Items, Customers, Addresses, Discount Management, Push Subscriptions, Push Notification Log, Notification Campaigns, Push Templates, and Push User Preferences (see [schema above](#-tablesdb-schema)).
+The database currently defines **20 tables**. The core e-commerce + push tables are documented above (Products, Product Images, Orders, Order Items, Customers, Addresses, Discount Management, Push Subscriptions, Push Notification Log, Push Templates, Push User Preferences, Notification Campaigns). In addition, [`appwrite.config.json`](./appwrite.config.json) defines:
+
+| Table | Purpose | Status |
+|-------|---------|--------|
+| Notification Campaign Analytics | Per-subscriber campaign events (`sent`, `delivered`, `clicked`, `dismissed`, `failed`) | ✅ Live |
+| Storefront Content | Homepage promotions & announcements (badge, CTA, theme, bag-qty rewards); drives web + mobile storefronts and MCP order notes | ✅ Live, managed at `/admin/promotions` |
+| Announcements | Top announcement bar (text, colors, active flag) | ✅ Live |
+| Popups | Announcement popup (image, link, delay) | ✅ Live (schema) |
+| Call Logs | Call-center log per customer call (agent, response, follow-up, order link) | ✅ Live |
+| Agent Orders | Orders placed by call-center agents outside the website (items CSV, status, agent name) | ✅ Live |
+| Campaigns | Marketing campaigns (target city, value range, status) | ✅ Live (schema) |
+| previous website WordPress Customers | Legacy one-time migration data from the old WordPress site | 🗄️ Legacy |
 
 ### 4. Storage Buckets
 
@@ -476,7 +502,11 @@ Create these buckets in Appwrite Console:
 | Bucket | ID | Read | Write | Max Size | Types |
 |--------|----|------|-------|----------|-------|
 | `product-images` | As configured | Public | Admin only | 5 MB | jpg, jpeg, png, webp |
-| `banner-images` | As configured | Public | Admin only | 5 MB | jpg, jpeg, png, webp |
+| `banner-images` | As configured | Public | Admin only | 10 MB | jpg, jpeg, png, webp |
+| `MillImageId` | As configured | Public | — | 30 MB | any |
+| `notification-images` | As configured | Public read | Admin only | 30 MB | jpg, png, gif, webp, svg |
+
+Full bucket definitions live in [`appwrite.config.json`](./appwrite.config.json).
 
 ### 5. Push Notifications Setup
 
@@ -514,6 +544,22 @@ Admins update order status from the `/admin/orders` dashboard.
 
 ---
 
+## 🚚 Delivery Policy
+
+| City | Fee | Notes |
+|------|-----|-------|
+| **Karachi** | Rs. 200 flat per order | Regardless of weight |
+| **Bahria Town Karachi** | Rs. 500 per *started* 10 kg | ≤10 kg → Rs. 500, ≤20 kg → Rs. 1,000, then +Rs. 500 per additional started 10 kg |
+
+- Delivery to these two cities only (`DELIVERY_CITIES` in `@repo/utils`); checkout and the MCP server enforce this.
+- Timeline: **2–3 business days**. Same-day delivery is not available.
+- Payment: **Cash on Delivery only**.
+- Support: `03041117423` · `support@yousufrice.com` · Mon–Sat, 9 AM – 6 PM (PKT).
+
+The MCP server enforces the same rules via `quote_order` / `confirm_order` (`apps/web/lib/mcp/handler.ts` + `lib/delivery-policy.ts`).
+
+---
+
 ## 📱 PWA & Push Notifications
 
 ### Browser Push (✅ Live)
@@ -547,6 +593,39 @@ The current browser push infrastructure is **web-only** (Web Push API + VAPID). 
 ---
 
 ## 🤖 AI Integration
+
+### MCP Server for AI Agents (✅ Live)
+
+A production **Model Context Protocol** server is exposed at `/api/mcp` (Streamable HTTP, stateless), letting any MCP-compatible AI agent (opencode, Claude Desktop, etc.) browse products, quote prices, place COD orders, and track deliveries.
+
+| Tool | Purpose |
+|------|---------|
+| `list_products` | List products with tier pricing (in-stock / hotel-restaurant filters) |
+| `search_products` | Search products by name/description |
+| `get_product_details` | Full product + tier details by ID |
+| `quote_order` | Build a price quote (adds city-based delivery fee; quotes are server-side, expire after 30 min, max 20 items / 1000 kg per item) |
+| `confirm_order` | Place the COD order from an accepted quote (idempotency keys, upserts customer, creates order + items + address) |
+| `track_order` | Track by order ID, optional phone verification |
+
+It also serves MCP **resources** (`yousuf-rice://policies/customer-service`, `.../policies/delivery`, `.../policies/payment`, `yousuf-rice://company/contact-information`) and a **prompt** (`yousuf_rice_customer_service`).
+
+- **Implementation**: `apps/web/app/api/mcp/route.ts` (tools/resources/prompt/auth) + `apps/web/lib/mcp/handler.ts` (Appwrite-backed logic). Design notes: [`docs/yousuf-rice-mcp-audit.md`](./docs/yousuf-rice-mcp-audit.md).
+- **Auth**: optional Bearer token via `MCP_AUTH_TOKEN` (timing-safe compare); requests without the right token get `401`. If the variable is unset the endpoint is open — set it in production.
+- **Local agent usage**: [`opencode.json`](./opencode.json) pre-configures `pnpm opencode` (loads env from `apps/web/.env` via [`start-opencode.ps1`](./start-opencode.ps1)):
+
+```json
+{
+  "mcp": {
+    "yousuf-rice": {
+      "type": "remote",
+      "url": "https://yousufrice.com/api/mcp",
+      "headers": { "Authorization": "Bearer {env:MCP_AUTH_TOKEN}" }
+    }
+  }
+}
+```
+
+### Legacy OpenAI Agents chat (🔧 Broken)
 
 - **OpenAI Agents SDK** integrated via `lib/agents/` with tools for Appwrite queries and loyalty discount management
 - **Web**: Chat interface (`FloatingChatbox` + `/api/chat`) exists but is currently **broken** — needs debugging
@@ -586,6 +665,9 @@ pnpm typecheck        # Run TypeScript type checking
 # Mobile
 pnpm --filter=@yousuf-rice/mobile android   # Build for Android
 pnpm --filter=@yousuf-rice/mobile ios       # Build for iOS
+
+# AI agents
+pnpm opencode           # Launch opencode CLI with the Yousuf Rice MCP server pre-configured (opencode.json)
 ```
 
 ---
